@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: icrcs-fe-portal
+    image: icrcs-fe-portal:v0.0.3
+    # If you want Compose to handle the build process automatically when needed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6060:6060"
+    env_file:
+      - .env.local
+    environment:
+      - PORT=6060
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped
+    
+    # -------------------------------------------------------------
+    # OPTIONAL: Un-comment the blocks below ONLY for local development.
+    # This enables Hot-Reloading so you don't have to rebuild.
+    # -------------------------------------------------------------
+    # command: npm run dev
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    #   - /app/.next

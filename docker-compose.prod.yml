@@ -1,0 +1,29 @@
+# Server deployment — pulls the pre-built image from the local registry
+# (no build step). Run on the server with:
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# The image is built + pushed from a dev machine (see Dockerfile / README):
+#   docker compose up -d --build           # builds icrcs-fe-portal:<tag>
+#   docker tag  icrcs-fe-portal:<tag> 10.248.0.7:30000/icrcs-fe-portal:<tag>
+#   docker push 10.248.0.7:30000/icrcs-fe-portal:<tag>
+
+services:
+  web:
+    container_name: icrcs-fe-portal
+    # Pull from the local (insecure HTTP) registry. Override the tag with:
+    #   IMAGE_TAG=v0.0.4 docker compose -f docker-compose.prod.yml up -d
+    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v0.0.3}
+    pull_policy: always
+    ports:
+      - "6060:6060"
+    # Server-side runtime vars (BACKEND_API_BASE_URL, API_*, REGISTRATION_EMAIL_PATH).
+    # NEXT_PUBLIC_* are baked into the image at build time and need not be set here.
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=6060
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped

@@ -1,0 +1,197 @@
+/* Standalone print stylesheet for the civil registration form (iframe print). */
+
+/* margin: 0 leaves the browser no room to draw its default headers/footers
+   (page title, URL, date, page count), so those corner words disappear. The
+   page's own margins are provided by padding on #printable-form instead. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #1a1a2e;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+#printable-form {
+  padding: 12mm;
+  font-size: 12px;
+  line-height: 1.375;
+  color: #000;
+  background: #fff;
+}
+
+#printable-form header {
+  border-bottom: 2px solid #0d1f33;
+  padding-bottom: 1rem;
+}
+
+#printable-form .header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+#printable-form .header-center {
+  flex: 1;
+  padding: 0 0.5rem;
+  text-align: center;
+}
+
+#printable-form .header-right {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+#printable-form .header-logo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+#printable-form .applicant-photo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border: 1px solid #0d1f33;
+  margin-left: auto;
+}
+
+#printable-form .title-lg {
+  font-size: 19px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #0d1f33;
+}
+
+#printable-form .title-md {
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #0d1f33;
+}
+
+#printable-form .title-gold {
+  margin-top: 0.35rem;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #8a6c14;
+}
+
+#printable-form .form-code {
+  margin-top: 0.25rem;
+  font-size: 10px;
+  color: #64748b;
+}
+
+#printable-form .app-id-banner {
+  margin: 1rem 0;
+  border-radius: 0.25rem;
+  background: #0d1f33;
+  padding: 0.5rem 1rem;
+  text-align: center;
+}
+
+#printable-form .app-id-banner span {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #fff;
+}
+
+#printable-form section {
+  margin-top: 1rem;
+  break-inside: avoid;
+}
+
+#printable-form h2 {
+  margin: 0;
+  border-bottom: 1px solid #a9c0db;
+  padding-bottom: 0.25rem;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1f33;
+}
+
+#printable-form .section-body {
+  margin-top: 0.5rem;
+}
+
+#printable-form .subtitle {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0d1f33;
+}
+
+#printable-form .row {
+  display: flex;
+  border: 1px solid #e2e8f0;
+}
+
+#printable-form .row-label {
+  width: 50%;
+  background: #f5f6fa;
+  padding: 0.375rem 0.75rem;
+  font-weight: 600;
+  color: #0d1f33;
+}
+
+#printable-form .row-value {
+  width: 50%;
+  padding: 0.375rem 0.75rem;
+}
+
+#printable-form .declaration {
+  padding: 0.25rem 0.25rem 0.5rem;
+  font-size: 11px;
+  line-height: 1.625;
+}
+
+#printable-form .declaration p {
+  margin: 0 0 0.5rem;
+}
+
+#printable-form .sig-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  font-size: 11px;
+}
+
+#printable-form .sig-line {
+  flex: 1;
+  border-top: 1px solid #000;
+  padding-top: 0.25rem;
+}
+
+#printable-form .official-box {
+  margin-top: 1rem;
+  border: 1px solid #000;
+  padding: 0.75rem;
+}
+
+#printable-form .official-box p {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}

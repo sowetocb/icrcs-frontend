@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* ICRCS Tanzania — Official institutional design tokens (Tailwind v4 @theme) */
+@theme {
+  /* Primary palette — deep navy matching the Immigration Department's official blue */
+  --color-navy-50: #eef2f7;
+  --color-navy-100: #d5e0ed;
+  --color-navy-200: #a9c0db;
+  --color-navy-500: #1b2e4b;
+  --color-navy-700: #0d1f33;
+  --color-navy-900: #060e1a;
+
+  /* Sidebar-specific deeper blues matching the institutional CMS sidebar */
+  --color-sidebar: #1e3557;
+  --color-sidebar-hover: #263f65;
+  --color-sidebar-active: #2a5cb8;
+
+  /* Gold / amber accent */
+  --color-gold-400: #e2b544;
+  --color-gold: #c9a227;
+  --color-gold-700: #8a6c14;
+
+  --color-sovereign: #0d1f33;
+
+  /* Semantic */
+  --color-success: #2e7d32;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+
+  /* Surface / card / ink */
+  --color-surface: #f5f6fa;
+  --color-card: #ffffff;
+  --color-line: #e2e8f0;
+  --color-ink: #1a1a2e;
+  --color-muted: #64748b;
+
+  /* Typography */
+  --font-display: var(--font-montserrat), system-ui, sans-serif;
+  --font-sans: var(--font-montserrat), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
+
+  /* Auto-scrolling info cards (login / create-profile). Registered via @theme
+     so Tailwind emits the `animate-marquee` utility + keyframes (a raw class
+     gets pruned by Lightning CSS). */
+  --animate-marquee: icrcs-marquee 40s linear infinite;
+  @keyframes icrcs-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+  --background: #f5f6fa;
+  --foreground: #1a1a2e;
+}
+
+/* Dark theme — overrides the semantic tokens so every `bg-surface`,
+   `text-ink`, `text-navy-700`, etc. adapts without touching components. */
+.dark {
+  color-scheme: dark;
+  --background: #0b1220;
+  --foreground: #e7edf6;
+
+  --color-surface: #0b1220;
+  --color-card: #131c30;
+  --color-line: #26344c;
+  --color-ink: #e7edf6;
+  --color-muted: #93a3bd;
+
+  --color-navy-50: #1a2742; /* subtle highlight bg (active nav, status card) */
+  --color-navy-100: #22324f;
+  --color-navy-200: #5e7aa3;
+  --color-navy-500: #496699; /* button hover — desaturated to soften fills */
+  --color-navy-700: #5b7bab; /* primary: heading text + button/panel bg — calmer steel blue */
+  --color-navy-900: #cfe0f7;
+
+  --color-sidebar: #0d1a2e;
+  --color-sidebar-hover: #162640;
+  --color-sidebar-active: #2a5cb8;
+
+  --color-gold-700: #e2b544; /* gold links/labels readable on dark */
+}
+
+html {
+  color-scheme: light;
+  background: var(--background);
+  /* App-wide readability bump: scales every rem-based Tailwind text/spacing
+     utility up from the 16px default for better visibility. */
+  font-size: 18px;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  /* Heavier default weight so normal body copy reads bolder app-wide. */
+  font-weight: 500;
+}
+
+/* ─── Tanzania flag-inspired login background ────────────────────────── */
+.tz-flag-bg {
+  background: linear-gradient(
+    135deg,
+    #1a9641 0%,
+    #1a9641 20%,
+    #2a6099 20%,
+    #1e4d8a 35%,
+    #f0c728 35%,
+    #e8b916 50%,
+    #1a1a1a 50%,
+    #222 65%,
+    #2a6099 65%,
+    #1e4d8a 80%,
+    #1a9641 80%,
+    #1a9641 100%
+  );
+}
+
+/* Printable application form — hidden on screen, the only thing printed. */
+@media screen {
+  #printable-form {
+    display: none;
+  }
+}
+@media print {
+  /* Keep the printable form at its original scale (the screen-wide 18px bump
+     would otherwise enlarge the A4 layout). */
+  html {
+    font-size: 16px;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-form {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #printable-form,
+  #printable-form * {
+    visibility: visible;
+  }
+  #printable-form img {
+    display: block;
+    max-width: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: A4;
+    margin: 12mm 12mm 14mm 12mm;
+
+    @top-left {
+      content: none;
+    }
+    @top-center {
+      content: none;
+    }
+    @top-right {
+      content: none;
+    }
+    @bottom-left {
+      content: none;
+    }
+    @bottom-center {
+      content: counter(page) " of " counter(pages);
+      font-size: 10px;
+      color: #1a1a2e;
+    }
+    @bottom-right {
+      content: none;
+    }
+  }
+}
