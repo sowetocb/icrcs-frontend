@@ -422,6 +422,7 @@ const en = {
     phVillageStreet: "Village / Street",
     phHouseStreet: "House Number / Street",
     phCity: "City",
+    optional: "Optional",
     phPostal: "Postal Code",
     phRegion: "Region",
     phDistrict: "District",
@@ -499,6 +500,8 @@ const en = {
     schoolN: "School", // REVIEW
     schoolNote: "Add each school attended.", // REVIEW
     emergencyContactN: "Emergency Contact", // REVIEW
+    emergencyContact1: "Emergency Contact 1",
+    emergencyContact2: "Emergency Contact 2",
     addRelative: "Add Relative", // REVIEW
     addSpouse: "Add Spouse", // REVIEW
     addSchool: "Add School", // REVIEW
@@ -1057,6 +1060,7 @@ const sw: typeof en = {
     phVillageStreet: "Kijiji / Mtaa",
     phHouseStreet: "Namba ya nyumba / Mtaa",
     phCity: "Jiji",
+    optional: "Si lazima",
     phPostal: "Sanduku la posta",
     phRegion: "Mkoa",
     phDistrict: "Wilaya",
@@ -1133,7 +1137,9 @@ const sw: typeof en = {
     spouseNote: "Ongeza taarifa za mwenzi wako.", // REVIEW
     schoolN: "Shule", // REVIEW
     schoolNote: "Ongeza kila shule uliyosoma.", // REVIEW
-    emergencyContactN: "Mtu wa Kuwasiliana Naye Dharura", // REVIEW
+    emergencyContactN: "Mtu wa Dharura", // REVIEW
+    emergencyContact1: "Mtu wa Kwanza wa Dharura",
+    emergencyContact2: "Mtu wa Pili wa Dharura",
     addRelative: "Ongeza Ndugu", // REVIEW
     addSpouse: "Ongeza Mwenzi", // REVIEW
     addSchool: "Ongeza Shule", // REVIEW
@@ -1190,7 +1196,7 @@ const sw: typeof en = {
     relSibling: "Ndugu", // REVIEW
     relSpouse: "Mwenzi", // REVIEW
     relChild: "Mtoto", // REVIEW
-    relRelative: "Jamaa", // REVIEW
+    relRelative: "Ndugu wa karibu",
     relGuardian: "Mlezi", // REVIEW
     relFriend: "Rafiki", // REVIEW
     relOther: "Nyingine", // REVIEW

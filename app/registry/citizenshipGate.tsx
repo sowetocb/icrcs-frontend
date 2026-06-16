@@ -115,13 +115,13 @@ export default function CitizenshipGate({
                 isFirstPerson
               >
                 <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label={t("fields.nationality")}>
+                  <Field label={t("fields.nationality")} required>
                     <CountrySelect name="gateNationality" placeholder={t("fields.phCountryNat")} />
                   </Field>
-                  <Field label={t("gate.travelDocType")}>
+                  <Field label={t("gate.travelDocType")} required>
                     <Select name="gateDocType" placeholder={t("fields.phSelectType")} options={travelDocumentOptions(t)} />
                   </Field>
-                  <Field label={t("fields.docNumberReq")}>
+                  <Field label={t("fields.docNumberReq")} required>
                     <TextInput name="gateDocNumber" placeholder={t("fields.phDocNumber")} />
                   </Field>
                 </div>

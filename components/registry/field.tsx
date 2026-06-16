@@ -58,15 +58,28 @@ export function Field({
   label,
   children,
   className = "",
+  required = false,
+  optional = false,
 }: {
   label?: string;
   children: React.ReactNode;
   className?: string;
+  /** Append a red asterisk to mark the field as mandatory. */
+  required?: boolean;
+  /** Append a muted "(Optional)" / "(Si lazima)" tag. */
+  optional?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-navy-700">{label}</label>
+        <label className="block text-sm font-medium text-navy-700">
+          {label}
+          {required && <span className="ml-0.5 text-danger">*</span>}
+          {optional && (
+            <span className="ml-1 font-normal text-muted">({t("fields.optional")})</span>
+          )}
+        </label>
       )}
       {children}
     </div>
@@ -78,11 +91,16 @@ export function TextInput({
   placeholder,
   type = "text",
   disabled = false,
+  maxLength,
+  numeric = false,
 }: {
   name: string;
   placeholder?: string;
   type?: string;
   disabled?: boolean;
+  maxLength?: number;
+  /** Restrict input to digits only (e.g. NIDA), with a numeric keypad on mobile. */
+  numeric?: boolean;
 }) {
   const { data, set, errors, locked } = useWizard();
   const invalid = errors.includes(name);
@@ -92,8 +110,13 @@ export function TextInput({
     <input
       type={type}
       value={value}
-      // Strip leading whitespace while typing (mid-word spaces are kept)…
-      onChange={(e) => set(name, e.target.value.replace(/^\s+/, ""))}
+      maxLength={maxLength}
+      inputMode={numeric ? "numeric" : undefined}
+      // Numeric fields keep digits only; others strip just leading whitespace
+      // while typing (mid-word spaces are kept)…
+      onChange={(e) =>
+        set(name, numeric ? e.target.value.replace(/\D/g, "") : e.target.value.replace(/^\s+/, ""))
+      }
       // …and trim trailing whitespace on blur, so stray spaces don't cause errors.
       onBlur={(e) => {
         const trimmed = e.target.value.trim();

@@ -38,23 +38,23 @@ function SchoolBlock({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.eduLevel")}>
+        <Field label={t("fields.eduLevel")} optional>
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
-        <Field label={t("fields.completionYear")}>
+        <Field label={t("fields.completionYear")} optional>
           <TextInput name={`${p}Year`} type="number" placeholder="2014" />
         </Field>
       </div>
 
-      <Field label={t("fields.schoolName")}>
+      <Field label={t("fields.schoolName")} required>
         <TextInput name={`${p}School`} placeholder="Buguruni Primary School" />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.schoolDistrict")}>
+        <Field label={t("fields.schoolDistrict")} optional>
           <TextInput name={`${p}District`} placeholder="Ilala" />
         </Field>
-        <Field label={t("fields.indexNo")}>
+        <Field label={t("fields.indexNo")} optional>
           <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" />
         </Field>
       </div>
@@ -146,20 +146,20 @@ export default function StepEducation() {
       <div className="space-y-5">
         <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label={employmentRequired ? t("fields.employmentStatus") : t("fields.employmentStatusOpt")}>
+          <Field label={t("fields.employmentStatus")} required={employmentRequired} optional={!employmentRequired}>
             <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobOptions(t)} />
           </Field>
-          <Field label={t("fields.occupationOpt")}>
+          <Field label={t("fields.occupation")} optional>
             <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
           </Field>
-          <Field label={employmentRequired ? t("fields.employer") : t("fields.employerOpt")}>
+          <Field label={t("fields.employer")} required={employmentRequired} optional={!employmentRequired}>
             <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
           </Field>
           {/* NIDA applies only to the adult account holder. Minors (always
               registered as dependents) have no National ID, so it's hidden. */}
           {isFirstPerson && (
-            <Field label={t("fields.nidaNumber")}>
-              <TextInput name="nidaNumber" placeholder="NIDA-12345678-90123" />
+            <Field label={t("fields.nidaNumber")} required>
+              <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
             </Field>
           )}
         </div>

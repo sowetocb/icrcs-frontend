@@ -32,39 +32,39 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
 
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.firstName")}>
+        <Field label={t("fields.firstName")} required>
           <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} />
         </Field>
-        <Field label={t("fields.middleName")}>
+        <Field label={t("fields.middleName")} required>
           <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} />
         </Field>
-        <Field label={t("fields.lastName")}>
+        <Field label={t("fields.lastName")} required>
           <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} />
         </Field>
       </div>
 
       {/* DOB + Gender + Phone */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.dob")}>
+        <Field label={t("fields.dob")} optional>
           <DateInput name={`${prefix}Dob`} />
         </Field>
-        <Field label={t("fields.gender")}>
+        <Field label={t("fields.gender")} required>
           <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
         </Field>
-        <Field label={t("fields.phone")}>
+        <Field label={t("fields.phone")} optional>
           <PhoneInput name={`${prefix}Phone`} />
         </Field>
       </div>
 
       {/* Nationality + identification document on one row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.nationality")}>
+        <Field label={t("fields.nationality")} optional>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountryNat")} />
         </Field>
-        <Field label={t("fields.docType")}>
+        <Field label={t("fields.docType")} optional>
           <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
         </Field>
-        <Field label={t("fields.docNumber")}>
+        <Field label={t("fields.docNumber")} optional>
           <TextInput name={`${prefix}DocNumber`} placeholder="e.g. 19600310-12345-00001-6" />
         </Field>
       </div>
@@ -73,7 +73,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
 
       {/* Place of Birth + Residence side by side */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Field label={t("fields.placeOfBirthRdw")}>
+        <Field label={t("fields.placeOfBirthRdw")} optional>
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
             {!pobIsTz && (
@@ -81,7 +81,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
             )}
           </div>
         </Field>
-        <Field label={t("fields.residence")}>
+        <Field label={t("fields.residence")} optional>
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Res`} showStreet />
             {!resIsTz && (

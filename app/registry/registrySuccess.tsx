@@ -1,9 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import PrintableForm from "./printableForm";
 import { printRegistrationForm } from "./printRegistrationForm";
+import { getStage9Preview } from "@/lib/api/registration";
+import { previewToForm } from "@/lib/registry/previewToForm";
+import { loadRegistration, loadRegistrationFor } from "./registrationStore";
+import { loadProfile } from "@/lib/auth/profile";
 
 export default function RegistrySuccess({
   applicationId,
@@ -17,13 +22,58 @@ export default function RegistrySuccess({
   const { t } = useI18n();
   const router = useRouter();
 
-  function printForm() {
+  // The form is printed from `formData`. It starts as the locally-entered data
+  // and is refreshed from the server-compiled preview when the user downloads.
+  const [formData, setFormData] = useState(data);
+  const [busy, setBusy] = useState(false);
+  // Set once the (preview-merged) formData is committed and the DOM should be
+  // printed on the next paint.
+  const printPending = useRef(false);
+
+  function doPrint() {
     const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
-      .map((k) => data[k])
+      .map((k) => formData[k])
       .filter((v): v is string => typeof v === "string" && v.trim() !== "")
       .join(" ");
     const documentName = `${fullName || "Citizen"} Registration Form`;
     printRegistrationForm(document.getElementById("printable-form"), documentName);
+  }
+
+  // Print after the preview-merged data has rendered into the hidden form.
+  useEffect(() => {
+    if (!printPending.current) return;
+    printPending.current = false;
+    doPrint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
+
+  async function printForm() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Pull all stages from the server-compiled preview so the printout
+      // reflects exactly what the backend stored. Falls back to local data.
+      const subjectId =
+        loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ??
+        loadRegistration()?.subjectId ??
+        "";
+      if (subjectId) {
+        const preview = await getStage9Preview(subjectId);
+        if (preview) {
+          const mapped = await previewToForm(preview);
+          // Merge server data over local (local keeps cascade names/photo the
+          // preview doesn't carry); printing is triggered by the effect above.
+          printPending.current = true;
+          setFormData((prev) => ({ ...prev, ...mapped }));
+          return;
+        }
+      }
+      doPrint();
+    } catch {
+      doPrint(); // preview unavailable — print what we have locally
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -62,7 +112,8 @@ export default function RegistrySuccess({
           <button
             type="button"
             onClick={printForm}
-            className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-surface"
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -74,7 +125,8 @@ export default function RegistrySuccess({
           <button
             type="button"
             onClick={printForm}
-            className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="6 9 6 2 18 2 18 9" />
@@ -95,7 +147,7 @@ export default function RegistrySuccess({
       </div>
 
       <PrintableForm
-        data={data}
+        data={formData}
         applicationId={applicationId}
         submittedDate={submittedDate}
       />

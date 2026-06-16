@@ -71,35 +71,35 @@ const REQUIRED_FIELDS: string[][] = [
   ],
   // Step 2: Address (permanent Region/District/Ward; current added when unlinked)
   ["permRegion", "permDistrict", "permWard"],
-  // Step 3: Parents (father + mother names + phone)
+  // Step 3: Parents (father + mother full names + gender; phone is optional)
   [
     ...nameFields("father"),
-    "fatherPhone",
+    "fatherGender",
     ...nameFields("mother"),
-    "motherPhone",
+    "motherGender",
   ],
   // Step 4: Education & Employment (relaxed — school only if attended)
   [],
-  // Step 5: Emergency Contacts
+  // Step 5: Emergency Contacts (full name + gender required)
   [
     "ec1RelType",
-    "ec1First",
-    "ec1Last",
+    ...nameFields("ec1"),
+    "ec1Gender",
     "ec1Phone",
     "ec2RelType",
-    "ec2First",
-    "ec2Last",
+    ...nameFields("ec2"),
+    "ec2Gender",
     "ec2Phone",
   ],
-  // Step 6: Family (at least two relatives required)
+  // Step 6: Family — at least two relatives (full name + gender required)
   [
     "rel1RelType",
-    "rel1First",
-    "rel1Last",
+    ...nameFields("rel1"),
+    "rel1Gender",
     "rel1Phone",
     "rel2RelType",
-    "rel2First",
-    "rel2Last",
+    ...nameFields("rel2"),
+    "rel2Gender",
     "rel2Phone",
   ],
   // Step 7: Referees (print only — no required fields)
@@ -412,9 +412,11 @@ export default function RegistryWizard({
     // Stage 6: if married, at least one spouse must be filled.
     if (step === 6 && data.isMarried === true) {
       const spouseCount = Math.max(1, Number(data.spouseCount) || 1);
+      const filled = (n: string) =>
+        typeof data[n] === "string" && (data[n] as string).trim() !== "";
       let hasSpouse = false;
       for (let i = 1; i <= spouseCount; i++) {
-        if (typeof data[`sp${i}First`] === "string" && (data[`sp${i}First`] as string).trim()) {
+        if (filled(`sp${i}First`)) {
           hasSpouse = true;
           break;
         }
@@ -423,6 +425,19 @@ export default function RegistryWizard({
         setErrors(["sp1First"]);
         setFormError(t("registry.spouseRequired"));
         return;
+      }
+      // Every started spouse needs a full name + gender (middle name and gender
+      // are mandatory across all stages).
+      for (let i = 1; i <= spouseCount; i++) {
+        if (!filled(`sp${i}First`)) continue;
+        const missingSpouse = [`sp${i}First`, `sp${i}Middle`, `sp${i}Last`, `sp${i}Gender`].filter(
+          (n) => !filled(n),
+        );
+        if (missingSpouse.length > 0) {
+          setErrors(missingSpouse);
+          setFormError(t("registry.required"));
+          return;
+        }
       }
     }
 

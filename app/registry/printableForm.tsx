@@ -302,8 +302,26 @@ export default function PrintableForm({
         <SuretyBlock index={2} tr={tr} />
       </Section>
 
-      {/* ─── Section 9: Applicant Declaration ─── */}
-      <Section title={tr("9. Applicant Declaration:", "9. Tamko la Mwombaji:")}>
+      {/* ─── Section 9: Witness to the Applicant (print only, blank) ─── */}
+      <Section title={tr("9. Witness to the Applicant:", "9. Shuhuda kwa Mwombaji:")}>
+        <Row label={tr("Full Name", "Jina Kamili")} value="" />
+        <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" />
+        <Row label={tr("Address", "Anwani")} value="" />
+        <Row label={tr("Phone Number", "Simu")} value="" />
+        <p className="declaration-note">
+          {tr(
+            "I witness that the information provided in this form is correct according to the applicant.",
+            "Nashuhudia kwamba maelezo katika fomu hii ni sahihi kwa mujibu wa mwombaji.",
+          )}
+        </p>
+        <div className="sig-row">
+          <span className="sig-line">{tr("Signature & Seal", "Sahihi na Muhuri")}</span>
+          <span className="sig-line">{tr("Date", "Tarehe")}</span>
+        </div>
+      </Section>
+
+      {/* ─── Section 10: Applicant Declaration ─── */}
+      <Section title={tr("10. Applicant Declaration:", "10. Tamko la Mwombaji:")}>
         <div className="declaration">
           <p>
             {locale === "sw" ? (

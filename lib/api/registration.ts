@@ -407,6 +407,14 @@ async function buildStage3Payload(data: Data): Promise<Record<string, unknown>> 
   };
 }
 
+/** Stages 3/5/6 route to /foreign when any of the listed people reside outside
+ * Tanzania (their residence carries a country code + city instead of a TZ
+ * street id), else /domestic. There is no bare endpoint for these stages. */
+const peopleSuffix = (data: Data, prefixes: string[]) =>
+  prefixes.some((p) => !isTanzania(str(data, `${p}ResCountry`))) ? "/foreign" : "/domestic";
+
+const stage3Suffix = (data: Data) => peopleSuffix(data, ["father", "mother"]);
+
 export async function submitStage3(subjectId: string, data: Data): Promise<unknown> {
   if (BYPASS) {
     await delay(300);
@@ -414,7 +422,7 @@ export async function submitStage3(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage3Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage3`, payload, at),
+    apiPost(`/v1/registration/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
   );
 }
 
@@ -425,7 +433,7 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage3Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage3`, payload, at),
+    apiPut(`/v1/registration/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
   );
 }
 
@@ -554,6 +562,8 @@ async function buildStage5Payload(data: Data): Promise<Record<string, unknown>> 
   return { contacts };
 }
 
+const stage5Suffix = (data: Data) => peopleSuffix(data, ["ec1", "ec2"]);
+
 export async function submitStage5(subjectId: string, data: Data): Promise<unknown> {
   if (BYPASS) {
     await delay(300);
@@ -561,7 +571,7 @@ export async function submitStage5(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage5Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage5`, payload, at),
+    apiPost(`/v1/registration/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
   );
 }
 
@@ -572,7 +582,7 @@ export async function editStage5(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage5Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage5`, payload, at),
+    apiPut(`/v1/registration/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
   );
 }
 
@@ -615,6 +625,22 @@ async function buildStage6Payload(data: Data): Promise<Record<string, unknown>> 
   };
 }
 
+/** Stage 6 foreign when any filled relative or spouse resides abroad. */
+function stage6Suffix(data: Data): string {
+  const prefixes: string[] = [];
+  const relCount = Math.max(2, Number(str(data, "relativeCount")) || 2);
+  for (let i = 1; i <= relCount; i++) {
+    if (str(data, `rel${i}First`)) prefixes.push(`rel${i}`);
+  }
+  if (data.isMarried === true) {
+    const spCount = Math.max(1, Number(str(data, "spouseCount")) || 1);
+    for (let i = 1; i <= spCount; i++) {
+      if (str(data, `sp${i}First`)) prefixes.push(`sp${i}`);
+    }
+  }
+  return peopleSuffix(data, prefixes);
+}
+
 export async function submitStage6(subjectId: string, data: Data): Promise<unknown> {
   if (BYPASS) {
     await delay(300);
@@ -622,7 +648,7 @@ export async function submitStage6(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage6Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage6`, payload, at),
+    apiPost(`/v1/registration/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
   );
 }
 
@@ -633,7 +659,7 @@ export async function editStage6(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage6Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage6`, payload, at),
+    apiPut(`/v1/registration/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
   );
 }
 

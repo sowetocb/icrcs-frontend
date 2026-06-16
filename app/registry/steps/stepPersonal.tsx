@@ -42,7 +42,7 @@ function PhotoUpload() {
   }
 
   return (
-    <Field label={t("fields.photo")}>
+    <Field label={t("fields.photo")} required>
       <div
         className={`flex items-center gap-5 rounded-xl border bg-card p-4 ${
           invalid ? "border-danger" : "border-line"
@@ -104,14 +104,14 @@ export default function StepPersonal() {
 
   return (
     <div className="space-y-5">
-      <Field label={t("fields.fullName")}>
+      <Field label={t("fields.fullName")} required>
         <NameRow prefix="applicant" />
       </Field>
 
       <PhotoUpload />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.gender")}>
+        <Field label={t("fields.gender")} required>
           <Select
             name="gender"
             placeholder={t("fields.phSelectGender")}
@@ -119,7 +119,7 @@ export default function StepPersonal() {
           />
         </Field>
 
-        <Field label={t("fields.dob")}>
+        <Field label={t("fields.dob")} required>
           <DateInput
           name="dob"
           minDate={`${currentYear - 120}-01-01`}
@@ -127,7 +127,7 @@ export default function StepPersonal() {
         />
         </Field>
 
-        <Field label={t("fields.marriage")}>
+        <Field label={t("fields.marriage")} required>
           <Select
             name="marriage"
             placeholder={t("fields.phSelectStatus")}
@@ -136,7 +136,7 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      <Field label={t("fields.placeOfBirth")}>
+      <Field label={t("fields.placeOfBirth")} required>
         {/* Single country picker (lookup-connected, with flag). The Region/
           District/Ward cascade shows for Tanzania; for any other country only
           the free-text City/Village below is used. */}
@@ -155,20 +155,20 @@ export default function StepPersonal() {
 
       {bornInTanzania && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t("fields.birthCertNo")}>
+          <Field label={t("fields.birthCertNo")} optional>
             <TextInput name="birthCertNo" placeholder="TZ1234567890" />
           </Field>
-          <div className="flex items-end">
+          <Field label={t("fields.birthCertFile")} optional>
             <FileInput name="birthCertFile" />
-          </div>
+          </Field>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.phone")}>
+        <Field label={t("fields.phone")} required>
           <PhoneInput name="phone" />
         </Field>
-        <Field label={t("fields.email")}>
+        <Field label={t("fields.email")} required>
           <TextInput name="email" type="email" placeholder="test@test.com" />
         </Field>
       </div>

@@ -60,7 +60,7 @@ export default function StepAddress() {
 
   return (
     <div className="space-y-6">
-      <Field label={t("fields.permAddress")}>
+      <Field label={t("fields.permAddress")} required>
         <div className="space-y-3">
           <WardCascade prefix="perm" showStreet />
           {/* Foreign addresses have no ward/street cascade — capture a free-text
@@ -87,7 +87,7 @@ export default function StepAddress() {
       </label>
 
       {!sameAsPerm && (
-        <Field label={t("fields.curAddress")}>
+        <Field label={t("fields.curAddress")} required>
           <div className="space-y-3">
             <WardCascade prefix="cur" showStreet />
             {curIsTz ? (
