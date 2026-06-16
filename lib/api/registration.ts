@@ -27,6 +27,11 @@ const MARITAL: Record<string, string> = {
 
 type Data = Record<string, string | boolean>;
 
+/** A country value counts as Tanzania (the domestic flow) when it's empty or
+ * explicitly "Tanzania"; anything else routes the stage to its `/foreign`
+ * variant. */
+const isTanzania = (country: string) => !country || country === "Tanzania";
+
 const str = (data: Data, key: string) =>
   typeof data[key] === "string" ? (data[key] as string).trim() : "";
 
@@ -194,7 +199,7 @@ async function buildStage1Payload(
 ): Promise<Record<string, unknown>> {
   const marriage = str(data, "marriage");
   const country = str(data, "pobCountry");
-  const bornInTanzania = !country || country === "Tanzania";
+  const bornInTanzania = isTanzania(country);
 
   return {
     ...(isSelf
@@ -215,6 +220,10 @@ async function buildStage1Payload(
     // for Tanzanian births (REGISTRATION_PLACE_OF_BIRTH_STREET_REQUIRED).
     placeOfBirthStreetId: bornInTanzania ? wardId(data, "pobStreetId") : null,
     villageOfBirth: str(data, "pobVillage") || str(data, "pobStreet") || null,
+    // Foreign births: the /foreign endpoint requires a free-text city of birth
+    // (captured as pobCityVillage). Omitted for Tanzanian births, which pin the
+    // location via the ward/street cascade instead.
+    ...(bornInTanzania ? {} : { cityOfBirth: str(data, "pobCityVillage") || null }),
     birthCertificateNo: str(data, "birthCertNo") || null,
   };
 }
@@ -258,8 +267,12 @@ export async function submitStage1(
   // Stage 1 (raw JSON) is submitted first to create the registration and obtain
   // the subjectId. The passport photo is then uploaded against that subjectId —
   // the /files/upload endpoint requires subjectId, so it can't precede Stage 1.
+  // Applicants born outside Tanzania go through the dedicated /foreign endpoint.
+  const path = isTanzania(str(data, "pobCountry"))
+    ? "/v1/registration/stage1"
+    : "/v1/registration/stage1/foreign";
   const response = extractStage1Response(
-    await withFreshAuth((at) => apiPost("/v1/registration/stage1", payload, at)),
+    await withFreshAuth((at) => apiPost(path, payload, at)),
   );
 
   // Stage 1.5 — conditional naturalization details against the new subjectId.
@@ -286,8 +299,9 @@ export async function editStage1(
     await delay(300);
     return { mock: true };
   }
+  const suffix = isTanzania(str(data, "pobCountry")) ? "" : "/foreign";
   const result = await withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage1`, payload, at),
+    apiPut(`/v1/registration/${subjectId}/stage1${suffix}`, payload, at),
   );
   await submitNaturalization(subjectId, data);
   return result;
@@ -297,8 +311,27 @@ export async function editStage1(
 // Stage 2 — Address
 // ──────────────────────────────────────────────────────────────────────────────
 
-function buildStage2Payload(data: Data): Record<string, unknown> {
+async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> {
   const sameAsCurrent = data.sameAsPerm === true;
+
+  // Foreign address: the /stage2/foreign endpoint takes just ISO country codes +
+  // a free-text city (no house number / postal code). When the current address
+  // mirrors the permanent one, only the current side is sent.
+  if (!isTanzania(str(data, "permCountry"))) {
+    const payload: Record<string, unknown> = {
+      currentCountryCode: await resolveCountryCode(
+        str(data, "curCountry") || str(data, "permCountry"),
+      ),
+      currentCity: str(data, "curCity") || str(data, "permCity") || null,
+      permanentSameAsCurrent: sameAsCurrent,
+    };
+    if (!sameAsCurrent) {
+      payload.permanentCountryCode = await resolveCountryCode(str(data, "permCountry"));
+      payload.permanentCity = str(data, "permCity") || null;
+    }
+    return payload;
+  }
+
   const payload: Record<string, unknown> = {
     currentWardId: wardId(data, "curWardId"),
     // Street / Mtaa id from the cascade (guide: `currentStreetId`).
@@ -316,25 +349,30 @@ function buildStage2Payload(data: Data): Record<string, unknown> {
   return payload;
 }
 
+/** Stage 2 routes to its `/foreign` variant when the permanent address is
+ * outside Tanzania. */
+const stage2Suffix = (data: Data) =>
+  isTanzania(str(data, "permCountry")) ? "" : "/foreign";
+
 export async function submitStage2(subjectId: string, data: Data): Promise<unknown> {
-  const payload = buildStage2Payload(data);
+  const payload = await buildStage2Payload(data);
   if (BYPASS) {
     await delay(300);
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage2`, payload, at),
+    apiPost(`/v1/registration/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
   );
 }
 
 export async function editStage2(subjectId: string, data: Data): Promise<unknown> {
-  const payload = buildStage2Payload(data);
+  const payload = await buildStage2Payload(data);
   if (BYPASS) {
     await delay(300);
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage2`, payload, at),
+    apiPut(`/v1/registration/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
   );
 }
 

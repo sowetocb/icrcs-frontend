@@ -195,10 +195,7 @@ export default function StepDetails({
 
         <div className="space-y-1.5">
           <label htmlFor="middleName" className={labelClass}>
-            {t("register.middleName")}{" "}
-            <span className="font-normal text-muted">
-              ({t("register.optional")})
-            </span>
+            {t("register.middleName")}
           </label>
           <input
             id="middleName"

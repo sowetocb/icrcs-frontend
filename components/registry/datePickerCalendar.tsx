@@ -54,17 +54,6 @@ export default function DatePickerCalendar({
     return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2024, m, 1)));
   }, [tag]);
 
-  const weekdayLabels = useMemo(() => {
-    const labels: string[] = [];
-    const monday = new Date(2024, 0, 1); // Mon 1 Jan 2024
-    for (let i = 0; i < WEEKDAY_COUNT; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      labels.push(new Intl.DateTimeFormat(tag, { weekday: "short" }).format(d));
-    }
-    return labels;
-  }, [tag]);
-
   const max = maxDate ? parseIso(maxDate) : null;
   const min = minDate ? parseIso(minDate) : null;
 
@@ -169,15 +158,7 @@ export default function DatePickerCalendar({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] font-medium text-muted">
-        {weekdayLabels.map((label) => (
-          <span key={label} className="py-1">
-            {label}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-1 grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 gap-0.5">
         {cells.map((day, idx) => {
           if (day === null) {
             return <span key={`empty-${idx}`} aria-hidden="true" />;

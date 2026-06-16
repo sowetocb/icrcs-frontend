@@ -266,8 +266,10 @@ export default function RegistryWizard({
       if (pobIsTz) {
         required = [...required, "pobWard", "pobStreet"];
       } else {
+        // Foreign births: drop the TZ cascade fields and require the free-text
+        // city of birth instead (the /foreign endpoint rejects a blank one).
         const tzOnly = new Set(["pobRegion", "pobDistrict", "pobWard", "pobVillage"]);
-        required = required.filter((n) => !tzOnly.has(n));
+        required = [...required.filter((n) => !tzOnly.has(n)), "pobCityVillage"];
       }
     }
 
@@ -277,14 +279,19 @@ export default function RegistryWizard({
     if (step === 2) {
       const permIsTz = !data.permCountry || data.permCountry === "Tanzania";
       if (!permIsTz) {
-        required = required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n));
+        // Foreign permanent address: drop the TZ cascade, require the city.
+        required = [
+          ...required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n)),
+          "permCity",
+        ];
       }
-      // The current address (when not linked) needs its own R/D/W in Tanzania.
+      // The current address (when not linked) needs its own R/D/W in Tanzania,
+      // or a free-text city when abroad.
       if (data.sameAsPerm !== true) {
         const curIsTz = !data.curCountry || data.curCountry === "Tanzania";
-        if (curIsTz) {
-          required = [...required, "curRegion", "curDistrict", "curWard"];
-        }
+        required = curIsTz
+          ? [...required, "curRegion", "curDistrict", "curWard"]
+          : [...required, "curCity"];
       }
     }
 

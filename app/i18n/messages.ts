@@ -419,6 +419,7 @@ const en = {
     // --- recovered exact values ---
     phVillageStreet: "Village / Street",
     phHouseStreet: "House Number / Street",
+    phCity: "City",
     phPostal: "Postal Code",
     phRegion: "Region",
     phDistrict: "District",
@@ -469,6 +470,7 @@ const en = {
     citizenNo: "No", // REVIEW
     nidaNumber: "NIDA Number", // REVIEW
     birthCertNo: "Birth Certificate Number", // REVIEW
+    birthCertFile: "Birth Certificate (upload)",
     indexNo: "Index Number", // REVIEW
     docType: "Document Type", // REVIEW
     docNumber: "Document Number", // REVIEW
@@ -1046,6 +1048,7 @@ const sw: typeof en = {
     // --- recovered exact values ---
     phVillageStreet: "Kijiji / Mtaa",
     phHouseStreet: "Namba ya nyumba / Mtaa",
+    phCity: "Jiji",
     phPostal: "Sanduku la posta",
     phRegion: "Mkoa",
     phDistrict: "Wilaya",

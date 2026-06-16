@@ -1,23 +1,26 @@
 import type { Metadata } from "next";
-import { Montserrat, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { LocaleProvider } from "./i18n/localeProvider";
 import { ThemeProvider, themeNoFlashScript } from "./theme/themeProvider";
 import SessionKeepAlive from "@/components/auth/sessionKeepAlive";
 import IdleLogout from "@/components/auth/idleLogout";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
+// Self-hosted (variable) fonts so the production build never reaches out to
+// Google Fonts at build time — the build container has no internet access.
+// The woff2 files live in app/fonts/ and cover the full weight axis.
+const montserrat = localFont({
+  src: "./fonts/Montserrat.woff2",
   variable: "--font-montserrat",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: "400 900",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrains = localFont({
+  src: "./fonts/JetBrainsMono.woff2",
   variable: "--font-jetbrains",
   display: "swap",
-  weight: ["400", "500"],
+  weight: "400 500",
 });
 
 export const metadata: Metadata = {

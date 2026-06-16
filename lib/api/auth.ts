@@ -220,6 +220,16 @@ export async function withFreshAuth<T>(
   try {
     return await call(token());
   } catch (err) {
+    // A 403 carrying the app's structured error envelope (errorCode/message) is
+    // a business-rule rejection — e.g. REGISTRATION_PARENT_NOT_APPROVED — NOT an
+    // auth failure. Surface its message rather than masking it as an expired
+    // session. (A bare 403, as Spring Security returns for a missing/invalid
+    // JWT, has no errorCode and still flows through the refresh path below.)
+    if (err instanceof ApiError && err.status === 403) {
+      const data = err.data as { errorCode?: unknown } | null;
+      if (data && typeof data === "object" && "errorCode" in data) throw err;
+    }
+
     const unauthorized =
       err instanceof ApiError && (err.status === 401 || err.status === 403);
     if (!unauthorized) throw err;

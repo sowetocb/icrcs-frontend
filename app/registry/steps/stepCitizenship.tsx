@@ -16,12 +16,19 @@ const ADDR_SUFFIXES = [
   "WardId",
   "Street",
   "StreetId",
+  // Free-text city, used instead of the cascade for foreign addresses.
+  "City",
 ] as const;
+
+const isTz = (country: unknown) =>
+  !country || country === "Tanzania";
 
 export default function StepAddress() {
   const { t } = useI18n();
   const { data, set } = useWizard();
   const sameAsPerm = data.sameAsPerm === true;
+  const permIsTz = isTz(data.permCountry);
+  const curIsTz = isTz(data.curCountry);
 
   const permValues = ADDR_SUFFIXES.map((s) => data[`perm${s}`]);
 
@@ -56,10 +63,16 @@ export default function StepAddress() {
       <Field label={t("fields.permAddress")}>
         <div className="space-y-3">
           <WardCascade prefix="perm" showStreet />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} />
-            <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
-          </div>
+          {/* Foreign addresses have no ward/street cascade — capture a free-text
+              city instead (sent as the country code + city to /stage2/foreign). */}
+          {permIsTz ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} />
+              <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
+            </div>
+          ) : (
+            <TextInput name="permCity" placeholder={t("fields.phCity")} />
+          )}
         </div>
       </Field>
 
@@ -77,10 +90,14 @@ export default function StepAddress() {
         <Field label={t("fields.curAddress")}>
           <div className="space-y-3">
             <WardCascade prefix="cur" showStreet />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} />
-              <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
-            </div>
+            {curIsTz ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} />
+                <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
+              </div>
+            ) : (
+              <TextInput name="curCity" placeholder={t("fields.phCity")} />
+            )}
           </div>
         </Field>
       )}

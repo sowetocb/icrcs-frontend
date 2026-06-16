@@ -304,9 +304,6 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 | Ward Cascade Selectors (Region → District → Ward) | ✅ Done |
 | Country Selector & Phone Input | ✅ Done |
 | Auto-Scrolling Info Cards (Auth Pages) | ✅ Done |
-| Visa Processing Module | 🔄 In progress |
-| Security Audit Module | 🔄 In progress |
-| Testing & Optimization | 🔄 In progress |
 
 ---
 
