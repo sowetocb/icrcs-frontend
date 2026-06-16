@@ -245,18 +245,23 @@ export default function WardCascade({
     <div className="space-y-3">
       {/* Country — drives the regions below, with flag emoji + search */}
       {showCountry && (
-        <CountryPicker
-          countryName={countryName}
-          placeholder={t("fields.phCountry")}
-          disabled={disabled}
-          invalid={errors.includes(`${prefix}Country`)}
-          lookupCountries={countries}
-          onChange={(lookupItem, country) => {
-            set(`${prefix}CountryId`, lookupItem ? String(lookupItem.id) : "");
-            set(`${prefix}Country`, country?.name ?? "");
-            clear("TerritoryId", "Territory", "RegionId", "Region", "DistrictId", "District", "WardId", "Ward", "StreetId", "Street");
-          }}
-        />
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-ink">
+            {t("fields.country")}
+          </span>
+          <CountryPicker
+            countryName={countryName}
+            placeholder={t("fields.phCountry")}
+            disabled={disabled}
+            invalid={errors.includes(`${prefix}Country`)}
+            lookupCountries={countries}
+            onChange={(lookupItem, country) => {
+              set(`${prefix}CountryId`, lookupItem ? String(lookupItem.id) : "");
+              set(`${prefix}Country`, country?.name ?? "");
+              clear("TerritoryId", "Territory", "RegionId", "Region", "DistrictId", "District", "WardId", "Ward", "StreetId", "Street");
+            }}
+          />
+        </div>
       )}
 
       {isTanzania && (

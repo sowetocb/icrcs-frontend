@@ -130,6 +130,7 @@ const en = {
     creatorBadge: "Account Holder",
     submittedOn: "Submitted on {date}",
     download: "Download PDF",
+    preparing: "Preparing…",
     loadError: "Could not load registered people. Please refresh or try again later.",
   },
   dashboard: {
@@ -523,10 +524,11 @@ const en = {
     phMiddleName: "Enter middle name", // REVIEW
     phLastName: "Enter last name", // REVIEW
     phCountry: "Country", // REVIEW
+    country: "Country",
     phCountryNat: "Country of nationality", // REVIEW
     phCityVillageBirth: "City / Village of birth", // REVIEW
     phCityOpt: "City", // REVIEW
-    phVillage: "Village", // REVIEW
+    phVillage: "City", // REVIEW
     phStreet: "Street", // REVIEW
     phDocNumber: "Enter document number", // REVIEW
     phSelect: "Select", // REVIEW
@@ -769,6 +771,7 @@ const sw: typeof en = {
     creatorBadge: "Mmiliki wa Akaunti",
     submittedOn: "Imewasilishwa tarehe {date}",
     download: "Pakua PDF",
+    preparing: "Inaandaa…",
     loadError: "Haikuweza kupakia watu waliojisajili. Tafadhali sasisha au jaribu tena baadaye.",
   },
   dashboard: {
@@ -1161,10 +1164,11 @@ const sw: typeof en = {
     phMiddleName: "Ingiza jina la kati", // REVIEW
     phLastName: "Ingiza jina la mwisho", // REVIEW
     phCountry: "Nchi", // REVIEW
+    country: "Nchi",
     phCountryNat: "Nchi ya utaifa", // REVIEW
     phCityVillageBirth: "Jiji / Kijiji cha kuzaliwa", // REVIEW
     phCityOpt: "Jiji (hiari)", // REVIEW
-    phVillage: "Kijiji", // REVIEW
+    phVillage: "Mji", // REVIEW
     phStreet: "Mtaa", // REVIEW
     phDocNumber: "Ingiza namba ya hati", // REVIEW
     phSelect: "Chagua", // REVIEW

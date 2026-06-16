@@ -50,20 +50,6 @@ const wardId = (data: Data, key: string): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-/** Resolve a country name to its backend id via the lookup (null if unknown). */
-async function resolveCountryId(name: string): Promise<number | null> {
-  if (!name) return null;
-  try {
-    const countries = await getCountries();
-    const match = countries.find(
-      (c) => c.name.toLowerCase() === name.toLowerCase(),
-    );
-    return match ? match.id : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Resolve a country name to its backend code via the lookup (null if unknown). */
 async function resolveCountryCode(name: string): Promise<string | null> {
   if (!name) return null;
@@ -537,8 +523,10 @@ async function buildPersonPayload(data: Data, prefix: string): Promise<Record<st
     gender: str(data, `${prefix}Gender`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
-    residenceCountryId: await resolveCountryId(str(data, `${prefix}ResCountry`)),
-    residenceWardId: wardId(data, `${prefix}ResWardId`),
+    // The backend expects the ISO country CODE (e.g. "KEN"), not the lookup id.
+    // Domestic persons pin their location with the street id; foreign persons
+    // with the free-text city.
+    residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
     residenceCity: str(data, `${prefix}ResCity`) || null,
     residenceStreetId: wardId(data, `${prefix}ResStreetId`),
     documentFileUrl: str(data, `${prefix}DocFileUrl`) || null,

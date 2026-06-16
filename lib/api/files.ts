@@ -15,10 +15,10 @@ export type AttachmentType = {
 };
 
 // attachmentTypeId values per the backend contract. The backend stores the
-// mandatory passport photo at attachmentTypeId=5 (also uploaded at Stage 1),
-// and the birth certificate at attachmentTypeId=1.
+// The passport photo (attachmentTypeId=5) is mandatory at Stage 1 (Personal
+// Information), so it is NOT mandatory again here in the Uploads stage.
 export const ATTACHMENT_TYPES: AttachmentType[] = [
-  { id: 5, label: "Passport Size Photo", mandatory: true },
+  { id: 5, label: "Passport Size Photo", mandatory: false },
   { id: 1, label: "Birth Certificate Copy", mandatory: false },
   { id: 2, label: "ID Copy (NIDA / Passport)", mandatory: false },
   { id: 4, label: "WEO / VEO Letter", mandatory: false },

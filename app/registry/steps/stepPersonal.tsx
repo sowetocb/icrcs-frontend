@@ -145,10 +145,12 @@ export default function StepPersonal() {
           <WardCascade prefix="pob" showStreet={bornInTanzania} />
           {/* Only show free-text when NOT born in Tanzania */}
           {!bornInTanzania && (
-            <TextInput
-              name="pobCityVillage"
-              placeholder={t("fields.phCityVillageBirth")}
-            />
+            <Field label={t("fields.phCityVillageBirth")}>
+              <TextInput
+                name="pobCityVillage"
+                placeholder={t("fields.phCityVillageBirth")}
+              />
+            </Field>
           )}
         </div>
       </Field>

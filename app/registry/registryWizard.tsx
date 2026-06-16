@@ -71,15 +71,21 @@ const REQUIRED_FIELDS: string[][] = [
   ],
   // Step 2: Address (permanent Region/District/Ward; current added when unlinked)
   ["permRegion", "permDistrict", "permWard"],
-  // Step 3: Parents (father + mother full names + gender; phone is optional)
+  // Step 3: Parents (father + mother full names + gender + DOB + nationality;
+  // phone is optional)
   [
     ...nameFields("father"),
     "fatherGender",
+    "fatherDob",
+    "fatherNatCountry",
     ...nameFields("mother"),
     "motherGender",
+    "motherDob",
+    "motherNatCountry",
   ],
-  // Step 4: Education & Employment (relaxed — school only if attended)
-  [],
+  // Step 4: Education & Employment — employment status is mandatory (the backend
+  // requires it); school is validated separately ("at least one if attended").
+  ["jobStatus"],
   // Step 5: Emergency Contacts (full name + gender required)
   [
     "ec1RelType",
@@ -91,16 +97,19 @@ const REQUIRED_FIELDS: string[][] = [
     "ec2Gender",
     "ec2Phone",
   ],
-  // Step 6: Family — at least two relatives (full name + gender required)
+  // Step 6: Family — at least two relatives (full name + gender + nationality;
+  // residence is enforced conditionally in missingFields)
   [
     "rel1RelType",
     ...nameFields("rel1"),
     "rel1Gender",
     "rel1Phone",
+    "rel1NatCountry",
     "rel2RelType",
     ...nameFields("rel2"),
     "rel2Gender",
     "rel2Phone",
+    "rel2NatCountry",
   ],
   // Step 7: Referees (print only — no required fields)
   [],
@@ -295,6 +304,50 @@ export default function RegistryWizard({
       }
     }
 
+    // Step 3: Parents' place of birth + residence are mandatory. Each is a
+    // cascade — Tanzania needs the Ward (+ Street for residence); abroad needs
+    // the country + the free-text city/village.
+    if (step === 3) {
+      for (const p of ["father", "mother"]) {
+        const pobTz = !data[`${p}PobCountry`] || data[`${p}PobCountry`] === "Tanzania";
+        required = pobTz
+          ? [...required, `${p}PobWard`]
+          : [...required, `${p}PobCountry`, `${p}Village`];
+
+        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        required = resTz
+          ? [...required, `${p}ResWard`, `${p}ResStreet`]
+          : [...required, `${p}ResCountry`, `${p}ResCity`];
+      }
+    }
+
+    // Step 5: Emergency contacts' place of birth + residence are mandatory
+    // (same cascade rules as the parents in Step 3).
+    if (step === 5) {
+      for (const p of ["ec1", "ec2"]) {
+        const pobTz = !data[`${p}PobCountry`] || data[`${p}PobCountry`] === "Tanzania";
+        required = pobTz
+          ? [...required, `${p}PobWard`]
+          : [...required, `${p}PobCountry`, `${p}Village`];
+
+        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        required = resTz
+          ? [...required, `${p}ResWard`, `${p}ResStreet`]
+          : [...required, `${p}ResCountry`, `${p}ResCity`];
+      }
+    }
+
+    // Step 6: Relatives' residence is mandatory — Tanzania needs Ward + Street,
+    // abroad needs Country + City (the two mandatory relatives, rel1/rel2).
+    if (step === 6) {
+      for (const p of ["rel1", "rel2"]) {
+        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        required = resTz
+          ? [...required, `${p}ResWard`, `${p}ResStreet`]
+          : [...required, `${p}ResCountry`, `${p}ResCity`];
+      }
+    }
+
     // Step 4 (education) is validated separately — see the custom "at least one
     // school" check below — so no static required fields here.
 
@@ -426,13 +479,24 @@ export default function RegistryWizard({
         setFormError(t("registry.spouseRequired"));
         return;
       }
-      // Every started spouse needs a full name + gender (middle name and gender
-      // are mandatory across all stages).
+      // Every started spouse needs a full name + gender + nationality + a
+      // residence (Ward/Street in Tanzania, Country/City abroad) — the same
+      // mandatory fields the backend enforces on relatives.
       for (let i = 1; i <= spouseCount; i++) {
-        if (!filled(`sp${i}First`)) continue;
-        const missingSpouse = [`sp${i}First`, `sp${i}Middle`, `sp${i}Last`, `sp${i}Gender`].filter(
-          (n) => !filled(n),
-        );
+        const p = `sp${i}`;
+        if (!filled(`${p}First`)) continue;
+        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        const residence = resTz
+          ? [`${p}ResWard`, `${p}ResStreet`]
+          : [`${p}ResCountry`, `${p}ResCity`];
+        const missingSpouse = [
+          `${p}First`,
+          `${p}Middle`,
+          `${p}Last`,
+          `${p}Gender`,
+          `${p}NatCountry`,
+          ...residence,
+        ].filter((n) => !filled(n));
         if (missingSpouse.length > 0) {
           setErrors(missingSpouse);
           setFormError(t("registry.required"));
@@ -491,22 +555,14 @@ export default function RegistryWizard({
           // Referees — GET only, nothing to submit
           await submitStage7(sid);
         } else if (step === 8) {
-          // Stage 8 is gated on the passport photo. If it didn't upload at
-          // Stage 1 (e.g. a network failure), retry it here using the cached
-          // photo before submitting — the user's data stays intact.
+          // The passport photo is mandatory at Stage 1 (Personal Information),
+          // NOT here. We only best-effort retry the upload if it failed earlier
+          // (e.g. a network blip) — it must never block the Uploads stage.
           if (data.passportPhotoUploaded !== "true") {
             const photoData =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : "";
-            const uploaded =
-              photoData && sid ? await uploadPassportPhoto(sid, photoData) : false;
-            if (uploaded) {
+            if (photoData && sid && (await uploadPassportPhoto(sid, photoData))) {
               set("passportPhotoUploaded", "true");
-            } else {
-              setSubmitting(false);
-              setFormError(
-                photoData ? t("registry.photoUploadRetry") : t("registry.photoMissing"),
-              );
-              return;
             }
           }
           await (edit ? editStage8(sid, data) : submitStage8(sid, data));

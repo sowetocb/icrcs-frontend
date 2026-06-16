@@ -67,11 +67,17 @@ export default function StepAddress() {
               city instead (sent as the country code + city to /stage2/foreign). */}
           {permIsTz ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} />
-              <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
+              <Field label={t("fields.phHouseStreet")}>
+                <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} />
+              </Field>
+              <Field label={t("fields.phPostal")}>
+                <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
+              </Field>
             </div>
           ) : (
-            <TextInput name="permCity" placeholder={t("fields.phCity")} />
+            <Field label={t("fields.phCity")}>
+              <TextInput name="permCity" placeholder={t("fields.phCity")} />
+            </Field>
           )}
         </div>
       </Field>
@@ -92,11 +98,17 @@ export default function StepAddress() {
             <WardCascade prefix="cur" showStreet />
             {curIsTz ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} />
-                <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
+                <Field label={t("fields.phHouseStreet")}>
+                  <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} />
+                </Field>
+                <Field label={t("fields.phPostal")}>
+                  <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
+                </Field>
               </div>
             ) : (
-              <TextInput name="curCity" placeholder={t("fields.phCity")} />
+              <Field label={t("fields.phCity")}>
+                <TextInput name="curCity" placeholder={t("fields.phCity")} />
+              </Field>
             )}
           </div>
         </Field>

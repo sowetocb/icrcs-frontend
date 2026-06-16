@@ -73,7 +73,7 @@ function PersonFields({ prefix }: { prefix: string }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.nationality")} optional>
+        <Field label={t("fields.nationality")} required>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountry")} />
         </Field>
         <Field label={t("fields.docType")} optional>
@@ -91,15 +91,19 @@ function PersonFields({ prefix }: { prefix: string }) {
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
             {!pobIsTz && (
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+              <Field label={t("fields.phVillage")}>
+                <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+              </Field>
             )}
           </div>
         </Field>
-        <Field label={t("fields.residence")} optional>
+        <Field label={t("fields.residence")} required>
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Res`} showStreet />
             {!resIsTz && (
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCityOpt")} />
+              <Field label={t("fields.phCity")}>
+                <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
+              </Field>
             )}
           </div>
         </Field>

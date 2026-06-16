@@ -4,8 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
+import { useLookup } from "@/components/lookup/useLookup";
+import { getGenders, type LookupItem } from "@/lib/api/lookup";
 
 export type Gender = "" | "M" | "F" | "O";
+
+/** The genders lookup returns a name ("MALE"/"FEMALE") and sometimes a code.
+ * Normalise to the M/F/O code the profile + registration use everywhere. */
+function genderCode(item: LookupItem): Gender {
+  if (item.code) return item.code.toUpperCase() as Gender;
+  const n = item.name.trim().toUpperCase();
+  if (n.startsWith("M")) return "M";
+  if (n.startsWith("F")) return "F";
+  return "O";
+}
+
+// Static fallback when the lookup is unavailable (offline / auth-bypass).
+const FALLBACK_GENDERS: LookupItem[] = [
+  { id: 1, name: "MALE", code: "M" },
+  { id: 2, name: "FEMALE", code: "F" },
+];
 
 export type RegistrationDetails = {
   firstName: string;
@@ -79,6 +97,24 @@ export default function StepDetails({
   onNext: (data: RegistrationDetails) => void | Promise<void>;
 }) {
   const { t } = useI18n();
+
+  // Gender options come from the lookup API; fall back to the static list when
+  // it's unavailable. Normalise each to the M/F/O code used across the app, and
+  // localise the M/F labels (the lookup names are uppercase English enums).
+  const { options: genderItems } = useLookup(getGenders, []);
+  const genderOptions = (genderItems.length ? genderItems : FALLBACK_GENDERS).map(
+    (item) => {
+      const value = genderCode(item);
+      const label =
+        value === "M"
+          ? t("register.genderMale")
+          : value === "F"
+            ? t("register.genderFemale")
+            : item.name;
+      return { value, label };
+    },
+  );
+
   const [form, setForm] = useState<RegistrationDetails>(defaultValues);
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<
@@ -223,8 +259,11 @@ export default function StepDetails({
               <option value="" disabled>
                 {t("register.genderSelect")}
               </option>
-              <option value="M">{t("register.genderMale")}</option>
-              <option value="F">{t("register.genderFemale")}</option>
+              {genderOptions.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
             </select>
             {errors.gender && (
               <FieldError id="gender-error" message={t("register.required")} />

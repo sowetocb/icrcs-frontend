@@ -9,6 +9,8 @@ import { useI18n } from "../../i18n/localeProvider";
 import { clearPeople, loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
+import { getStage9Preview } from "@/lib/api/registration";
+import { previewToForm } from "@/lib/registry/previewToForm";
 import PrintableForm from "../printableForm";
 import { printRegistrationForm } from "../printRegistrationForm";
 
@@ -69,6 +71,8 @@ export default function PeopleList() {
   const [fetchError, setFetchError] = useState("");
   // The person whose form is rendered (hidden) for the next PDF download.
   const [printPerson, setPrintPerson] = useState<Person | null>(null);
+  // Subject id currently being prepared for download (fetching the preview).
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Read from localStorage after mount to avoid SSR/client hydration mismatch.
   useEffect(() => {
@@ -134,23 +138,36 @@ export default function PeopleList() {
     return "subjectId" in person;
   }
 
-  const handleDownloadRemote = (rp: RegisteredPerson) => {
-    const local = people.find((lp) => lp.applicationId === rp.subjectId);
-    if (local) {
-      setPrintPerson(local);
-    } else {
+  const handleDownloadRemote = async (rp: RegisteredPerson) => {
+    if (downloadingId) return;
+    setDownloadingId(rp.subjectId);
+    try {
+      const local = people.find((lp) => lp.applicationId === rp.subjectId);
+
+      // Base: the local draft if we have it, else a minimal name/email/phone
+      // fallback derived from the list row.
       const nameParts = rp.fullName.trim().split(/\s+/).filter(Boolean);
       const first = nameParts[0] || "";
       const last = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
       const middle = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
-      
-      const fallbackData: Record<string, string | boolean> = {
+      const baseData: Record<string, string | boolean> = local?.data ?? {
         applicantFirst: first,
         applicantMiddle: middle,
         applicantLast: last,
         email: rp.email,
         phone: rp.phoneNumber,
       };
+
+      // Fetch all stages from the server-compiled preview and merge over the
+      // base so the PDF reflects everything the user filled. Falls back to the
+      // base data if the preview is unavailable.
+      let data = baseData;
+      try {
+        const preview = await getStage9Preview(rp.subjectId);
+        if (preview) data = { ...baseData, ...(await previewToForm(preview)) };
+      } catch {
+        // preview unavailable — print the base data
+      }
 
       const date = new Date(rp.createdAt);
       const formattedDate = Number.isNaN(date.getTime())
@@ -159,12 +176,14 @@ export default function PeopleList() {
 
       setPrintPerson({
         applicationId: rp.subjectId,
-        submittedDate: formattedDate,
+        submittedDate: local?.submittedDate ?? formattedDate,
         name: rp.fullName,
-        isCreator: false,
+        isCreator: local?.isCreator ?? false,
         status: "submitted",
-        data: fallbackData,
+        data,
       });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -301,10 +320,13 @@ export default function PeopleList() {
                               <button
                                 type="button"
                                 onClick={() => handleDownloadRemote(p)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
+                                disabled={downloadingId === p.subjectId}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <DownloadIcon />
-                                {t("people.download")}
+                                {downloadingId === p.subjectId
+                                  ? t("people.preparing")
+                                  : t("people.download")}
                               </button>
                             </div>
                           </>

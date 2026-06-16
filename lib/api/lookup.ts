@@ -234,13 +234,23 @@ const MOCK_CITIZENSHIP_TYPES: LookupItem[] = [
   { id: 4, name: "Decent" },
 ];
 
-/** GET /lookup/genders → { genderName, id } */
+/** Map a gender name ("MALE"/"FEMALE") to the M/F/O code the backend expects
+ * everywhere. The lookup itself doesn't return a code, so we derive it. */
+function genderCodeFromName(name: string): string {
+  const n = name.trim().toUpperCase();
+  if (n.startsWith("M")) return "M";
+  if (n.startsWith("F")) return "F";
+  return "O";
+}
+
+/** GET /lookup/genders → { genderName, id }. We attach a `code` (M/F/O) so the
+ * option `value` submitted to the backend is the code, not the lookup id. */
 export function getGenders(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_GENDERS);
-  return getList("/lookup/genders", (o) => ({
-    id: num(o.id),
-    name: str(o.genderName),
-  })).catch(() => MOCK_GENDERS);
+  return getList("/lookup/genders", (o) => {
+    const name = str(o.genderName);
+    return { id: num(o.id), name, code: genderCodeFromName(name) };
+  }).catch(() => MOCK_GENDERS);
 }
 
 /** GET /lookup/marital-statuses → { statusName, id } */
