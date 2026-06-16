@@ -6,7 +6,7 @@ import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 
-const OTP_TTL = 300; // 5:00
+const OTP_TTL = 600; // 10:00
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);

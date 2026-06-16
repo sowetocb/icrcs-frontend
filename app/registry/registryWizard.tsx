@@ -88,16 +88,18 @@ const REQUIRED_FIELDS: string[][] = [
   // Step 4: Education & Employment — employment status is mandatory (the backend
   // requires it); school is validated separately ("at least one if attended").
   ["jobStatus"],
-  // Step 5: Emergency Contacts (full name + gender required)
+  // Step 5: Emergency Contacts (full name + gender + nationality required)
   [
     "ec1RelType",
     ...nameFields("ec1"),
     "ec1Gender",
     "ec1Phone",
+    "ec1NatCountry",
     "ec2RelType",
     ...nameFields("ec2"),
     "ec2Gender",
     "ec2Phone",
+    "ec2NatCountry",
   ],
   // Step 6: Family — at least two relatives (full name + gender + nationality;
   // residence is enforced conditionally in missingFields)
@@ -521,6 +523,9 @@ export default function RegistryWizard({
     let appId = applicationId;
     const updatedStages = new Set(submittedStages);
     const edit = submittedStages.has(step);
+    // Holds the form data merged with the server-compiled preview (fetched after
+    // Stage 8) so Stage 9 (Preview & Declaration) reflects the backend record.
+    let mergedData: Record<string, string | boolean> | null = null;
 
     // Submit stage to backend
     if (step >= 1 && step <= 8) {
@@ -568,6 +573,18 @@ export default function RegistryWizard({
             }
           }
           await (edit ? editStage8(sid, data) : submitStage8(sid, data));
+          // Pull the server-compiled preview so Stage 9 (Preview & Declaration)
+          // shows everything the backend stored across all stages. Non-fatal —
+          // a failure just falls back to the locally-entered data.
+          try {
+            const preview = await getStage9Preview(sid);
+            if (preview) {
+              mergedData = { ...data, ...(await previewToForm(preview)) };
+              setData(mergedData);
+            }
+          } catch {
+            // ignore — Stage 9 uses the locally-entered data
+          }
         }
       } catch (err) {
         setSubmitting(false);
@@ -608,7 +625,7 @@ export default function RegistryWizard({
       applicationId: appId || undefined,
       subjectId: sid || undefined,
       submittedStages: [...updatedStages],
-      data,
+      data: mergedData ?? data,
     });
     setStep(next);
   }

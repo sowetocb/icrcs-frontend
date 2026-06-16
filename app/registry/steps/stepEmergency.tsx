@@ -81,7 +81,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.nationality")} optional>
+        <Field label={t("fields.nationality")} required>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountry")} />
         </Field>
         <Field label={t("fields.docType")} optional>
