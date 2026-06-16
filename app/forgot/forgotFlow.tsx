@@ -7,6 +7,10 @@ import { useI18n } from "../i18n/localeProvider";
 import { forgotPassword, verifyResetOtp, resetPassword } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 
+// The reset OTP is valid for 10 minutes, so resend is only offered after that
+// (mirrors the create-profile OTP).
+const OTP_RESEND_COOLDOWN = 600; // 10:00
+
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
 const labelClass = "block text-sm font-medium text-navy-700";
@@ -94,7 +98,7 @@ export default function ForgotFlow() {
       const res = await forgotPassword(identifier.trim());
       setProfileId(res.profileId);
       setResent(false);
-      setResendIn(30);
+      setResendIn(OTP_RESEND_COOLDOWN);
       setStep(2);
     } catch (err) {
       setError(getErrorMessage(err, t("forgot.error")));
@@ -112,7 +116,7 @@ export default function ForgotFlow() {
       const res = await forgotPassword(identifier.trim());
       setProfileId(res.profileId);
       setResent(true);
-      setResendIn(30);
+      setResendIn(OTP_RESEND_COOLDOWN);
     } catch (err) {
       setError(getErrorMessage(err, t("forgot.error")));
     } finally {

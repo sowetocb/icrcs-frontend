@@ -7,6 +7,8 @@ import {
   occupationTypeOptions,
   documentTypeOptions,
 } from "@/components/registry/blocks";
+import { useLookup } from "@/components/lookup/useLookup";
+import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
 
 type Data = Record<string, string | boolean>;
 type Tr = (en: string, sw: string) => string;
@@ -68,6 +70,28 @@ export default function PrintableForm({
   const gender = s("gender") ? (genderMap[s("gender")] ?? s("gender")) : "—";
   const applicantName = fullName("applicant");
 
+  // Translate id/enum-coded values to readable labels.
+  const { options: eduLevels } = useLookup(getEducationLevels, []);
+  const eduLevelName = (key: string) => {
+    const id = s(key);
+    if (!id) return "—";
+    return eduLevels.find((o) => String(o.id) === id)?.name ?? id;
+  };
+  const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
+  const maritalMap: Record<string, string> = {
+    SINGLE: tr("Single", "Hajaoa/Hajaolewa"),
+    MARRIED: tr("Married", "Ameoa/Ameolewa"),
+    DIVORCED: tr("Divorced", "Ametalikiana"),
+    WIDOWED: tr("Widowed", "Mjane/Mgane"),
+  };
+  const maritalStatus = (() => {
+    const v = s("marriage");
+    if (!v) return "—";
+    // v may be a lookup id ("1"), an enum ("SINGLE") or a legacy label.
+    const name = (maritalOptions.find((o) => String(o.id) === v)?.name ?? v).toUpperCase();
+    return maritalMap[name] ?? name.charAt(0) + name.slice(1).toLowerCase();
+  })();
+
   // Citizenship type
   const citizenshipType = optionLabel(CITIZENSHIP_TYPE_ID_OPTIONS, s("citizenshipTypeId"));
 
@@ -98,6 +122,7 @@ export default function PrintableForm({
   const isMarried = data.isMarried === true;
   const relativeCount = Math.max(2, Number(data.relativeCount) || 2);
   const spouseCount = Math.max(1, Number(data.spouseCount) || 1);
+  const childCount = Math.max(1, Number(data.childCount) || 1);
 
   return (
     <div id="printable-form">
@@ -153,7 +178,7 @@ export default function PrintableForm({
         <Row label={tr("Ward", "Kata")} value={val("pobWard")} />
         <Row label={tr("Village / Street", "Kijiji / Mtaa")} value={val("pobVillage")} />
         <Row label={tr("Birth Certificate No.", "Namba ya Cheti cha Kuzaliwa")} value={val("birthCertNo")} />
-        <Row label={tr("Marital Status", "Hali ya Ndoa")} value={val("marriage")} />
+        <Row label={tr("Marital Status", "Hali ya Ndoa")} value={maritalStatus} />
         <Row label={tr("Phone Number", "Namba ya Simu")} value={val("phone")} />
         <Row label={tr("Email Address", "Barua Pepe")} value={val("email")} />
 
@@ -216,7 +241,7 @@ export default function PrintableForm({
             .map((n) => (
               <div key={n}>
                 <SubTitle>{`${tr("School", "Shule")} ${n}`}</SubTitle>
-                <Row label={tr("Education Level", "Kiwango cha Elimu")} value={val(`edu${n}Level`)} />
+                <Row label={tr("Education Level", "Kiwango cha Elimu")} value={eduLevelName(`edu${n}Level`)} />
                 <Row label={tr("School / Institution", "Shule / Taasisi")} value={val(`edu${n}School`)} />
                 <Row label={tr("Completion Year", "Mwaka wa Kuhitimu")} value={val(`edu${n}Year`)} />
                 <Row label={tr("School District", "Wilaya ya Shule")} value={val(`edu${n}District`)} />
@@ -269,6 +294,21 @@ export default function PrintableForm({
               </div>
             ))}
 
+        {hasChildren &&
+          Array.from({ length: childCount }, (_, i) => i + 1)
+            .filter((n) => s(`ch${n}First`))
+            .map((n) => (
+              <div key={`ch${n}`}>
+                <SubTitle>{`${tr("Child", "Mtoto")} ${n}`}</SubTitle>
+                <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`ch${n}`)} />
+                <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`ch${n}Dob`)} />
+                <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`ch${n}Gender`)] ?? val(`ch${n}Gender`)} />
+                <Row label={tr("Phone", "Simu")} value={val(`ch${n}Phone`)} />
+                <Row label={tr("Nationality", "Utaifa")} value={val(`ch${n}NatCountry`)} />
+                <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`ch${n}OccType`)) || "—"} />
+              </div>
+            ))}
+
         <SubTitle>{tr("Relatives", "Ndugu")}</SubTitle>
         {Array.from({ length: relativeCount }, (_, i) => i + 1)
           .filter((n) => s(`rel${n}First`))
@@ -304,10 +344,10 @@ export default function PrintableForm({
 
       {/* ─── Section 9: Witness to the Applicant (print only, blank) ─── */}
       <Section title={tr("9. Witness to the Applicant:", "9. Shuhuda kwa Mwombaji:")}>
-        <Row label={tr("Full Name", "Jina Kamili")} value="" />
-        <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" />
-        <Row label={tr("Address", "Anwani")} value="" />
-        <Row label={tr("Phone Number", "Simu")} value="" />
+        <Row label={tr("Full Name", "Jina Kamili")} value="" keepEmpty />
+        <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" keepEmpty />
+        <Row label={tr("Address", "Anwani")} value="" keepEmpty />
+        <Row label={tr("Phone Number", "Simu")} value="" keepEmpty />
         <p className="declaration-note">
           {tr(
             "I witness that the information provided in this form is correct according to the applicant.",
@@ -379,7 +419,18 @@ function SubTitle({ children }: { children: React.ReactNode }) {
   return <p className="subtitle">{children}</p>;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  keepEmpty = false,
+}: {
+  label: string;
+  value: string;
+  /** Keep the (blank) row even when empty — for print-only fields filled in by
+   * hand (referees, witness). Data rows are omitted when empty. */
+  keepEmpty?: boolean;
+}) {
+  if (!keepEmpty && (!value || value === "—")) return null;
   return (
     <div className="row">
       <span className="row-label">{label}</span>
@@ -520,15 +571,15 @@ function SuretyBlock({ index, tr }: { index: number; tr: Tr }) {
   return (
     <>
       <SubTitle>{ordinal}</SubTitle>
-      <Row label={tr("Full Name", "Jina Kamili")} value="" />
-      <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" />
-      <Row label={tr("Address", "Anuani")} value="" />
-      <Row label={tr("Phone Number", "Namba ya Simu")} value="" />
-      <Row label={tr("Residence", "Anapoishi")} value="" />
-      <Row label={tr("Street", "Mtaa")} value="" />
-      <Row label={tr("House No.", "Nyumba Na.")} value="" />
-      <Row label={tr("Relationship", "Uhusiano")} value="" />
-      <Row label={tr("Signature", "Sahihi")} value="" />
+      <Row label={tr("Full Name", "Jina Kamili")} value="" keepEmpty />
+      <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" keepEmpty />
+      <Row label={tr("Address", "Anuani")} value="" keepEmpty />
+      <Row label={tr("Phone Number", "Namba ya Simu")} value="" keepEmpty />
+      <Row label={tr("Residence", "Anapoishi")} value="" keepEmpty />
+      <Row label={tr("Street", "Mtaa")} value="" keepEmpty />
+      <Row label={tr("House No.", "Nyumba Na.")} value="" keepEmpty />
+      <Row label={tr("Relationship", "Uhusiano")} value="" keepEmpty />
+      <Row label={tr("Signature", "Sahihi")} value="" keepEmpty />
     </>
   );
 }

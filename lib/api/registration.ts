@@ -604,9 +604,26 @@ async function buildStage6Payload(data: Data): Promise<Record<string, unknown>> 
     }
   }
 
+  // Children — only when "I have children" is ticked. Same person shape as
+  // spouses (the UI reuses the spouse block).
+  const hasChildren = data.hasChildren === true;
+  const children: unknown[] = [];
+  if (hasChildren) {
+    const childCount = Math.max(1, Number(str(data, "childCount")) || 1);
+    for (let i = 1; i <= childCount; i++) {
+      const p = `ch${i}`;
+      if (!str(data, `${p}First`)) continue;
+      children.push({
+        childSubjectId: null,
+        occupationTypeId: intOrNull(data, `${p}OccType`),
+        person: await buildPersonPayload(data, p),
+      });
+    }
+  }
+
   return {
-    hasChildren: data.hasChildren === true,
-    children: [] as unknown[],
+    hasChildren,
+    children,
     isMarried,
     spouses,
     relatives,
@@ -624,6 +641,12 @@ function stage6Suffix(data: Data): string {
     const spCount = Math.max(1, Number(str(data, "spouseCount")) || 1);
     for (let i = 1; i <= spCount; i++) {
       if (str(data, `sp${i}First`)) prefixes.push(`sp${i}`);
+    }
+  }
+  if (data.hasChildren === true) {
+    const chCount = Math.max(1, Number(str(data, "childCount")) || 1);
+    for (let i = 1; i <= chCount; i++) {
+      if (str(data, `ch${i}First`)) prefixes.push(`ch${i}`);
     }
   }
   return peopleSuffix(data, prefixes);

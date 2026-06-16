@@ -509,6 +509,41 @@ export default function RegistryWizard({
       }
     }
 
+    // Stage 6: if "I have children" is ticked, every started child needs the
+    // same complete record as a spouse (full name + gender + nationality +
+    // residence), and at least one child must be filled.
+    if (step === 6 && data.hasChildren === true) {
+      const childCount = Math.max(1, Number(data.childCount) || 1);
+      const filled = (n: string) =>
+        typeof data[n] === "string" && (data[n] as string).trim() !== "";
+      if (!Array.from({ length: childCount }, (_, i) => i + 1).some((i) => filled(`ch${i}First`))) {
+        setErrors(["ch1First"]);
+        setFormError(t("registry.required"));
+        return;
+      }
+      for (let i = 1; i <= childCount; i++) {
+        const p = `ch${i}`;
+        if (!filled(`${p}First`)) continue;
+        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        const residence = resTz
+          ? [`${p}ResWard`, `${p}ResStreet`]
+          : [`${p}ResCountry`, `${p}ResCity`];
+        const missingChild = [
+          `${p}First`,
+          `${p}Middle`,
+          `${p}Last`,
+          `${p}Gender`,
+          `${p}NatCountry`,
+          ...residence,
+        ].filter((n) => !filled(n));
+        if (missingChild.length > 0) {
+          setErrors(missingChild);
+          setFormError(t("registry.required"));
+          return;
+        }
+      }
+    }
+
     // NOTE: Passport Size Photo upload validation is temporarily disabled —
     // Stage 8 can be passed without uploading any document.
     // if (step === 8 && data.passportPhotoUploaded !== "true") {

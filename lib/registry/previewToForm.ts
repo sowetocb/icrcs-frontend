@@ -140,5 +140,23 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
     });
   }
 
+  // ── Children ──────────────────────────────────────────────────────────────
+  // Same shape as spouses (a nested person), with a flat fallback.
+  const childrenList = arr(d.children);
+  if (childrenList.length > 0) {
+    out.hasChildren = true;
+    out.childCount = String(childrenList.length);
+    childrenList.forEach((c, i) => {
+      const person = obj(c.person).firstName != null ? obj(c.person) : c;
+      const prefix = `ch${i + 1}`;
+      out[`${prefix}First`] = str(person.firstName);
+      out[`${prefix}Middle`] = str(person.middleName);
+      out[`${prefix}Last`] = str(person.lastName);
+      if (person.gender != null) out[`${prefix}Gender`] = str(person.gender);
+      if (person.phoneNumber != null) out[`${prefix}Phone`] = str(person.phoneNumber);
+      if (person.nationalityCode != null) out[`${prefix}NatCountry`] = codeToName(str(person.nationalityCode));
+    });
+  }
+
   return out;
 }

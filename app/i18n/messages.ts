@@ -497,6 +497,7 @@ const en = {
     relativesNote: "Add close relatives.", // REVIEW
     relativeN: "Relative", // REVIEW
     spouseN: "Spouse", // REVIEW
+    childN: "Child {n}",
     spouseNote: "Add your spouse's details.", // REVIEW
     schoolN: "School", // REVIEW
     schoolNote: "Add each school attended.", // REVIEW
@@ -505,6 +506,7 @@ const en = {
     emergencyContact2: "Emergency Contact 2",
     addRelative: "Add Relative", // REVIEW
     addSpouse: "Add Spouse", // REVIEW
+    addChild: "Add Child",
     addSchool: "Add School", // REVIEW
     remove: "Remove", // REVIEW
     required: "Required", // REVIEW
@@ -1137,6 +1139,7 @@ const sw: typeof en = {
     relativesNote: "Ongeza ndugu wa karibu.", // REVIEW
     relativeN: "Ndugu", // REVIEW
     spouseN: "Mwenzi", // REVIEW
+    childN: "Mtoto {n}",
     spouseNote: "Ongeza taarifa za mwenzi wako.", // REVIEW
     schoolN: "Shule", // REVIEW
     schoolNote: "Ongeza kila shule uliyosoma.", // REVIEW
@@ -1145,6 +1148,7 @@ const sw: typeof en = {
     emergencyContact2: "Mtu wa Pili wa Dharura",
     addRelative: "Ongeza Ndugu", // REVIEW
     addSpouse: "Ongeza Mwenzi", // REVIEW
+    addChild: "Ongeza Mtoto",
     addSchool: "Ongeza Shule", // REVIEW
     remove: "Ondoa", // REVIEW
     required: "Inahitajika", // REVIEW

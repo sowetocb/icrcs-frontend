@@ -20,6 +20,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 
 const MIN_RELATIVES = 2;
 const MIN_SPOUSES = 1;
+const MIN_CHILDREN = 1;
 
 // Shared person field suffixes — used to clear a removed block.
 const PERSON_SUFFIXES = [
@@ -31,6 +32,8 @@ const PERSON_SUFFIXES = [
 ];
 const RELATIVE_SUFFIXES = ["RelType", "OccType", ...PERSON_SUFFIXES];
 const SPOUSE_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
+// Children use the same inputs as spouses.
+const CHILD_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
 
 /** The common person inputs shared by relatives and spouses. */
 function PersonFields({ prefix }: { prefix: string }) {
@@ -164,6 +167,16 @@ export default function StepFamily() {
   const isMarried = data.isMarried === true;
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
+  const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
+
+  function addChild() {
+    set("childCount", String(childCount + 1));
+  }
+  function removeLastChild() {
+    if (childCount <= MIN_CHILDREN) return;
+    for (const suffix of CHILD_SUFFIXES) set(`ch${childCount}${suffix}`, "");
+    set("childCount", String(childCount - 1));
+  }
 
   function addRelative() {
     set("relativeCount", String(relativeCount + 1));
@@ -197,9 +210,33 @@ export default function StepFamily() {
           <span className="text-sm font-medium text-ink">{t("fields.haveChildren")}</span>
         </label>
         {hasChildren && (
-          <p className="text-sm text-muted px-1">
-            {t("fields.childrenNote")}
-          </p>
+          <div className="space-y-5">
+            <p className="text-sm text-muted">{t("fields.childrenNote")}</p>
+
+            {Array.from({ length: childCount }, (_, i) => i + 1).map((n) => (
+              <PersonBlock
+                key={n}
+                prefix={`ch${n}`}
+                label={t("fields.childN").replace("{n}", String(n))}
+                withRelationship={false}
+                onRemove={
+                  n === childCount && childCount > MIN_CHILDREN ? removeLastChild : undefined
+                }
+              />
+            ))}
+
+            <button
+              type="button"
+              onClick={addChild}
+              className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              {t("fields.addChild")}
+            </button>
+          </div>
         )}
       </div>
 

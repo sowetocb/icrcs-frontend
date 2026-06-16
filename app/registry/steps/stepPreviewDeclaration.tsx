@@ -13,6 +13,8 @@ import {
   occupationTypeOptions,
   documentTypeOptions,
 } from "@/components/registry/blocks";
+import { useLookup } from "@/components/lookup/useLookup";
+import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
 
 /** Look up a label from a { value, label } options array. */
 function optionLabel(
@@ -66,10 +68,12 @@ function PreviewSection({
 }
 
 function PreviewRow({ label, value }: { label: string; value: string }) {
+  // Empty fields are omitted from the preview entirely.
+  if (!value || !value.trim()) return null;
   return (
     <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4">
       <dt className="text-xs font-medium text-muted">{label}</dt>
-      <dd className="text-sm text-ink">{value || "—"}</dd>
+      <dd className="text-sm text-ink">{value}</dd>
     </div>
   );
 }
@@ -94,6 +98,24 @@ export default function StepPreviewDeclaration() {
   };
   const genderLabel = (v: string) =>
     v === "M" ? t("opt.male") : v === "F" ? t("opt.female") : v === "O" ? t("opt.other") : v;
+
+  // Translate id/enum-coded values (fetched by id) to readable labels.
+  const { options: eduLevels } = useLookup(getEducationLevels, []);
+  const eduLevelName = (id: string) =>
+    id ? (eduLevels.find((o) => String(o.id) === id)?.name ?? id) : "";
+  const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
+  const MARITAL_LABELS: Record<string, string> = {
+    SINGLE: t("opt.single"),
+    MARRIED: t("opt.married"),
+    DIVORCED: t("opt.divorced"),
+    WIDOWED: t("opt.widowed"),
+  };
+  const maritalLabel = (v: string) => {
+    if (!v) return "";
+    // v may be a lookup id ("1"), an enum ("SINGLE") or a legacy label ("Single").
+    const name = (maritalOptions.find((o) => String(o.id) === v)?.name ?? v).toUpperCase();
+    return MARITAL_LABELS[name] ?? name.charAt(0) + name.slice(1).toLowerCase();
+  };
   const fullName = (prefix: string) =>
     [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)].filter(Boolean).join(" ");
   const address = (prefix: string) =>
@@ -135,6 +157,7 @@ export default function StepPreviewDeclaration() {
   const isMarried = data.isMarried === true;
   const relativeCount = Math.max(2, Number(data.relativeCount) || 2);
   const spouseCount = Math.max(1, Number(data.spouseCount) || 1);
+  const childCount = Math.max(1, Number(data.childCount) || 1);
 
   // Fetch the server-compiled summary so the applicant reviews exactly what the
   // backend has stored, and any compilation error surfaces before submitting.
@@ -197,7 +220,7 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.ward")} value={s("pobWard")} />
         <PreviewRow label={t("preview.villageStreet")} value={s("pobVillage")} />
         <PreviewRow label={t("preview.birthCertNo")} value={s("birthCertNo")} />
-        <PreviewRow label={t("preview.maritalStatus")} value={s("marriage")} />
+        <PreviewRow label={t("preview.maritalStatus")} value={maritalLabel(s("marriage"))} />
         <PreviewRow label={t("preview.phone")} value={s("phone")} />
         <PreviewRow label={t("preview.email")} value={s("email")} />
         {s("citizenshipTypeId") === "3" && (
@@ -277,7 +300,7 @@ export default function StepPreviewDeclaration() {
                 key={n}
                 label={t("fields.schoolN").replace("{n}", String(n))}
                 value={[
-                  s(`edu${n}Level`) ? `${t("preview.level")}: ${s(`edu${n}Level`)}` : "",
+                  s(`edu${n}Level`) ? `${t("preview.level")}: ${eduLevelName(s(`edu${n}Level`))}` : "",
                   s(`edu${n}School`),
                   s(`edu${n}Year`) ? `(${s(`edu${n}Year`)})` : "",
                   s(`edu${n}District`),
@@ -349,6 +372,21 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.phone")} value={s(`sp${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`sp${n}NatCountry`)} />
                 <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s(`sp${n}OccType`))} />
+              </div>
+            ))}
+
+        {hasChildren &&
+          Array.from({ length: childCount }, (_, i) => i + 1)
+            .filter((n) => s(`ch${n}First`))
+            .map((n) => (
+              <div key={`ch${n}`}>
+                <PreviewSubTitle>{t("fields.childN").replace("{n}", String(n))}</PreviewSubTitle>
+                <PreviewRow label={t("preview.fullName")} value={fullName(`ch${n}`)} />
+                <PreviewRow label={t("preview.dob")} value={s(`ch${n}Dob`)} />
+                <PreviewRow label={t("preview.gender")} value={genderLabel(s(`ch${n}Gender`))} />
+                <PreviewRow label={t("preview.phone")} value={s(`ch${n}Phone`)} />
+                <PreviewRow label={t("preview.nationality")} value={s(`ch${n}NatCountry`)} />
+                <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s(`ch${n}OccType`))} />
               </div>
             ))}
 
