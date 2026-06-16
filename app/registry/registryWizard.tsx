@@ -28,7 +28,9 @@ import {
   editStage6,
   editStage8,
   uploadPassportPhoto,
+  getStage9Preview,
 } from "@/lib/api/registration";
+import { previewToForm } from "@/lib/registry/previewToForm";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
 import StepPersonal from "./steps/stepPersonal";

@@ -59,25 +59,31 @@ export default function RegistryClient() {
           );
           if (remoteIncomplete) {
             setHasIncomplete(true);
-            // If there's no local draft, or the local draft doesn't match this incomplete registration,
-            // we write/sync it to local storage so the wizard can resume from it.
+            // The backend is the source of truth for progress. Reconcile the
+            // local draft with it so the wizard resumes at the right stage.
             const currentDraft = loadRegistrationFor(ownerId);
+            // Stages the backend has accepted, and the step to resume at.
+            const serverStep = remoteIncomplete.currentStage + 1;
+            const serverSubmitted = Array.from(
+              { length: remoteIncomplete.currentStage },
+              (_, i) => i + 1,
+            );
+
             if (!currentDraft || currentDraft.subjectId !== remoteIncomplete.subjectId) {
+              // No matching local draft — seed one from the backend record.
               const nameParts = remoteIncomplete.fullName.trim().split(/\s+/).filter(Boolean);
               const first = nameParts[0] || "";
               const last = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
               const middle = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
 
               saveRegistration({
-                step: remoteIncomplete.currentStage + 1,
+                step: serverStep,
+                maxStep: serverStep,
                 completed: false,
                 ownerId,
                 subjectId: remoteIncomplete.subjectId,
                 applicationId: remoteIncomplete.subjectId,
-                submittedStages: Array.from(
-                  { length: remoteIncomplete.currentStage },
-                  (_, i) => i + 1
-                ),
+                submittedStages: serverSubmitted,
                 data: {
                   applicantFirst: first,
                   applicantMiddle: middle,
@@ -86,6 +92,29 @@ export default function RegistryClient() {
                   phone: remoteIncomplete.phoneNumber,
                 },
               });
+            } else {
+              // Same registration: if the backend is ahead of the local draft
+              // (a stage was submitted from another device, or a local submit
+              // failed AFTER the server accepted it), advance the local draft so
+              // the user resumes at the next unfilled stage instead of
+              // re-submitting a completed one. Keep the locally-entered data.
+              const mergedSubmitted = Array.from(
+                new Set([...(currentDraft.submittedStages ?? []), ...serverSubmitted]),
+              ).sort((a, b) => a - b);
+              const step = Math.max(currentDraft.step ?? 1, serverStep);
+              const advanced =
+                step !== currentDraft.step ||
+                mergedSubmitted.length !== (currentDraft.submittedStages?.length ?? 0);
+              if (advanced) {
+                saveRegistration({
+                  ...currentDraft,
+                  completed: false,
+                  ownerId,
+                  step,
+                  maxStep: Math.max(currentDraft.maxStep ?? 1, step),
+                  submittedStages: mergedSubmitted,
+                });
+              }
             }
           }
         }
