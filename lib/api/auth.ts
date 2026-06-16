@@ -77,6 +77,22 @@ export async function register(
   return { preAuthToken: String(data.preAuthToken ?? "") };
 }
 
+/** POST /v1/auth/resend-otp — re-sends the email OTP for a pending registration.
+ * Returns a (possibly rotated) pre-auth token to use for the next verify; falls
+ * back to the caller's existing token when the backend doesn't return one. */
+export async function resendOtp(
+  email: string,
+  currentPreAuthToken = "",
+): Promise<{ preAuthToken: string }> {
+  if (BYPASS) {
+    await delay(400);
+    return { preAuthToken: currentPreAuthToken || "mock-pre-auth-token" };
+  }
+  const raw = (await apiPost("/v1/auth/resend-otp", { email })) as Record<string, unknown>;
+  const data = (raw?.data ?? raw ?? {}) as Record<string, unknown>;
+  return { preAuthToken: String(data.preAuthToken ?? "") || currentPreAuthToken };
+}
+
 /** POST /v1/auth/verify-otp — confirms the code (sent as a string), authorised by
  * the register pre-auth token. Returns session tokens. */
 export async function verifyOtp(

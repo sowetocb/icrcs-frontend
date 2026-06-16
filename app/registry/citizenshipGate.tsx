@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { WizardProvider, Field, Select, TextInput } from "@/components/registry/field";
 import CountrySelect from "@/components/registry/countrySelect";
-import { documentTypeOptions } from "@/components/registry/blocks";
+import { travelDocumentOptions } from "@/components/registry/blocks";
 import { useI18n } from "../i18n/localeProvider";
 import { fetchForeignerDetails } from "@/lib/api/registration";
 
@@ -119,7 +119,7 @@ export default function CitizenshipGate({
                     <CountrySelect name="gateNationality" placeholder={t("fields.phCountryNat")} />
                   </Field>
                   <Field label={t("gate.travelDocType")}>
-                    <Select name="gateDocType" placeholder={t("fields.phSelectType")} options={documentTypeOptions(t)} />
+                    <Select name="gateDocType" placeholder={t("fields.phSelectType")} options={travelDocumentOptions(t)} />
                   </Field>
                   <Field label={t("fields.docNumberReq")}>
                     <TextInput name="gateDocNumber" placeholder={t("fields.phDocNumber")} />

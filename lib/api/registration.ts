@@ -267,9 +267,10 @@ export async function submitStage1(
   // Stage 1 (raw JSON) is submitted first to create the registration and obtain
   // the subjectId. The passport photo is then uploaded against that subjectId —
   // the /files/upload endpoint requires subjectId, so it can't precede Stage 1.
-  // Applicants born outside Tanzania go through the dedicated /foreign endpoint.
+  // Stage 1 is split by place of birth: born in Tanzania → /domestic, born
+  // abroad → /foreign. There is no bare /stage1 endpoint.
   const path = isTanzania(str(data, "pobCountry"))
-    ? "/v1/registration/stage1"
+    ? "/v1/registration/stage1/domestic"
     : "/v1/registration/stage1/foreign";
   const response = extractStage1Response(
     await withFreshAuth((at) => apiPost(path, payload, at)),
@@ -299,7 +300,7 @@ export async function editStage1(
     await delay(300);
     return { mock: true };
   }
-  const suffix = isTanzania(str(data, "pobCountry")) ? "" : "/foreign";
+  const suffix = isTanzania(str(data, "pobCountry")) ? "/domestic" : "/foreign";
   const result = await withFreshAuth((at) =>
     apiPut(`/v1/registration/${subjectId}/stage1${suffix}`, payload, at),
   );
@@ -349,10 +350,10 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
   return payload;
 }
 
-/** Stage 2 routes to its `/foreign` variant when the permanent address is
- * outside Tanzania. */
+/** Stage 2 is split by the permanent address country: in Tanzania → /domestic,
+ * abroad → /foreign. There is no bare /stage2 endpoint. */
 const stage2Suffix = (data: Data) =>
-  isTanzania(str(data, "permCountry")) ? "" : "/foreign";
+  isTanzania(str(data, "permCountry")) ? "/domestic" : "/foreign";
 
 export async function submitStage2(subjectId: string, data: Data): Promise<unknown> {
   const payload = await buildStage2Payload(data);

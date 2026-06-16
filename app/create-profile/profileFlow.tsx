@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import StepDetails, { RegistrationDetails } from "./stepDetails";
 import StepOtp from "./stepOtp";
-import { register, verifyOtp } from "@/lib/api/auth";
+import { register, verifyOtp, resendOtp } from "@/lib/api/auth";
 import { saveProfile } from "@/lib/auth/profile";
 
 type Step = 1 | 2;
@@ -59,6 +59,13 @@ export default function CreateProfileFlow() {
     router.push("/login");
   }
 
+  // Re-send the email OTP for the pending registration; keep the (possibly
+  // rotated) pre-auth token so the next verify stays authorised.
+  async function handleResend() {
+    const { preAuthToken: token } = await resendOtp(details.email, preAuthToken);
+    if (token) setPreAuthToken(token);
+  }
+
   return (
     <div className="w-full">
       {/* Step progress */}
@@ -77,7 +84,13 @@ export default function CreateProfileFlow() {
         <StepDetails defaultValues={emptyDetails} onNext={handleRegister} />
       )}
 
-      {step === 2 && <StepOtp email={details.email} onNext={handleVerify} />}
+      {step === 2 && (
+        <StepOtp
+          email={details.email}
+          onNext={handleVerify}
+          onResend={handleResend}
+        />
+      )}
     </div>
   );
 }

@@ -155,9 +155,13 @@ export default function StepEducation() {
           <Field label={employmentRequired ? t("fields.employer") : t("fields.employerOpt")}>
             <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
           </Field>
-          <Field label={t("fields.nidaNumber")}>
-            <TextInput name="nidaNumber" placeholder="NIDA-12345678-90123" />
-          </Field>
+          {/* NIDA applies only to the adult account holder. Minors (always
+              registered as dependents) have no National ID, so it's hidden. */}
+          {isFirstPerson && (
+            <Field label={t("fields.nidaNumber")}>
+              <TextInput name="nidaNumber" placeholder="NIDA-12345678-90123" />
+            </Field>
+          )}
         </div>
       </div>
     </div>

@@ -77,6 +77,8 @@ const en = {
     expires: "Code Expires in",
     expired: "Verification code expired",
     resend: "Resend code",
+    resending: "Resending…",
+    resendFailed: "Couldn't resend the code. Please try again.",
     next: "Next",
     invalid: "Please enter the full 6-digit code",
     agree: "By creating an account, you agree to our",
@@ -571,6 +573,10 @@ const en = {
     docPassport: "Passport",
     docDriving: "Driving License",
     docVoter: "Voter ID",
+    docPermit: "Permit",
+    docVisa: "Visa",
+    docPass: "Pass",
+    docOther: "Any other",
   },
   gate: {
     title: "Citizenship Check", // REVIEW
@@ -707,6 +713,8 @@ const sw: typeof en = {
     expires: "Msimbo utaisha baada ya",
     expired: "Msimbo wa uthibitisho umeisha muda",
     resend: "Tuma msimbo tena",
+    resending: "Inatuma tena…",
+    resendFailed: "Imeshindikana kutuma msimbo tena. Tafadhali jaribu tena.",
     next: "Endelea",
     invalid: "Tafadhali weka msimbo kamili wa tarakimu 6",
     agree: "Kwa kufungua akaunti, unakubali",
@@ -1099,6 +1107,7 @@ const sw: typeof en = {
     citizenNo: "Hapana", // REVIEW
     nidaNumber: "Namba ya NIDA", // REVIEW
     birthCertNo: "Namba ya Cheti cha Kuzaliwa", // REVIEW
+    birthCertFile: "Cheti cha Kuzaliwa (pakia)",
     indexNo: "Namba ya Mtihani", // REVIEW
     docType: "Aina ya Hati", // REVIEW
     docNumber: "Namba ya Hati", // REVIEW
@@ -1198,6 +1207,10 @@ const sw: typeof en = {
     docPassport: "Pasipoti", // REVIEW
     docDriving: "Leseni ya Udereva", // REVIEW
     docVoter: "Kitambulisho cha Mpiga Kura", // REVIEW
+    docPermit: "Kibali", // REVIEW
+    docVisa: "Viza", // REVIEW
+    docPass: "Pasi", // REVIEW
+    docOther: "Nyingine yoyote", // REVIEW
   },
   gate: {
     title: "Uhakiki wa Uraia", // REVIEW

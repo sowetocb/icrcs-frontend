@@ -68,6 +68,18 @@ export const documentTypeOptions = (t: Translate): Opt[] => [
   { value: "4", label: t("opt.docVoter") },
 ];
 
+// Travel documents a non-citizen identifies themselves with at the citizenship
+// gate (distinct from the citizen ID documents above). NOTE: the values are the
+// backend travel-document type ids — align them with the immigration backend's
+// lookup once that endpoint is finalised.
+export const travelDocumentOptions = (t: Translate): Opt[] => [
+  { value: "1", label: t("opt.docPassport") },
+  { value: "2", label: t("opt.docPermit") },
+  { value: "3", label: t("opt.docVisa") },
+  { value: "4", label: t("opt.docPass") },
+  { value: "5", label: t("opt.docOther") },
+];
+
 /**
  * Lookup-driven option hooks: the available options and their stored values
  * come from the lookup API, while the visible label is taken from the local

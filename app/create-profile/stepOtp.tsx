@@ -6,7 +6,7 @@ import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 
-const OTP_TTL = 179; // 02:59
+const OTP_TTL = 300; // 5:00
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -17,9 +17,11 @@ function formatTime(seconds: number) {
 export default function StepOtp({
   email,
   onNext,
+  onResend,
 }: {
   email: string;
   onNext: (code: string) => void | Promise<void>;
+  onResend?: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
   const [code, setCode] = useState("");
@@ -28,6 +30,7 @@ export default function StepOtp({
   const [legal, setLegal] = useState<null | "terms" | "privacy">(null);
   const [submitting, setSubmitting] = useState(false);
   const [verifyError, setVerifyError] = useState("");
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -53,11 +56,21 @@ export default function StepOtp({
     }
   }
 
-  function resend() {
-    // TODO: POST /api/registration/otp/resend
-    setCode("");
-    setInvalid(false);
-    setSecondsLeft(OTP_TTL);
+  async function resend() {
+    if (resending) return;
+    setResending(true);
+    setVerifyError("");
+    try {
+      await onResend?.();
+      // Only reset the input + timer once the backend has re-issued the OTP.
+      setCode("");
+      setInvalid(false);
+      setSecondsLeft(OTP_TTL);
+    } catch (err) {
+      setVerifyError(getErrorMessage(err, t("otp.resendFailed")));
+    } finally {
+      setResending(false);
+    }
   }
 
   return (
@@ -92,9 +105,10 @@ export default function StepOtp({
               <button
                 type="button"
                 onClick={resend}
-                className="font-semibold text-gold-700 hover:text-gold"
+                disabled={resending}
+                className="font-semibold text-gold-700 hover:text-gold disabled:opacity-60"
               >
-                {t("otp.resend")}
+                {resending ? t("otp.resending") : t("otp.resend")}
               </button>
             </span>
           ) : (

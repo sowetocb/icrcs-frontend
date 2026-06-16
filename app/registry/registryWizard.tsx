@@ -401,7 +401,8 @@ export default function RegistryWizard({
       const dob = typeof data.dob === "string" ? data.dob : "";
       const adult = dob ? isAtLeast18(dob) : false;
       const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
-      if (adult && !nida) {
+      // NIDA is required only for the adult account holder — never for a minor.
+      if (isFirstPerson && adult && !nida) {
         setErrors(["nidaNumber"]);
         setFormError(t("registry.nidaRequired"));
         return;
