@@ -3,23 +3,30 @@
 import { useI18n } from "@/app/i18n/localeProvider";
 import {
   citizenshipTypeIdOptions,
-  relationshipTypeOptions,
-  occupationTypeOptions,
   documentTypeOptions,
+  useRelationshipTypeOptions,
+  useOccupationTypeOptions,
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
 
 type Data = Record<string, string | boolean>;
 type Tr = (en: string, sw: string) => string;
+type Opt = { value: string; label: string };
 
-/** Look up a label from a { value, label } options array. */
-function optionLabel(
-  options: { value: string; label: string }[],
-  value: string,
-): string {
+/** First letter of each word capitalised, the rest lower-cased — for the
+ * UPPERCASE lookup values the backend returns (regions, wards, …). */
+function titleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
+}
+
+/** Look up a label from a { value, label } options array, title-cased. */
+function optionLabel(options: Opt[], value: string): string {
   if (!value) return "";
-  return options.find((o) => o.value === value)?.label ?? value;
+  return titleCase(options.find((o) => o.value === value)?.label ?? value);
 }
 
 export default function PrintableForm({
@@ -37,8 +44,10 @@ export default function PrintableForm({
 
   // Locale-aware lookup option lists, built once per render.
   const CITIZENSHIP_TYPE_ID_OPTIONS = citizenshipTypeIdOptions(t);
-  const RELATIONSHIP_TYPE_OPTIONS = relationshipTypeOptions(t);
-  const OCCUPATION_TYPE_OPTIONS = occupationTypeOptions(t);
+  // Relationship/occupation come from the lookup (the backend ids don't match
+  // the static 1–8 lists).
+  const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
+  const OCCUPATION_TYPE_OPTIONS = useOccupationTypeOptions();
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
 
   const s = (key: string) => {
@@ -75,7 +84,7 @@ export default function PrintableForm({
   const eduLevelName = (key: string) => {
     const id = s(key);
     if (!id) return "—";
-    return eduLevels.find((o) => String(o.id) === id)?.name ?? id;
+    return titleCase(eduLevels.find((o) => String(o.id) === id)?.name ?? id);
   };
   const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
   const maritalMap: Record<string, string> = {
@@ -96,19 +105,6 @@ export default function PrintableForm({
   const citizenshipType = optionLabel(CITIZENSHIP_TYPE_ID_OPTIONS, s("citizenshipTypeId"));
 
   // Attachments
-  const attachmentNames = (() => {
-    const raw = s("attachments");
-    if (!raw) return "—";
-    try {
-      const parsed = JSON.parse(raw) as { name?: string }[];
-      const names = Array.isArray(parsed)
-        ? parsed.map((x) => x?.name).filter((n): n is string => !!n && n.trim() !== "")
-        : [];
-      return names.length > 0 ? names.join(", ") : "—";
-    } catch {
-      return "—";
-    }
-  })();
 
   // Education — multiple schools
   const neverAttendedSchool = data.neverAttendedSchool === true;
@@ -149,11 +145,11 @@ export default function PrintableForm({
           </div>
           <div className="header-right">
             <p className="form-code">Fomu TIF24</p>
-            {s("passportPhotoData") ? (
+            {(s("passportPhotoData") || s("stage1PhotoData")) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 className="applicant-photo"
-                src={s("passportPhotoData")}
+                src={s("passportPhotoData") || s("stage1PhotoData")}
                 alt="Applicant passport photo"
               />
             ) : null}
@@ -173,9 +169,10 @@ export default function PrintableForm({
         <Row label={tr("Citizenship Type", "Aina ya Uraia")} value={citizenshipType || "—"} />
         <Row label={tr("Nationality", "Utaifa")} value={val("nationalityCountry")} />
         <Row label={tr("Country of Birth", "Nchi ya Kuzaliwa")} value={val("pobCountry")} />
-        <Row label={tr("Region", "Mkoa")} value={val("pobRegion")} />
-        <Row label={tr("District", "Wilaya")} value={val("pobDistrict")} />
-        <Row label={tr("Ward", "Kata")} value={val("pobWard")} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s("pobRegion"))} />
+        <Row label={tr("District", "Wilaya")} value={titleCase(s("pobDistrict"))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s("pobWard"))} />
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s("pobStreet"))} />
         <Row label={tr("Village / Street", "Kijiji / Mtaa")} value={val("pobVillage")} />
         <Row label={tr("Birth Certificate No.", "Namba ya Cheti cha Kuzaliwa")} value={val("birthCertNo")} />
         <Row label={tr("Marital Status", "Hali ya Ndoa")} value={maritalStatus} />
@@ -196,11 +193,13 @@ export default function PrintableForm({
       {/* ─── Section 2: Residence / Address ─── */}
       <Section title={tr("2. Residence Information:", "2. Taarifa za Makazi:")}>
         <SubTitle>{tr("Current Address", "Anuani ya Sasa")}</SubTitle>
-        <Row label={tr("Country", "Nchi")} value={val("curCountry")} />
-        <Row label={tr("Region", "Mkoa")} value={val("curRegion")} />
-        <Row label={tr("District", "Wilaya")} value={val("curDistrict")} />
-        <Row label={tr("Ward", "Kata")} value={val("curWard")} />
-        <Row label={tr("House No. / Street", "Nyumba Na. / Mtaa")} value={val("curHouseNumber")} />
+        <Row label={tr("Country", "Nchi")} value={titleCase(s("curCountry"))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s("curRegion"))} />
+        <Row label={tr("District", "Wilaya")} value={titleCase(s("curDistrict"))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s("curWard"))} />
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s("curStreet"))} />
+        <Row label={tr("City", "Jiji")} value={titleCase(s("curCity"))} />
+        <Row label={tr("House No.", "Nyumba Na.")} value={val("curHouseNumber")} />
         <Row label={tr("Postal Code", "Msimbo wa Posta")} value={val("curPostalCode")} />
 
         <SubTitle>{tr("Permanent Address", "Anuani ya Kudumu")}</SubTitle>
@@ -211,11 +210,13 @@ export default function PrintableForm({
           />
         ) : (
           <>
-            <Row label={tr("Country", "Nchi")} value={val("permCountry")} />
-            <Row label={tr("Region", "Mkoa")} value={val("permRegion")} />
-            <Row label={tr("District", "Wilaya")} value={val("permDistrict")} />
-            <Row label={tr("Ward", "Kata")} value={val("permWard")} />
-            <Row label={tr("House No. / Street", "Nyumba Na. / Mtaa")} value={val("permHouseNumber")} />
+            <Row label={tr("Country", "Nchi")} value={titleCase(s("permCountry"))} />
+            <Row label={tr("Region", "Mkoa")} value={titleCase(s("permRegion"))} />
+            <Row label={tr("District", "Wilaya")} value={titleCase(s("permDistrict"))} />
+            <Row label={tr("Ward", "Kata")} value={titleCase(s("permWard"))} />
+            <Row label={tr("Street", "Mtaa")} value={titleCase(s("permStreet"))} />
+            <Row label={tr("City", "Jiji")} value={titleCase(s("permCity"))} />
+            <Row label={tr("House No.", "Nyumba Na.")} value={val("permHouseNumber")} />
             <Row label={tr("Postal Code", "Msimbo wa Posta")} value={val("permPostalCode")} />
           </>
         )}
@@ -331,19 +332,14 @@ export default function PrintableForm({
           ))}
       </Section>
 
-      {/* ─── Section 7: Attachments ─── */}
-      <Section title={tr("7. Attachments:", "7. Viambatisho:")}>
-        <Row label={tr("Uploaded Documents", "Nyaraka Zilizopakiwa")} value={attachmentNames} />
-      </Section>
-
-      {/* ─── Section 8: Referees (print only, blank for manual completion) ─── */}
-      <Section title={tr("8. Referees:", "8. Wadhamini wa Mwombaji:")}>
+      {/* ─── Section 7: Referees (print only, blank for manual completion) ─── */}
+      <Section title={tr("7. Referees:", "7. Wadhamini wa Mwombaji:")}>
         <SuretyBlock index={1} tr={tr} />
         <SuretyBlock index={2} tr={tr} />
       </Section>
 
       {/* ─── Section 9: Witness to the Applicant (print only, blank) ─── */}
-      <Section title={tr("9. Witness to the Applicant:", "9. Shuhuda kwa Mwombaji:")}>
+      <Section title={tr("8. Witness to the Applicant:", "8. Shuhuda kwa Mwombaji:")}>
         <Row label={tr("Full Name", "Jina Kamili")} value="" keepEmpty />
         <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" keepEmpty />
         <Row label={tr("Address", "Anwani")} value="" keepEmpty />
@@ -361,7 +357,7 @@ export default function PrintableForm({
       </Section>
 
       {/* ─── Section 10: Applicant Declaration ─── */}
-      <Section title={tr("10. Applicant Declaration:", "10. Tamko la Mwombaji:")}>
+      <Section title={tr("9. Applicant Declaration:", "9. Tamko la Mwombaji:")}>
         <div className="declaration">
           <p>
             {locale === "sw" ? (
@@ -463,21 +459,6 @@ function ParentPrintBlock({
     M: tr("Male", "Mwanaume"),
     F: tr("Female", "Mwanamke"),
   };
-  const pobParts = [
-    s(`${prefix}PobWard`),
-    s(`${prefix}PobDistrict`),
-    s(`${prefix}PobRegion`),
-    s(`${prefix}PobCountry`),
-  ].filter(Boolean).join(", ");
-  const resParts = [
-    s(`${prefix}ResStreet`),
-    s(`${prefix}ResCity`),
-    s(`${prefix}ResWard`),
-    s(`${prefix}ResDistrict`),
-    s(`${prefix}ResRegion`),
-    s(`${prefix}ResCountry`),
-  ].filter(Boolean).join(", ");
-
   return (
     <>
       <SubTitle>{label}</SubTitle>
@@ -486,9 +467,20 @@ function ParentPrintBlock({
       <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
       <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
       <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
-      <Row label={tr("Place of Birth", "Mahali pa Kuzaliwa")} value={pobParts || "—"} />
+      <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
+      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
+      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
+      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
+      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
+      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
       <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
-      <Row label={tr("Residence", "Makazi")} value={resParts || "—"} />
+      <SubTitle>{tr("Residence", "Makazi")}</SubTitle>
+      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
+      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
+      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
+      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
+      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
+      <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
       {s(`${prefix}DocType`) && (
         <Row
           label={tr("Document", "Hati")}
@@ -515,8 +507,8 @@ function EmergencyPrintBlock({
   s: (key: string) => string;
   val: (key: string) => string;
 }) {
-  const RELATIONSHIP_TYPE_OPTIONS = relationshipTypeOptions(t);
-  const OCCUPATION_TYPE_OPTIONS = occupationTypeOptions(t);
+  const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
+  const OCCUPATION_TYPE_OPTIONS = useOccupationTypeOptions();
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
   const name = [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)]
     .filter(Boolean)
@@ -525,21 +517,6 @@ function EmergencyPrintBlock({
     M: tr("Male", "Mwanaume"),
     F: tr("Female", "Mwanamke"),
   };
-  const pobParts = [
-    s(`${prefix}PobWard`),
-    s(`${prefix}PobDistrict`),
-    s(`${prefix}PobRegion`),
-    s(`${prefix}PobCountry`),
-  ].filter(Boolean).join(", ");
-  const resParts = [
-    s(`${prefix}ResStreet`),
-    s(`${prefix}ResCity`),
-    s(`${prefix}ResWard`),
-    s(`${prefix}ResDistrict`),
-    s(`${prefix}ResRegion`),
-    s(`${prefix}ResCountry`),
-  ].filter(Boolean).join(", ");
-
   return (
     <>
       <SubTitle>
@@ -552,9 +529,20 @@ function EmergencyPrintBlock({
       <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
       <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
       <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
-      <Row label={tr("Place of Birth", "Mahali pa Kuzaliwa")} value={pobParts || "—"} />
+      <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
+      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
+      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
+      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
+      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
+      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
       <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
-      <Row label={tr("Residence", "Makazi")} value={resParts || "—"} />
+      <SubTitle>{tr("Residence", "Makazi")}</SubTitle>
+      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
+      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
+      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
+      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
+      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
+      <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
       {s(`${prefix}DocType`) && (
         <Row
           label={tr("Document", "Hati")}

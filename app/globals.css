@@ -35,8 +35,8 @@
   --color-muted: #64748b;
 
   /* Typography */
-  --font-display: var(--font-montserrat), system-ui, sans-serif;
-  --font-sans: var(--font-montserrat), system-ui, sans-serif;
+  --font-display: var(--font-ubuntu-sans), system-ui, sans-serif;
+  --font-sans: var(--font-ubuntu-sans), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
 
   /* Auto-scrolling info cards (login / create-profile). Registered via @theme

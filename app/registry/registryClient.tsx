@@ -45,18 +45,34 @@ export default function RegistryClient() {
       try {
         const remoteList = await getRegisteredPeople();
         if (remoteList.length > 0) {
-          // If any registration is completed/submitted:
-          const hasRemoteCompleted = remoteList.some(
-            (p) => !(p.status === "PENDING" && p.currentStage < 9)
-          );
-          if (hasRemoteCompleted) {
+          // A registration is still "in progress" only while it's PENDING and
+          // hasn't completed all 9 forms. Anything else (submitted, approved,
+          // pending enrollment, etc.) is finished.
+          const isIncomplete = (p: (typeof remoteList)[number]) =>
+            p.status === "PENDING" && p.currentStage < 9;
+
+          if (remoteList.some((p) => !isIncomplete(p))) {
             setSelfDone(true);
           }
 
-          // If any registration is incomplete (status === "PENDING" && currentStage < 6):
-          const remoteIncomplete = remoteList.find(
-            (p) => p.status === "PENDING" && p.currentStage < 9
-          );
+          // Stale-draft cleanup: if the local draft points to a registration the
+          // backend already considers finished (e.g. completed in another
+          // browser), drop it so the user isn't prompted to resume a finished
+          // registration. A draft without a subjectId is a local-only, not-yet-
+          // submitted draft and is left alone.
+          const localDraft = loadRegistrationFor(ownerId);
+          if (localDraft && !localDraft.completed && localDraft.subjectId) {
+            const remoteMatch = remoteList.find(
+              (p) => p.subjectId === localDraft.subjectId,
+            );
+            if (remoteMatch && !isIncomplete(remoteMatch)) {
+              clearRegistration();
+              setHasIncomplete(false);
+            }
+          }
+
+          // If any registration is still genuinely incomplete on the backend:
+          const remoteIncomplete = remoteList.find(isIncomplete);
           if (remoteIncomplete) {
             setHasIncomplete(true);
             // The backend is the source of truth for progress. Reconcile the

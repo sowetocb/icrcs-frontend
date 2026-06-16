@@ -9,11 +9,11 @@ import IdleLogout from "@/components/auth/idleLogout";
 // Self-hosted (variable) fonts so the production build never reaches out to
 // Google Fonts at build time — the build container has no internet access.
 // The woff2 files live in app/fonts/ and cover the full weight axis.
-const montserrat = localFont({
-  src: "./fonts/Montserrat.woff2",
-  variable: "--font-montserrat",
+const ubuntuSans = localFont({
+  src: "./fonts/UbuntuSans.woff2",
+  variable: "--font-ubuntu-sans",
   display: "swap",
-  weight: "400 900",
+  weight: "400 800",
 });
 
 const jetbrains = localFont({
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${ubuntuSans.variable} ${jetbrains.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

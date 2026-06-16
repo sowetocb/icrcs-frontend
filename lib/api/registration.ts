@@ -1,7 +1,12 @@
-import { apiGet, apiPost, apiPut, apiUpload } from "./client";
+import { apiGet, apiPost, apiPut } from "./client";
 import { withFreshAuth } from "./auth";
 import { loadSession } from "@/lib/auth/session";
 import { getCountries } from "./lookup";
+import {
+  uploadAttachment,
+  PASSPORT_PHOTO_TYPE,
+  type UploadedAttachment,
+} from "./files";
 
 /** Decode a base64 data URL into a Blob (for multipart upload). */
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } | null {
@@ -110,36 +115,31 @@ type Stage1Response = {
   /** Whether the passport photo uploaded successfully. When false, the user can
    * retry the upload at Stage 8 (which the backend gates on the photo). */
   photoUploaded: boolean;
+  /** The uploaded photo's file metadata, so Stage 8 can include it in its
+   * attachments (the backend requires the passport photo there). */
+  photoAttachment?: UploadedAttachment;
 };
 
 /** Upload the passport-size photo against an existing registration. Decoupled
  * from Stage 1 so it can be retried (e.g. after a network failure) at Stage 8.
- * Returns false on any failure — the caller decides whether to block/retry. */
+ * Returns the uploaded file metadata (so Stage 8 can register the photo in its
+ * attachments — the backend requires it there), or null on any failure.
+ *
+ * Uses the shared `uploadAttachment` path (form fields, no query params) — the
+ * same endpoint that works for every other attachment. */
 export async function uploadPassportPhoto(
   subjectId: string,
   photoDataUrl: string,
-): Promise<boolean> {
-  if (BYPASS) {
-    await delay(300);
-    return true;
-  }
+): Promise<UploadedAttachment | null> {
   const photo = dataUrlToBlob(photoDataUrl);
-  if (!photo || !subjectId) return false;
-  const form = new FormData();
-  form.append("file", photo.blob, `photo.${photo.ext}`);
-  form.append("subjectId", subjectId);
-  form.append("attachmentTypeId", "5");
+  if (!photo || !subjectId) return null;
+  const file = new File([photo.blob], `photo.${photo.ext}`, {
+    type: photo.blob.type || "image/jpeg",
+  });
   try {
-    await withFreshAuth((at) =>
-      apiUpload(
-        `/v1/files/upload?subjectId=${encodeURIComponent(subjectId)}&attachmentTypeId=5`,
-        form,
-        at,
-      ),
-    );
-    return true;
+    return await uploadAttachment(subjectId, PASSPORT_PHOTO_TYPE, file);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -266,12 +266,15 @@ export async function submitStage1(
   if (response.subjectId) await submitNaturalization(response.subjectId, data);
 
   // Decoupled photo upload: a failure here is NON-FATAL — the registration is
-  // already created (re-submitting Stage 1 would duplicate it). The outcome is
-  // returned so the wizard can retry the upload at the Stage 8 gate.
-  response.photoUploaded =
+  // already created (re-submitting Stage 1 would duplicate it). The uploaded
+  // file metadata is returned so the wizard can carry it into the Stage 8
+  // attachments; on failure the wizard retries at the Stage 8 gate.
+  const photo =
     photoDataUrl && response.subjectId
       ? await uploadPassportPhoto(response.subjectId, photoDataUrl)
-      : false;
+      : null;
+  response.photoUploaded = !!photo;
+  response.photoAttachment = photo ?? undefined;
 
   return response;
 }

@@ -40,8 +40,9 @@ import StepEducation from "./steps/stepEducation";
 import StepEmergency from "./steps/stepEmergency";
 import StepFamily from "./steps/stepFamily";
 import StepReferees from "./steps/stepReferees";
-import StepAttachments from "./steps/stepAttachments";
+import StepAttachments, { parseAttachments } from "./steps/stepAttachments";
 import StepPreviewDeclaration from "./steps/stepPreviewDeclaration";
+import { PASSPORT_PHOTO_TYPE, type UploadedAttachment } from "@/lib/api/files";
 
 const TOTAL = 9;
 const STEP_COMPONENTS = [
@@ -241,6 +242,31 @@ export default function RegistryWizard({
     setErrors((e) => (e.includes(name) ? e.filter((n) => n !== name) : e));
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
   };
+
+  // Merge the passport photo (uploaded at Stage 1) into the attachments list so
+  // Stage 8 registers it with the backend — which requires the passport photo.
+  function mergePhotoAttachment(
+    d: Record<string, string | boolean>,
+    att: UploadedAttachment,
+  ): Record<string, string | boolean> {
+    const list = parseAttachments(d.attachments).filter(
+      (a) => a.typeId !== PASSPORT_PHOTO_TYPE,
+    );
+    list.push({
+      id: `att-${PASSPORT_PHOTO_TYPE}`,
+      typeId: PASSPORT_PHOTO_TYPE,
+      name: "Passport Size Photo",
+      fileId: att.fileId,
+      fileUrl: att.fileUrl,
+      mimeType: att.mimeType,
+      fileSizeBytes: att.fileSizeBytes,
+      fileHash: att.fileHash,
+    });
+    return { ...d, attachments: JSON.stringify(list), passportPhotoUploaded: "true" };
+  }
+  function recordPhotoAttachment(att: UploadedAttachment) {
+    setData((d) => mergePhotoAttachment(d, att));
+  }
 
   function validateDob(dob: string) {
     if (!dob) {
@@ -578,8 +604,13 @@ export default function RegistryWizard({
             appId = response.applicationId || response.subjectId;
             if (appId) setApplicationId(appId);
             // Track the decoupled photo upload; if it failed (e.g. network), the
-            // user retries at the Stage 8 gate without losing any data.
-            set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
+            // user retries at the Stage 8 gate without losing any data. On
+            // success, record it in the attachments so Stage 8 can register it.
+            if (response.photoAttachment) {
+              recordPhotoAttachment(response.photoAttachment);
+            } else {
+              set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
+            }
           }
         } else if (step === 2) {
           await (edit ? editStage2(sid, data) : submitStage2(sid, data));
@@ -600,14 +631,23 @@ export default function RegistryWizard({
           // The passport photo is mandatory at Stage 1 (Personal Information),
           // NOT here. We only best-effort retry the upload if it failed earlier
           // (e.g. a network blip) — it must never block the Uploads stage.
-          if (data.passportPhotoUploaded !== "true") {
+          // Ensure the passport photo is in the attachments the backend requires.
+          // If it isn't (Stage 1 upload failed), retry the upload now and merge
+          // it into the payload (local copy — setData is async).
+          let data8 = data;
+          const hasPhoto = parseAttachments(data.attachments).some(
+            (a) => a.typeId === PASSPORT_PHOTO_TYPE,
+          );
+          if (!hasPhoto) {
             const photoData =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : "";
-            if (photoData && sid && (await uploadPassportPhoto(sid, photoData))) {
-              set("passportPhotoUploaded", "true");
+            const att = photoData && sid ? await uploadPassportPhoto(sid, photoData) : null;
+            if (att) {
+              data8 = mergePhotoAttachment(data, att);
+              recordPhotoAttachment(att);
             }
           }
-          await (edit ? editStage8(sid, data) : submitStage8(sid, data));
+          await (edit ? editStage8(sid, data8) : submitStage8(sid, data8));
           // Pull the server-compiled preview so Stage 9 (Preview & Declaration)
           // shows everything the backend stored across all stages. Non-fatal —
           // a failure just falls back to the locally-entered data.

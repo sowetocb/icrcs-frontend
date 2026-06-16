@@ -617,9 +617,13 @@ const en = {
     residence: "Residence", // REVIEW
     currentAddress: "Current Address", // REVIEW
     permanentAddress: "Permanent Address", // REVIEW
+    country: "Country",
     region: "Region", // REVIEW
     district: "District", // REVIEW
     ward: "Ward", // REVIEW
+    street: "Street",
+    houseNumber: "House Number",
+    city: "City",
     village: "Village", // REVIEW
     villageStreet: "Village / Street", // REVIEW
     postalCode: "Postal Code", // REVIEW
@@ -1258,9 +1262,13 @@ const sw: typeof en = {
     residence: "Makazi", // REVIEW
     currentAddress: "Anuani ya Sasa", // REVIEW
     permanentAddress: "Anuani ya Kudumu", // REVIEW
+    country: "Nchi",
     region: "Mkoa", // REVIEW
     district: "Wilaya", // REVIEW
     ward: "Kata", // REVIEW
+    street: "Mtaa",
+    houseNumber: "Namba ya Nyumba",
+    city: "Jiji",
     village: "Kijiji", // REVIEW
     villageStreet: "Kijiji / Mtaa", // REVIEW
     postalCode: "Msimbo wa Posta", // REVIEW

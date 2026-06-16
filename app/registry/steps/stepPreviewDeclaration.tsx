@@ -3,18 +3,26 @@
 import { useEffect, useState } from "react";
 import { useWizard } from "@/components/registry/field";
 import { useI18n } from "@/app/i18n/localeProvider";
-import { parseAttachments, type Attachment } from "./stepAttachments";
 import { loadProfile } from "@/lib/auth/profile";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
 import { getStage9Preview } from "@/lib/api/registration";
 import { getErrorMessage } from "@/lib/api/client";
 import {
-  relationshipTypeOptions,
-  occupationTypeOptions,
   documentTypeOptions,
+  useRelationshipTypeOptions,
+  useOccupationTypeOptions,
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
+
+/** First letter of each word capitalised, the rest lower-cased. Used for the
+ * lookup-sourced values the backend returns in UPPERCASE (regions, wards, …). */
+function titleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
+}
 
 /** Look up a label from a { value, label } options array. */
 function optionLabel(
@@ -102,7 +110,7 @@ export default function StepPreviewDeclaration() {
   // Translate id/enum-coded values (fetched by id) to readable labels.
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const eduLevelName = (id: string) =>
-    id ? (eduLevels.find((o) => String(o.id) === id)?.name ?? id) : "";
+    id ? titleCase(eduLevels.find((o) => String(o.id) === id)?.name ?? id) : "";
   const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
   const MARITAL_LABELS: Record<string, string> = {
     SINGLE: t("opt.single"),
@@ -118,38 +126,32 @@ export default function StepPreviewDeclaration() {
   };
   const fullName = (prefix: string) =>
     [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)].filter(Boolean).join(" ");
-  const address = (prefix: string) =>
-    [
-      s(`${prefix}HouseNumber`),
-      s(`${prefix}Ward`),
-      s(`${prefix}District`),
-      s(`${prefix}Region`),
-      s(`${prefix}Country`),
-    ]
-      .filter(Boolean)
-      .join(", ");
-  const pobAddress = (prefix: string) =>
-    [
-      s(`${prefix}PobWard`),
-      s(`${prefix}PobDistrict`),
-      s(`${prefix}PobRegion`),
-      s(`${prefix}PobCountry`),
-    ].filter(Boolean).join(", ");
-  const resAddress = (prefix: string) =>
-    [
-      s(`${prefix}ResStreet`),
-      s(`${prefix}ResCity`),
-      s(`${prefix}ResWard`),
-      s(`${prefix}ResDistrict`),
-      s(`${prefix}ResRegion`),
-      s(`${prefix}ResCountry`),
-    ].filter(Boolean).join(", ");
+
+  // Lookup-driven relationship/occupation options (the backend ids don't match
+  // the static 1–8 lists, so resolve via the lookup), title-cased.
+  const relationshipOpts = useRelationshipTypeOptions();
+  const occupationOpts = useOccupationTypeOptions();
+  const optLabel = (opts: { value: string; label: string }[], v: string) =>
+    v ? titleCase(opts.find((o) => o.value === v)?.label ?? v) : "";
+
+  // Split a cascade (Country → Region → District → Ward → Street) into separate
+  // rows, each value title-cased. Empty rows are dropped by PreviewRow. `extras`
+  // are appended (village / city / house number / postal code).
+  const cascadeRows = (p: string, extras?: React.ReactNode) => (
+    <>
+      <PreviewRow label={t("preview.country")} value={titleCase(s(`${p}Country`))} />
+      <PreviewRow label={t("preview.region")} value={titleCase(s(`${p}Region`))} />
+      <PreviewRow label={t("preview.district")} value={titleCase(s(`${p}District`))} />
+      <PreviewRow label={t("preview.ward")} value={titleCase(s(`${p}Ward`))} />
+      <PreviewRow label={t("preview.street")} value={titleCase(s(`${p}Street`))} />
+      {extras}
+    </>
+  );
 
   const prof = typeof window !== "undefined" ? loadProfile() : null;
   const profileName = prof ? [prof.firstName, prof.middleName, prof.lastName].filter(Boolean).join(" ") : "";
   const applicantName = fullName("applicant") || profileName || "—";
   const gender = s("gender") ? genderLabel(s("gender")) : "—";
-  const attachments = parseAttachments(data.attachments);
   const agreed = data.agree === true;
 
   // Family data
@@ -208,16 +210,17 @@ export default function StepPreviewDeclaration() {
         title={t("registry.s1Title")}
         step={1}
         onEdit={edit}
-        photo={s("passportPhotoData") || undefined}
+        photo={s("passportPhotoData") || s("stage1PhotoData") || undefined}
       >
         <PreviewRow label={t("preview.fullName")} value={applicantName} />
         <PreviewRow label={t("preview.gender")} value={gender} />
         <PreviewRow label={t("preview.dob")} value={s("dob")} />
         <PreviewRow label={t("preview.nationality")} value={s("nationalityCountry")} />
         <PreviewRow label={t("preview.countryOfBirth")} value={s("pobCountry")} />
-        <PreviewRow label={t("preview.region")} value={s("pobRegion")} />
-        <PreviewRow label={t("preview.district")} value={s("pobDistrict")} />
-        <PreviewRow label={t("preview.ward")} value={s("pobWard")} />
+        <PreviewRow label={t("preview.region")} value={titleCase(s("pobRegion"))} />
+        <PreviewRow label={t("preview.district")} value={titleCase(s("pobDistrict"))} />
+        <PreviewRow label={t("preview.ward")} value={titleCase(s("pobWard"))} />
+        <PreviewRow label={t("preview.street")} value={titleCase(s("pobStreet"))} />
         <PreviewRow label={t("preview.villageStreet")} value={s("pobVillage")} />
         <PreviewRow label={t("preview.birthCertNo")} value={s("birthCertNo")} />
         <PreviewRow label={t("preview.maritalStatus")} value={maritalLabel(s("marriage"))} />
@@ -236,20 +239,30 @@ export default function StepPreviewDeclaration() {
       {/* ─── Step 2: Address ─── */}
       <PreviewSection title={t("registry.s2Title")} step={2} onEdit={edit}>
         <PreviewSubTitle>{t("preview.currentAddress")}</PreviewSubTitle>
-        <PreviewRow label={t("preview.currentAddress")} value={address("cur")} />
-        <PreviewRow label={t("preview.postalCode")} value={s("curPostalCode")} />
+        {cascadeRows(
+          "cur",
+          <>
+            <PreviewRow label={t("preview.city")} value={titleCase(s("curCity"))} />
+            <PreviewRow label={t("preview.houseNumber")} value={s("curHouseNumber")} />
+            <PreviewRow label={t("preview.postalCode")} value={s("curPostalCode")} />
+          </>,
+        )}
 
         <PreviewSubTitle>{t("preview.permanentAddress")}</PreviewSubTitle>
         {data.sameAsPerm === true ? (
           <PreviewRow
             label={t("preview.permanentAddress")}
-            value={`${address("cur")} (${t("registry.sameAsPerm")})`}
+            value={t("registry.sameAsPerm")}
           />
         ) : (
-          <>
-            <PreviewRow label={t("preview.permanentAddress")} value={address("perm")} />
-            <PreviewRow label={t("preview.postalCode")} value={s("permPostalCode")} />
-          </>
+          cascadeRows(
+            "perm",
+            <>
+              <PreviewRow label={t("preview.city")} value={titleCase(s("permCity"))} />
+              <PreviewRow label={t("preview.houseNumber")} value={s("permHouseNumber")} />
+              <PreviewRow label={t("preview.postalCode")} value={s("permPostalCode")} />
+            </>,
+          )
         )}
       </PreviewSection>
 
@@ -261,9 +274,10 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("fatherGender"))} />
         <PreviewRow label={t("preview.phone")} value={s("fatherPhone")} />
         <PreviewRow label={t("preview.nationality")} value={s("fatherNatCountry")} />
-        <PreviewRow label={t("preview.placeOfBirth")} value={pobAddress("father")} />
-        <PreviewRow label={t("preview.village")} value={s("fatherVillage")} />
-        <PreviewRow label={t("preview.residence")} value={resAddress("father")} />
+        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+        {cascadeRows("fatherPob", <PreviewRow label={t("preview.village")} value={s("fatherVillage")} />)}
+        <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+        {cascadeRows("fatherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("fatherResCity"))} />)}
         {s("fatherDocType") && (
           <PreviewRow
             label={t("preview.document")}
@@ -277,9 +291,10 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("motherGender"))} />
         <PreviewRow label={t("preview.phone")} value={s("motherPhone")} />
         <PreviewRow label={t("preview.nationality")} value={s("motherNatCountry")} />
-        <PreviewRow label={t("preview.placeOfBirth")} value={pobAddress("mother")} />
-        <PreviewRow label={t("preview.village")} value={s("motherVillage")} />
-        <PreviewRow label={t("preview.residence")} value={resAddress("mother")} />
+        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+        {cascadeRows("motherPob", <PreviewRow label={t("preview.village")} value={s("motherVillage")} />)}
+        <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+        {cascadeRows("motherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("motherResCity"))} />)}
         {s("motherDocType") && (
           <PreviewRow
             label={t("preview.document")}
@@ -313,7 +328,7 @@ export default function StepPreviewDeclaration() {
         )}
         <PreviewSubTitle>{t("preview.employment")}</PreviewSubTitle>
         <PreviewRow label={t("preview.employmentStatus")} value={s("jobStatus")} />
-        <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s("occupation"))} />
+        <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s("occupation"))} />
         <PreviewRow label={t("preview.employer")} value={s("employer")} />
         <PreviewRow label={t("preview.nida")} value={s("nidaNumber")} />
       </PreviewSection>
@@ -322,14 +337,16 @@ export default function StepPreviewDeclaration() {
       <PreviewSection title={t("registry.s5Title")} step={5} onEdit={edit}>
         <PreviewSubTitle>{t("fields.emergencyContactN").replace("{n}", "1")}</PreviewSubTitle>
         <PreviewRow label={t("preview.fullName")} value={fullName("ec1")} />
-        <PreviewRow label={t("preview.relationship")} value={optionLabel(relationshipTypeOptions(t), s("ec1RelType"))} />
-        <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s("ec1OccType"))} />
+        <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s("ec1RelType"))} />
+        <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s("ec1OccType"))} />
         <PreviewRow label={t("preview.dob")} value={s("ec1Dob")} />
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec1Gender"))} />
         <PreviewRow label={t("preview.phone")} value={s("ec1Phone")} />
         <PreviewRow label={t("preview.nationality")} value={s("ec1NatCountry")} />
-        <PreviewRow label={t("preview.placeOfBirth")} value={pobAddress("ec1")} />
-        <PreviewRow label={t("preview.residence")} value={resAddress("ec1")} />
+        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+        {cascadeRows("ec1Pob", <PreviewRow label={t("preview.village")} value={s("ec1Village")} />)}
+        <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+        {cascadeRows("ec1Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec1ResCity"))} />)}
         {s("ec1DocType") && (
           <PreviewRow
             label={t("preview.document")}
@@ -339,14 +356,16 @@ export default function StepPreviewDeclaration() {
 
         <PreviewSubTitle>{t("fields.emergencyContactN").replace("{n}", "2")}</PreviewSubTitle>
         <PreviewRow label={t("preview.fullName")} value={fullName("ec2")} />
-        <PreviewRow label={t("preview.relationship")} value={optionLabel(relationshipTypeOptions(t), s("ec2RelType"))} />
-        <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s("ec2OccType"))} />
+        <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s("ec2RelType"))} />
+        <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s("ec2OccType"))} />
         <PreviewRow label={t("preview.dob")} value={s("ec2Dob")} />
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec2Gender"))} />
         <PreviewRow label={t("preview.phone")} value={s("ec2Phone")} />
         <PreviewRow label={t("preview.nationality")} value={s("ec2NatCountry")} />
-        <PreviewRow label={t("preview.placeOfBirth")} value={pobAddress("ec2")} />
-        <PreviewRow label={t("preview.residence")} value={resAddress("ec2")} />
+        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+        {cascadeRows("ec2Pob", <PreviewRow label={t("preview.village")} value={s("ec2Village")} />)}
+        <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+        {cascadeRows("ec2Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec2ResCity"))} />)}
         {s("ec2DocType") && (
           <PreviewRow
             label={t("preview.document")}
@@ -371,7 +390,7 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.gender")} value={genderLabel(s(`sp${n}Gender`))} />
                 <PreviewRow label={t("preview.phone")} value={s(`sp${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`sp${n}NatCountry`)} />
-                <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s(`sp${n}OccType`))} />
+                <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`sp${n}OccType`))} />
               </div>
             ))}
 
@@ -386,7 +405,7 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.gender")} value={genderLabel(s(`ch${n}Gender`))} />
                 <PreviewRow label={t("preview.phone")} value={s(`ch${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`ch${n}NatCountry`)} />
-                <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s(`ch${n}OccType`))} />
+                <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`ch${n}OccType`))} />
               </div>
             ))}
 
@@ -396,27 +415,16 @@ export default function StepPreviewDeclaration() {
             <div key={`rel${n}`}>
               <PreviewSubTitle>{t("fields.relativeN").replace("{n}", String(n))}</PreviewSubTitle>
               <PreviewRow label={t("preview.fullName")} value={fullName(`rel${n}`)} />
-              <PreviewRow label={t("preview.relationship")} value={optionLabel(relationshipTypeOptions(t), s(`rel${n}RelType`))} />
+              <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s(`rel${n}RelType`))} />
               <PreviewRow label={t("preview.dob")} value={s(`rel${n}Dob`)} />
               <PreviewRow label={t("preview.gender")} value={genderLabel(s(`rel${n}Gender`))} />
               <PreviewRow label={t("preview.phone")} value={s(`rel${n}Phone`)} />
-              <PreviewRow label={t("preview.occupation")} value={optionLabel(occupationTypeOptions(t), s(`rel${n}OccType`))} />
+              <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`rel${n}OccType`))} />
             </div>
           ))}
       </PreviewSection>
 
       {/* ─── Step 7: Referees (informational) ─── */}
-
-      {/* ─── Step 8: Attachments ─── */}
-      <PreviewSection title={t("registry.s8Title")} step={8} onEdit={edit}>
-        {attachments.length === 0 ? (
-          <PreviewRow label={t("preview.documents")} value={t("registry.attachEmpty")} />
-        ) : (
-          attachments.map((doc: Attachment) => (
-            <PreviewRow key={doc.id} label={t("preview.document")} value={doc.name} />
-          ))
-        )}
-      </PreviewSection>
 
       {/* ─── Official Clause ─── */}
       <div className="rounded-xl border border-line bg-surface/60 p-6">
