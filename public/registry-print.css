@@ -1,5 +1,15 @@
 /* Standalone print stylesheet for the civil registration form (iframe print). */
 
+/* Self-hosted Ubuntu Sans so the printed PDF matches the rest of the app
+   (the print iframe is a separate document and can't use the Next font vars). */
+@font-face {
+  font-family: "Ubuntu Sans";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/UbuntuSans.woff2") format("woff2");
+}
+
 /* margin: 0 leaves the browser no room to draw its default headers/footers
    (page title, URL, date, page count), so those corner words disappear. The
    page's own margins are provided by padding on #printable-form instead. */
@@ -18,7 +28,7 @@ body {
   padding: 0;
   background: #fff;
   color: #1a1a2e;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Ubuntu Sans", system-ui, -apple-system, sans-serif;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
