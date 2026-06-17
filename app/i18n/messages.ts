@@ -421,10 +421,10 @@ const en = {
   fields: {
     // --- recovered exact values ---
     phVillageStreet: "Village / Street",
-    phHouseStreet: "House Number / Street",
+    phHouseStreet: "House Number / Street (Optional)",
     phCity: "City",
     optional: "Optional",
-    phPostal: "Postal Code",
+    phPostal: "Postal Code (Optional)",
     phRegion: "Region",
     phDistrict: "District",
     phWard: "Ward",

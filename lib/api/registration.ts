@@ -459,7 +459,8 @@ function buildStage4Payload(data: Data, isSelf: boolean): Record<string, unknown
       if (!str(data, `${p}School`)) continue;
       educationList.push({
         educationLevelId: intOrNull(data, `${p}Level`) ?? 1,
-        countryId: 1,
+        // Schools are captured as Tanzanian; the backend expects the ISO code.
+        countryCode: "TZA",
         city: str(data, `${p}District`) || null,
         schoolName: str(data, `${p}School`),
         registrationNumber: str(data, `${p}IndexNo`) || null,

@@ -230,16 +230,20 @@ export default function WardCascade({
   const cols =
     levels === "district" ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
 
-  // Region/District/Ward only apply to Tanzania. For any other country the
-  // cascade is hidden and the caller's free-text City/Village field is used.
-  // Gate on the country NAME (reliable) rather than the lookup id, which varies.
-  // When the country picker is hidden (domestic address) or alwaysCascade is set,
-  // show the cascade regardless. When the country picker IS shown, the user must
-  // explicitly select Tanzania — an empty/unset country hides the cascade.
-  const isTanzania =
-    alwaysCascade ||
-    !showCountry ||
-    countryName.trim().toLowerCase() === "tanzania";
+  // Region/District/Ward only apply to Tanzania. The cascade is shown for
+  // Tanzania AND while no country has been picked yet (in the latter case the
+  // Territory select is rendered DISABLED, prompting the user to pick a country
+  // first). A *foreign* country hides the cascade — the caller's free-text
+  // City/Village field is used instead.
+  const explicitlyTanzania = countryName.trim().toLowerCase() === "tanzania";
+  // Domestic-forced: no country picker (address) or alwaysCascade.
+  const forceCascade = alwaysCascade || !showCountry;
+  const isForeign =
+    showCountry && !forceCascade && countryName.trim() !== "" && !explicitlyTanzania;
+  const isTanzania = !isForeign;
+  // Territory is enabled only once Tanzania is the chosen country; before any
+  // country is picked it renders disabled.
+  const territoryDisabled = disabled || (!forceCascade && !explicitlyTanzania);
 
   return (
     <div className="space-y-3">
@@ -270,7 +274,7 @@ export default function WardCascade({
           value={String(territoryId || "")}
           label={t("fields.phTerritory")}
           options={territories}
-          disabled={disabled}
+          disabled={territoryDisabled}
           invalid={errors.includes(`${prefix}Territory`)}
           onChange={(item) => {
             set(`${prefix}TerritoryId`, item ? String(item.id) : "");

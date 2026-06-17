@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { LOGO_EMBLEM } from "@/lib/assets";
 
@@ -28,7 +27,8 @@ function Tile({ src, caption }: { src: string; caption: string }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={LOGO_EMBLEM}
             alt={caption}
             width={56}
