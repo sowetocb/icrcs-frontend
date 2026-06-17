@@ -17,7 +17,16 @@ import { getRegisteredPeople } from "@/lib/api/registry";
 type Mode = "landing" | "gate" | "wizard" | "success";
 
 export default function RegistryClient() {
-  const [mode, setMode] = useState<Mode>("landing");
+  // Compute initial mode synchronously from localStorage so a page refresh
+  // keeps the user on the same screen (especially the wizard) instead of
+  // bouncing them back to the landing page.
+  const [mode, setMode] = useState<Mode>(() => {
+    if (typeof window === "undefined") return "landing";
+    const ownerId = loadProfile()?.profileId ?? "";
+    const draft = loadRegistrationFor(ownerId);
+    if (draft && !draft.completed) return "wizard";
+    return "landing";
+  });
   const [submission, setSubmission] = useState<{
     id: string;
     date: string;
@@ -27,8 +36,16 @@ export default function RegistryClient() {
   // Registration gating (read after mount; localStorage is client-only):
   //  - selfDone: the profile owner's registration has been completed.
   //  - hasIncomplete: a registration is in progress (draft not yet completed).
-  const [selfDone, setSelfDone] = useState(false);
-  const [hasIncomplete, setHasIncomplete] = useState(false);
+  const [selfDone, setSelfDone] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return loadPeople().some(isSubmitted);
+  });
+  const [hasIncomplete, setHasIncomplete] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const ownerId = loadProfile()?.profileId ?? "";
+    const draft = loadRegistrationFor(ownerId);
+    return !!draft && !draft.completed;
+  });
   useEffect(() => {
     // Only this account holder's own draft counts as "in progress".
     const ownerId = loadProfile()?.profileId ?? "";
