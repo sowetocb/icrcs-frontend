@@ -187,7 +187,8 @@ async function buildStage1Payload(
   const country = str(data, "pobCountry");
   const bornInTanzania = isTanzania(country);
 
-  return {
+  // Base fields shared by both domestic and foreign payloads.
+  const base: Record<string, unknown> = {
     ...(isSelf
       ? {}
       : {
@@ -201,17 +202,18 @@ async function buildStage1Payload(
     nationalityCode: await resolveCountryCode(str(data, "nationalityCountry")),
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
-    placeOfBirthWardId: bornInTanzania ? wardId(data, "pobWardId") : null,
-    // Street / Mtaa id from the place-of-birth cascade — required by the backend
-    // for Tanzanian births (REGISTRATION_PLACE_OF_BIRTH_STREET_REQUIRED).
-    placeOfBirthStreetId: bornInTanzania ? wardId(data, "pobStreetId") : null,
-    villageOfBirth: str(data, "pobVillage") || str(data, "pobStreet") || null,
-    // Foreign births: the /foreign endpoint requires a free-text city of birth
-    // (captured as pobCityVillage). Omitted for Tanzanian births, which pin the
-    // location via the ward/street cascade instead.
-    ...(bornInTanzania ? {} : { cityOfBirth: str(data, "pobCityVillage") || null }),
     birthCertificateNo: str(data, "birthCertNo") || null,
   };
+
+  if (bornInTanzania) {
+    // Domestic: pin the birth location via the street cascade (no city field).
+    base.placeOfBirthStreetId = wardId(data, "pobStreetId");
+  } else {
+    // Foreign: free-text city of birth (no street / ward).
+    base.cityOfBirth = str(data, "pobCityVillage") || null;
+  }
+
+  return base;
 }
 
 /** Stage 1.5 — Naturalization details. The guide exposes this as a separate

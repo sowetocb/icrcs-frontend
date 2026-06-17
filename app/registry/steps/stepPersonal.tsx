@@ -98,9 +98,13 @@ export default function StepPersonal() {
   const maritalStatuses = useMarriageOptions();
   const currentYear = new Date().getFullYear();
 
-  // Tanzania-specific place-of-birth + birth certificate fields only apply when
-  // the applicant explicitly picks Tanzania as their country of birth.
-  const bornInTanzania = data.pobCountry === "Tanzania";
+  // Place-of-birth logic: the Tanzania cascade (territory → ward → street)
+  // renders only when Tanzania is explicitly picked. The free-text city field
+  // renders only when a non-Tanzania country is explicitly picked. When no
+  // country is selected yet, neither is shown — just the country picker.
+  const pobCountry = typeof data.pobCountry === "string" ? (data.pobCountry as string).trim() : "";
+  const bornInTanzania = pobCountry === "Tanzania";
+  const bornAbroad = pobCountry !== "" && !bornInTanzania;
 
   return (
     <div className="space-y-5">
@@ -142,8 +146,8 @@ export default function StepPersonal() {
         <div className="space-y-3">
           {/* Enable street selection internally inside the cascade helper */}
           <WardCascade prefix="pob" showStreet={bornInTanzania} />
-          {/* Only show free-text when NOT born in Tanzania */}
-          {!bornInTanzania && (
+          {/* Only show free-text when born abroad (not Tanzania) */}
+          {bornAbroad && (
             <Field label={t("fields.phCityVillageBirth")}>
               <TextInput
                 name="pobCityVillage"

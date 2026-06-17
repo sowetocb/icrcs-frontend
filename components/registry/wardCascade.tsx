@@ -230,17 +230,16 @@ export default function WardCascade({
   const cols =
     levels === "district" ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
 
-  // Region/District/Ward only apply to Tanzania. The cascade is shown for
-  // Tanzania AND while no country has been picked yet (in the latter case the
-  // Territory select is rendered DISABLED, prompting the user to pick a country
-  // first). A *foreign* country hides the cascade — the caller's free-text
-  // City/Village field is used instead.
+  // Region/District/Ward only apply to Tanzania. The cascade is shown ONLY
+  // when Tanzania is explicitly picked as the country. When no country has been
+  // selected yet, neither the cascade nor the city field is rendered — just the
+  // country picker. A foreign country hides the cascade entirely; the caller's
+  // free-text City field is used instead.
   const explicitlyTanzania = countryName.trim().toLowerCase() === "tanzania";
   // Domestic-forced: no country picker (address) or alwaysCascade.
   const forceCascade = alwaysCascade || !showCountry;
-  const isForeign =
-    showCountry && !forceCascade && countryName.trim() !== "" && !explicitlyTanzania;
-  const isTanzania = !isForeign;
+  // Show cascade when Tanzania is explicitly chosen, or when the caller forces it.
+  const showTzCascade = forceCascade || explicitlyTanzania;
   // Territory is enabled only once Tanzania is the chosen country; before any
   // country is picked it renders disabled.
   const territoryDisabled = disabled || (!forceCascade && !explicitlyTanzania);
@@ -268,7 +267,7 @@ export default function WardCascade({
         </div>
       )}
 
-      {isTanzania && (
+      {showTzCascade && (
       <div className={`grid grid-cols-1 gap-3 ${cols}`}>
         <CascadeSelect
           value={String(territoryId || "")}
@@ -324,7 +323,7 @@ export default function WardCascade({
       )}
 
       {/* Street / Mtaa dropdown — shown after Ward when showStreet is enabled */}
-      {isTanzania && showStreet && levels === "ward" && (
+      {showTzCascade && showStreet && levels === "ward" && (
         <CascadeSelect
           value={streetIdVal}
           label={t("fields.phMtaa")}
