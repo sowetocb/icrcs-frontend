@@ -21,7 +21,7 @@ const ADDR_SUFFIXES = [
 ] as const;
 
 const isTz = (country: unknown) =>
-  !country || country === "Tanzania";
+  country === "Tanzania";
 
 export default function StepAddress() {
   const { t } = useI18n();

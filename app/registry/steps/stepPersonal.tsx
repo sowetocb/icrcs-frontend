@@ -99,8 +99,8 @@ export default function StepPersonal() {
   const currentYear = new Date().getFullYear();
 
   // Tanzania-specific place-of-birth + birth certificate fields only apply when
-  // the applicant was born in Tanzania (or hasn't picked a country yet).
-  const bornInTanzania = !data.pobCountry || data.pobCountry === "Tanzania";
+  // the applicant explicitly picks Tanzania as their country of birth.
+  const bornInTanzania = data.pobCountry === "Tanzania";
 
   return (
     <div className="space-y-5">
@@ -123,7 +123,6 @@ export default function StepPersonal() {
           <DateInput
           name="dob"
           minDate={`${currentYear - 120}-01-01`}
-          maxDate={`${currentYear - 16}-12-31`}
         />
         </Field>
 

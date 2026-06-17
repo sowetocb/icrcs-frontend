@@ -234,11 +234,11 @@ export default function WardCascade({
   // cascade is hidden and the caller's free-text City/Village field is used.
   // Gate on the country NAME (reliable) rather than the lookup id, which varies.
   // When the country picker is hidden (domestic address) or alwaysCascade is set,
-  // show the cascade regardless; an unset country defaults to Tanzania.
+  // show the cascade regardless. When the country picker IS shown, the user must
+  // explicitly select Tanzania — an empty/unset country hides the cascade.
   const isTanzania =
     alwaysCascade ||
     !showCountry ||
-    !countryName ||
     countryName.trim().toLowerCase() === "tanzania";
 
   return (
@@ -260,21 +260,6 @@ export default function WardCascade({
               set(`${prefix}Country`, country?.name ?? "");
               clear("TerritoryId", "Territory", "RegionId", "Region", "DistrictId", "District", "WardId", "Ward", "StreetId", "Street");
             }}
-          />
-        </div>
-      )}
-
-      {/* Territory — always visible when country picker is shown, but disabled
-          until the user selects Tanzania. */}
-      {showCountry && !isTanzania && (
-        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-1`}>
-          <CascadeSelect
-            value=""
-            label={t("fields.phTerritory")}
-            options={territories}
-            disabled={true}
-            invalid={false}
-            onChange={() => {}}
           />
         </div>
       )}

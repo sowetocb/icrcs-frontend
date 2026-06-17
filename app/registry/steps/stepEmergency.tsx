@@ -27,10 +27,8 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
   // Place of birth / residence: the Region→District→Ward→Street cascade only
   // applies to Tanzania. For any other country the cascade is hidden and a
   // free-text village/city is collected instead. An unset country is Tanzania.
-  const pobIsTz =
-    !data[`${prefix}PobCountry`] || data[`${prefix}PobCountry`] === "Tanzania";
-  const resIsTz =
-    !data[`${prefix}ResCountry`] || data[`${prefix}ResCountry`] === "Tanzania";
+  const pobIsTz = data[`${prefix}PobCountry`] === "Tanzania";
+  const resIsTz = data[`${prefix}ResCountry`] === "Tanzania";
 
   return (
     <div className="space-y-5">

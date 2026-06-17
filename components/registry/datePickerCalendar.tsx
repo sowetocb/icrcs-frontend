@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { localeTag, parseIso, toIso } from "@/lib/dateFormat";
 
@@ -27,6 +27,122 @@ type Props = {
   onClose: () => void;
 };
 
+/** Multi-column year grid picker — replaces the native `<select>` that produced
+ * an impossibly long single-column dropdown for ~120 years. */
+function YearGrid({
+  years,
+  selected,
+  onPick,
+  onClose,
+}: {
+  years: number[];
+  selected: number;
+  onPick: (y: number) => void;
+  onClose: () => void;
+}) {
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the selected year into view on mount.
+  useEffect(() => {
+    const el = gridRef.current?.querySelector("[data-selected]");
+    el?.scrollIntoView({ block: "center" });
+  }, []);
+
+  // Close when clicking outside.
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (gridRef.current && !gridRef.current.contains(e.target as Node))
+        onClose();
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={gridRef}
+      className="absolute inset-0 z-10 overflow-y-auto rounded-lg bg-card p-2"
+    >
+      <div className="grid grid-cols-4 gap-1">
+        {years.map((y) => {
+          const active = y === selected;
+          return (
+            <button
+              key={y}
+              type="button"
+              data-selected={active ? "" : undefined}
+              onClick={() => {
+                onPick(y);
+                onClose();
+              }}
+              className={`rounded-md px-1 py-1.5 text-sm font-medium transition ${
+                active
+                  ? "bg-navy-700 text-white"
+                  : "text-ink hover:bg-surface"
+              }`}
+            >
+              {y}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Multi-column month grid picker (3 × 4). */
+function MonthGrid({
+  labels,
+  selected,
+  onPick,
+  onClose,
+}: {
+  labels: string[];
+  selected: number;
+  onPick: (m: number) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute inset-0 z-10 overflow-y-auto rounded-lg bg-card p-2"
+    >
+      <div className="grid grid-cols-3 gap-1">
+        {labels.map((label, m) => {
+          const active = m === selected;
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                onPick(m);
+                onClose();
+              }}
+              className={`rounded-md px-1 py-2 text-sm font-medium capitalize transition ${
+                active
+                  ? "bg-navy-700 text-white"
+                  : "text-ink hover:bg-surface"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function DatePickerCalendar({
   value,
   maxDate,
@@ -40,6 +156,8 @@ export default function DatePickerCalendar({
   const initial = selected ?? new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
+  const [showYears, setShowYears] = useState(false);
+  const [showMonths, setShowMonths] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,6 +169,11 @@ export default function DatePickerCalendar({
 
   const monthLabels = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(tag, { month: "long" });
+    return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2024, m, 1)));
+  }, [tag]);
+
+  const shortMonthLabels = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(tag, { month: "short" });
     return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2024, m, 1)));
   }, [tag]);
 
@@ -66,9 +189,6 @@ export default function DatePickerCalendar({
     for (let y = endYear; y >= startYear; y--) list.push(y);
     return list;
   }, [min, max]);
-
-  // Keep the dropdown valid if the parsed/initial year falls outside the range.
-  const yearOptions = years.includes(viewYear) ? years : [viewYear, ...years];
 
   function isDisabled(y: number, m: number, d: number): boolean {
     const dt = new Date(y, m, d);
@@ -109,7 +229,8 @@ export default function DatePickerCalendar({
       role="dialog"
       aria-label={t("fields.openCalendar")}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      {/* Header: prev / month+year / next */}
+      <div className="relative mb-3 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={prevMonth}
@@ -120,32 +241,38 @@ export default function DatePickerCalendar({
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
+
         <div className="flex items-center gap-1.5">
-          <select
-            value={viewMonth}
-            onChange={(e) => setViewMonth(Number(e.target.value))}
-            aria-label={t("fields.selectMonth")}
-            className="rounded-md border border-line bg-card px-1.5 py-1 text-sm font-semibold text-navy-700 outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
+          {/* Month button — opens multi-column month grid */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowMonths((v) => !v);
+              setShowYears(false);
+            }}
+            className="rounded-md border border-line bg-card px-2 py-1 text-sm font-semibold text-navy-700 outline-none transition hover:bg-surface focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
           >
-            {monthLabels.map((label, m) => (
-              <option key={label} value={m}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={viewYear}
-            onChange={(e) => setViewYear(Number(e.target.value))}
-            aria-label={t("fields.selectYear")}
-            className="rounded-md border border-line bg-card px-1.5 py-1 text-sm font-semibold text-navy-700 outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
+            {shortMonthLabels[viewMonth]}
+            <svg className="ml-1 inline-block text-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {/* Year button — opens multi-column year grid */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowYears((v) => !v);
+              setShowMonths(false);
+            }}
+            className="rounded-md border border-line bg-card px-2 py-1 text-sm font-semibold text-navy-700 outline-none transition hover:bg-surface focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
           >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+            {viewYear}
+            <svg className="ml-1 inline-block text-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </div>
+
         <button
           type="button"
           onClick={nextMonth}
@@ -158,40 +285,60 @@ export default function DatePickerCalendar({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5">
-        {cells.map((day, idx) => {
-          if (day === null) {
-            return <span key={`empty-${idx}`} aria-hidden="true" />;
-          }
-          const iso = toIso(new Date(viewYear, viewMonth, day));
-          const disabled = isDisabled(viewYear, viewMonth, day);
-          const isSelected = value === iso;
-          const isToday = iso === toIso(new Date());
+      {/* Day grid (or year/month overlay) */}
+      <div className="relative">
+        {showYears && (
+          <YearGrid
+            years={years}
+            selected={viewYear}
+            onPick={setViewYear}
+            onClose={() => setShowYears(false)}
+          />
+        )}
+        {showMonths && (
+          <MonthGrid
+            labels={monthLabels}
+            selected={viewMonth}
+            onPick={setViewMonth}
+            onClose={() => setShowMonths(false)}
+          />
+        )}
+        <div className="grid grid-cols-7 gap-0.5">
+          {cells.map((day, idx) => {
+            if (day === null) {
+              return <span key={`empty-${idx}`} aria-hidden="true" />;
+            }
+            const iso = toIso(new Date(viewYear, viewMonth, day));
+            const disabled = isDisabled(viewYear, viewMonth, day);
+            const isSelected = value === iso;
+            const isToday = iso === toIso(new Date());
 
-          return (
-            <button
-              key={iso}
-              type="button"
-              disabled={disabled}
-              onClick={() => {
-                onSelect(iso);
-                onClose();
-              }}
-              className={`rounded-md py-1.5 text-sm transition ${
-                disabled
-                  ? "cursor-not-allowed text-muted/40"
-                  : isSelected
-                    ? "bg-navy-700 font-semibold text-white"
-                    : isToday
-                      ? "font-semibold text-gold-700 hover:bg-surface"
-                      : "text-ink hover:bg-surface"
-              }`}
-            >
-              {day}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={iso}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onSelect(iso);
+                  onClose();
+                }}
+                className={`rounded-md py-1.5 text-sm transition ${
+                  disabled
+                    ? "cursor-not-allowed text-muted/40"
+                    : isSelected
+                      ? "bg-navy-700 font-semibold text-white"
+                      : isToday
+                        ? "font-semibold text-gold-700 hover:bg-surface"
+                        : "text-ink hover:bg-surface"
+                }`}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+

@@ -304,14 +304,17 @@ export default function RegistryWizard({
     // the cascade (the backend rejects Stage 1 without a street); foreign births
     // hide those fields entirely.
     if (step === 1) {
-      const pobIsTz = !data.pobCountry || data.pobCountry === "Tanzania";
+      const pobIsTz = data.pobCountry === "Tanzania";
       if (pobIsTz) {
         required = [...required, "pobWard", "pobStreet"];
-      } else {
+      } else if (data.pobCountry) {
         // Foreign births: drop the TZ cascade fields and require the free-text
         // city of birth instead (the /foreign endpoint rejects a blank one).
         const tzOnly = new Set(["pobRegion", "pobDistrict", "pobWard", "pobVillage"]);
         required = [...required.filter((n) => !tzOnly.has(n)), "pobCityVillage"];
+      } else {
+        // No country picked yet — require the country itself.
+        // (pobCountry is already in the base REQUIRED_FIELDS list.)
       }
     }
 
@@ -319,21 +322,29 @@ export default function RegistryWizard({
     // Step 2: Region/District/Ward only apply to Tanzania — they're hidden for
     // other countries, so don't require them there.
     if (step === 2) {
-      const permIsTz = !data.permCountry || data.permCountry === "Tanzania";
-      if (!permIsTz) {
+      const permIsTz = data.permCountry === "Tanzania";
+      if (!permIsTz && data.permCountry) {
         // Foreign permanent address: drop the TZ cascade, require the city.
         required = [
           ...required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n)),
           "permCity",
         ];
+      } else if (!data.permCountry) {
+        // No country selected yet — drop cascade requirements.
+        required = required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n));
+        required = [...required, "permCountry"];
       }
       // The current address (when not linked) needs its own R/D/W in Tanzania,
       // or a free-text city when abroad.
       if (data.sameAsPerm !== true) {
-        const curIsTz = !data.curCountry || data.curCountry === "Tanzania";
-        required = curIsTz
-          ? [...required, "curRegion", "curDistrict", "curWard"]
-          : [...required, "curCity"];
+        const curIsTz = data.curCountry === "Tanzania";
+        if (curIsTz) {
+          required = [...required, "curRegion", "curDistrict", "curWard"];
+        } else if (data.curCountry) {
+          required = [...required, "curCity"];
+        } else {
+          required = [...required, "curCountry"];
+        }
       }
     }
 
@@ -342,12 +353,12 @@ export default function RegistryWizard({
     // the country + the free-text city/village.
     if (step === 3) {
       for (const p of ["father", "mother"]) {
-        const pobTz = !data[`${p}PobCountry`] || data[`${p}PobCountry`] === "Tanzania";
+        const pobTz = data[`${p}PobCountry`] === "Tanzania";
         required = pobTz
           ? [...required, `${p}PobWard`]
           : [...required, `${p}PobCountry`, `${p}Village`];
 
-        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        const resTz = data[`${p}ResCountry`] === "Tanzania";
         required = resTz
           ? [...required, `${p}ResWard`, `${p}ResStreet`]
           : [...required, `${p}ResCountry`, `${p}ResCity`];
@@ -358,12 +369,12 @@ export default function RegistryWizard({
     // (same cascade rules as the parents in Step 3).
     if (step === 5) {
       for (const p of ["ec1", "ec2"]) {
-        const pobTz = !data[`${p}PobCountry`] || data[`${p}PobCountry`] === "Tanzania";
+        const pobTz = data[`${p}PobCountry`] === "Tanzania";
         required = pobTz
           ? [...required, `${p}PobWard`]
           : [...required, `${p}PobCountry`, `${p}Village`];
 
-        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        const resTz = data[`${p}ResCountry`] === "Tanzania";
         required = resTz
           ? [...required, `${p}ResWard`, `${p}ResStreet`]
           : [...required, `${p}ResCountry`, `${p}ResCity`];
@@ -374,7 +385,7 @@ export default function RegistryWizard({
     // abroad needs Country + City (the two mandatory relatives, rel1/rel2).
     if (step === 6) {
       for (const p of ["rel1", "rel2"]) {
-        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
+        const resTz = data[`${p}ResCountry`] === "Tanzania";
         required = resTz
           ? [...required, `${p}ResWard`, `${p}ResStreet`]
           : [...required, `${p}ResCountry`, `${p}ResCity`];
