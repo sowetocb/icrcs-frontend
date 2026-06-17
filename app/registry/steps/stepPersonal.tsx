@@ -9,6 +9,7 @@ import {
 import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
 import WardCascade from "@/components/registry/wardCascade";
+import CountrySelect from "@/components/registry/countrySelect";
 
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
  * it survives reloads and is rebuilt into the `photo` part on submission. */
@@ -138,6 +139,10 @@ export default function StepPersonal() {
           />
         </Field>
       </div>
+
+      <Field label={t("fields.nationality")} required>
+        <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
+      </Field>
 
       <Field label={t("fields.placeOfBirth")} required>
         {/* Single country picker (lookup-connected, with flag). The Region/

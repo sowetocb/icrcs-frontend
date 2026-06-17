@@ -41,11 +41,15 @@ function PersonFields({ prefix }: { prefix: string }) {
   const { data } = useWizard();
   const genders = useGenderOptions();
 
-  // Place of birth / residence: the Region→District→Ward→Street cascade only
-  // applies to Tanzania. For any other country the cascade is hidden and a
-  // free-text village/city is collected instead. An unset country is Tanzania.
-  const pobIsTz = data[`${prefix}PobCountry`] === "Tanzania";
-  const resIsTz = data[`${prefix}ResCountry`] === "Tanzania";
+  // Place of birth / residence: the cascade only applies when Tanzania is
+  // explicitly picked. City/village shows only for an explicit foreign country.
+  const pobCountry = typeof data[`${prefix}PobCountry`] === "string" ? (data[`${prefix}PobCountry`] as string).trim() : "";
+  const pobIsTz = pobCountry === "Tanzania";
+  const pobIsForeign = pobCountry !== "" && !pobIsTz;
+
+  const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
+  const resIsTz = resCountry === "Tanzania";
+  const resIsForeign = resCountry !== "" && !resIsTz;
 
   return (
     <>
@@ -93,7 +97,7 @@ function PersonFields({ prefix }: { prefix: string }) {
         <Field label={t("fields.placeOfBirth")} optional>
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-            {!pobIsTz && (
+            {pobIsForeign && (
               <Field label={t("fields.phVillage")}>
                 <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
               </Field>
@@ -103,7 +107,7 @@ function PersonFields({ prefix }: { prefix: string }) {
         <Field label={t("fields.residence")} required>
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Res`} showStreet />
-            {!resIsTz && (
+            {resIsForeign && (
               <Field label={t("fields.phCity")}>
                 <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
               </Field>

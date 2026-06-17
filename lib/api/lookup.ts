@@ -205,11 +205,11 @@ const MOCK_GENDERS: LookupItem[] = [
   { id: 2, name: "FEMALE", code: "F" },
 ];
 const MOCK_MARITAL_STATUSES: LookupItem[] = [
-  { id: 1, name: "SINGLE" },
-  { id: 2, name: "MARRIED" },
-  { id: 3, name: "DIVORCED" },
-  { id: 4, name: "WIDOWED" },
-  { id: 5, name: "SEPARATED" },
+  { id: 1, name: "SINGLE", code: "SINGLE" },
+  { id: 2, name: "MARRIED", code: "MARRIED" },
+  { id: 3, name: "DIVORCED", code: "DIVORCED" },
+  { id: 4, name: "WIDOWED", code: "WIDOWED" },
+  { id: 5, name: "SEPARATED", code: "SEPARATED" },
 ];
 const MOCK_EDUCATION: LookupItem[] = [
   { id: 4, name: "Primary Education" },
@@ -253,13 +253,20 @@ export function getGenders(): Promise<LookupItem[]> {
   }).catch(() => MOCK_GENDERS);
 }
 
-/** GET /lookup/marital-statuses → { statusName, id } */
+/** GET /lookup/marital-statuses → { statusName, id }.
+ * The backend stores statuses without a separate code field — derive the
+ * canonical uppercase name so the registration payload can use it directly
+ * ("SINGLE", "MARRIED", etc.). */
 export function getMaritalStatuses(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_MARITAL_STATUSES);
-  return getList("/lookup/marital-statuses", (o) => ({
-    id: num(o.id),
-    name: str(o.statusName),
-  })).catch(() => MOCK_MARITAL_STATUSES);
+  return getList("/lookup/marital-statuses", (o) => {
+    const name = str(o.statusName);
+    return {
+      id: num(o.id),
+      name,
+      code: name.toUpperCase().replace(/\s+/g, "_"),
+    };
+  }).catch(() => MOCK_MARITAL_STATUSES);
 }
 
 /** GET /lookup/educations → { levelName, id } */

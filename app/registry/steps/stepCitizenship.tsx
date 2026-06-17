@@ -20,15 +20,21 @@ const ADDR_SUFFIXES = [
   "City",
 ] as const;
 
-const isTz = (country: unknown) =>
-  country === "Tanzania";
-
 export default function StepAddress() {
   const { t } = useI18n();
   const { data, set } = useWizard();
   const sameAsPerm = data.sameAsPerm === true;
-  const permIsTz = isTz(data.permCountry);
-  const curIsTz = isTz(data.curCountry);
+
+  // Address fields: the Tanzania cascade + house/postal fields only render when
+  // Tanzania is explicitly selected. The city field only renders when a foreign
+  // country is explicitly selected. When no country is picked yet, neither shows.
+  const permCountry = typeof data.permCountry === "string" ? (data.permCountry as string).trim() : "";
+  const permIsTz = permCountry === "Tanzania";
+  const permIsForeign = permCountry !== "" && !permIsTz;
+
+  const curCountry = typeof data.curCountry === "string" ? (data.curCountry as string).trim() : "";
+  const curIsTz = curCountry === "Tanzania";
+  const curIsForeign = curCountry !== "" && !curIsTz;
 
   const permValues = ADDR_SUFFIXES.map((s) => data[`perm${s}`]);
 
@@ -74,11 +80,11 @@ export default function StepAddress() {
                 <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
               </Field>
             </div>
-          ) : (
+          ) : permIsForeign ? (
             <Field label={t("fields.phCity")}>
               <TextInput name="permCity" placeholder={t("fields.phCity")} />
             </Field>
-          )}
+          ) : null}
         </div>
       </Field>
 
@@ -105,11 +111,11 @@ export default function StepAddress() {
                   <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
                 </Field>
               </div>
-            ) : (
+            ) : curIsForeign ? (
               <Field label={t("fields.phCity")}>
                 <TextInput name="curCity" placeholder={t("fields.phCity")} />
               </Field>
-            )}
+            ) : null}
           </div>
         </Field>
       )}

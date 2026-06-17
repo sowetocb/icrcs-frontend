@@ -67,6 +67,7 @@ const REQUIRED_FIELDS: string[][] = [
     "stage1PhotoData",
     "gender",
     "dob",
+    "nationalityCountry",
     "pobCountry",
     "marriage",
     "phone",
@@ -74,16 +75,14 @@ const REQUIRED_FIELDS: string[][] = [
   ],
   // Step 2: Address (permanent Region/District/Ward; current added when unlinked)
   ["permRegion", "permDistrict", "permWard"],
-  // Step 3: Parents (father + mother full names + gender + DOB + nationality;
-  // phone is optional)
+  // Step 3: Parents (father + mother full names + gender + nationality;
+  // phone and DOB are optional)
   [
     ...nameFields("father"),
     "fatherGender",
-    "fatherDob",
     "fatherNatCountry",
     ...nameFields("mother"),
     "motherGender",
-    "motherDob",
     "motherNatCountry",
   ],
   // Step 4: Education & Employment — employment status is mandatory (the backend
@@ -352,18 +351,26 @@ export default function RegistryWizard({
 
     // Step 3: Parents' place of birth + residence are mandatory. Each is a
     // cascade — Tanzania needs the Ward (+ Street for residence); abroad needs
-    // the country + the free-text city/village.
+    // the country + the free-text city/village. No country = require it.
     if (step === 3) {
       for (const p of ["father", "mother"]) {
-        const pobTz = data[`${p}PobCountry`] === "Tanzania";
-        required = pobTz
-          ? [...required, `${p}PobWard`]
-          : [...required, `${p}PobCountry`, `${p}Village`];
+        const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
+        if (pobCountry === "Tanzania") {
+          required = [...required, `${p}PobWard`];
+        } else if (pobCountry) {
+          required = [...required, `${p}Village`];
+        } else {
+          required = [...required, `${p}PobCountry`];
+        }
 
-        const resTz = data[`${p}ResCountry`] === "Tanzania";
-        required = resTz
-          ? [...required, `${p}ResWard`, `${p}ResStreet`]
-          : [...required, `${p}ResCountry`, `${p}ResCity`];
+        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+        if (resCountry === "Tanzania") {
+          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+        } else if (resCountry) {
+          required = [...required, `${p}ResCity`];
+        } else {
+          required = [...required, `${p}ResCountry`];
+        }
       }
     }
 
@@ -371,26 +378,39 @@ export default function RegistryWizard({
     // (same cascade rules as the parents in Step 3).
     if (step === 5) {
       for (const p of ["ec1", "ec2"]) {
-        const pobTz = data[`${p}PobCountry`] === "Tanzania";
-        required = pobTz
-          ? [...required, `${p}PobWard`]
-          : [...required, `${p}PobCountry`, `${p}Village`];
+        const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
+        if (pobCountry === "Tanzania") {
+          required = [...required, `${p}PobWard`];
+        } else if (pobCountry) {
+          required = [...required, `${p}Village`];
+        } else {
+          required = [...required, `${p}PobCountry`];
+        }
 
-        const resTz = data[`${p}ResCountry`] === "Tanzania";
-        required = resTz
-          ? [...required, `${p}ResWard`, `${p}ResStreet`]
-          : [...required, `${p}ResCountry`, `${p}ResCity`];
+        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+        if (resCountry === "Tanzania") {
+          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+        } else if (resCountry) {
+          required = [...required, `${p}ResCity`];
+        } else {
+          required = [...required, `${p}ResCountry`];
+        }
       }
     }
 
     // Step 6: Relatives' residence is mandatory — Tanzania needs Ward + Street,
-    // abroad needs Country + City (the two mandatory relatives, rel1/rel2).
+    // abroad needs City (the two mandatory relatives, rel1/rel2). No country =
+    // require it.
     if (step === 6) {
       for (const p of ["rel1", "rel2"]) {
-        const resTz = data[`${p}ResCountry`] === "Tanzania";
-        required = resTz
-          ? [...required, `${p}ResWard`, `${p}ResStreet`]
-          : [...required, `${p}ResCountry`, `${p}ResCity`];
+        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+        if (resCountry === "Tanzania") {
+          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+        } else if (resCountry) {
+          required = [...required, `${p}ResCity`];
+        } else {
+          required = [...required, `${p}ResCountry`];
+        }
       }
     }
 
@@ -529,10 +549,12 @@ export default function RegistryWizard({
       for (let i = 1; i <= spouseCount; i++) {
         const p = `sp${i}`;
         if (!filled(`${p}First`)) continue;
-        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
-        const residence = resTz
+        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+        const residence = resCountry === "Tanzania"
           ? [`${p}ResWard`, `${p}ResStreet`]
-          : [`${p}ResCountry`, `${p}ResCity`];
+          : resCountry
+            ? [`${p}ResCity`]
+            : [`${p}ResCountry`];
         const missingSpouse = [
           `${p}First`,
           `${p}Middle`,
@@ -564,10 +586,12 @@ export default function RegistryWizard({
       for (let i = 1; i <= childCount; i++) {
         const p = `ch${i}`;
         if (!filled(`${p}First`)) continue;
-        const resTz = !data[`${p}ResCountry`] || data[`${p}ResCountry`] === "Tanzania";
-        const residence = resTz
+        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+        const residence = resCountry === "Tanzania"
           ? [`${p}ResWard`, `${p}ResStreet`]
-          : [`${p}ResCountry`, `${p}ResCity`];
+          : resCountry
+            ? [`${p}ResCity`]
+            : [`${p}ResCountry`];
         const missingChild = [
           `${p}First`,
           `${p}Middle`,

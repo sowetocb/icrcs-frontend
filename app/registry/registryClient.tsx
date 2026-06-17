@@ -17,20 +17,12 @@ import { getRegisteredPeople } from "@/lib/api/registry";
 type Mode = "landing" | "gate" | "wizard" | "success";
 
 export default function RegistryClient() {
-  // Distinguish page refresh (F5) from fresh navigation (clicking a link).
-  // On refresh while filling forms → stay in the wizard.
-  // On fresh navigation (sidebar click) → always show the landing page.
-  const [mode, setMode] = useState<Mode>(() => {
-    if (typeof window === "undefined") return "landing";
-    const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-    const isReload = navEntry?.type === "reload";
-    if (isReload) {
-      const ownerId = loadProfile()?.profileId ?? "";
-      const draft = loadRegistrationFor(ownerId);
-      if (draft && !draft.completed) return "wizard";
-    }
-    return "landing";
-  });
+  // Opening the Citizen Registry always shows the landing page — the user picks
+  // "Resume Registration" to continue an in-progress draft. (The navigation
+  // type from `performance` is unreliable here: it reflects the original
+  // document load, so a sidebar click after a refresh wrongly looked like a
+  // reload and auto-resumed the wizard.)
+  const [mode, setMode] = useState<Mode>("landing");
   const [submission, setSubmission] = useState<{
     id: string;
     date: string;

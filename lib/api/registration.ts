@@ -7,6 +7,8 @@ import {
   PASSPORT_PHOTO_TYPE,
   type UploadedAttachment,
 } from "./files";
+import { COUNTRIES } from "@/lib/countries";
+import { alpha2ToAlpha3 } from "@/lib/iso3";
 
 /** Decode a base64 data URL into a Blob (for multipart upload). */
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } | null {
@@ -55,7 +57,9 @@ const wardId = (data: Data, key: string): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-/** Resolve a country name to its backend code via the lookup (null if unknown). */
+/** Resolve a country name to its ISO alpha-3 code (e.g. "TZA"). Prefers the
+ * backend lookup, but falls back to a local name → alpha-2 → alpha-3 mapping
+ * because /v1/lookup/countries can return an empty list. */
 async function resolveCountryCode(name: string): Promise<string | null> {
   if (!name) return null;
   try {
@@ -63,10 +67,12 @@ async function resolveCountryCode(name: string): Promise<string | null> {
     const match = countries.find(
       (c) => c.name.toLowerCase() === name.toLowerCase(),
     );
-    return match && match.code ? match.code : null;
+    if (match?.code) return match.code;
   } catch {
-    return null;
+    // fall through to the local mapping
   }
+  const local = COUNTRIES.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  return local ? alpha2ToAlpha3(local.code) : null;
 }
 
 /** Non-citizen self-service lookup: verify a traveller by their travel
@@ -158,18 +164,18 @@ function extractStage1Response(raw: unknown): Stage1Response {
     typeof rawData === "string"
       ? rawData
       : String(
-          payload.subjectId ??
-            payload.registrationId ??
-            payload.id ??
-            payload.personId ??
-            "",
-        );
+        payload.subjectId ??
+        payload.registrationId ??
+        payload.id ??
+        payload.personId ??
+        "",
+      );
 
   const applicationId = String(
     payload.applicationId ??
-      payload.applicationNumber ??
-      payload.registrationNumber ??
-      "",
+    payload.applicationNumber ??
+    payload.registrationNumber ??
+    "",
   );
 
   return {
@@ -187,15 +193,13 @@ async function buildStage1Payload(
   const country = str(data, "pobCountry");
   const bornInTanzania = isTanzania(country);
 
-  // Base fields shared by both domestic and foreign payloads.
+  // Base fields shared by both domestic and foreign payloads. Names are always
+  // sent (for self they are prefilled from the profile) to match the backend
+  // payload contract.
   const base: Record<string, unknown> = {
-    ...(isSelf
-      ? {}
-      : {
-          firstName: str(data, "applicantFirst"),
-          middleName: str(data, "applicantMiddle"),
-          lastName: str(data, "applicantLast"),
-        }),
+    firstName: str(data, "applicantFirst"),
+    middleName: str(data, "applicantMiddle"),
+    lastName: str(data, "applicantLast"),
     sex: str(data, "gender"),
     dateOfBirth: str(data, "dob"),
     maritalStatus: MARITAL[marriage] ?? (marriage.toUpperCase() || "SINGLE"),
@@ -375,17 +379,20 @@ export async function editStage2(subjectId: string, data: Data): Promise<unknown
 // Parent object — exact Stage 3 shape (residence only; no gender/DOB/place of
 // birth — the backend derives parent gender and doesn't store those here).
 async function buildParentPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
+  const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
   return {
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`),
     lastName: str(data, `${prefix}Last`),
     phoneNumber: phone(data, `${prefix}Phone`),
+    // API expects the ISO country CODE (e.g. "TZA"), not the lookup id.
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
-    // API expects the ISO country CODE (e.g. "TZA"), not the lookup id, and does
-    // not take a residence ward — the street id alone pins the location.
     residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
-    residenceCity: str(data, `${prefix}ResCity`) || null,
-    residenceStreetId: wardId(data, `${prefix}ResStreetId`),
+    // Domestic residence pins the location via the street id; a foreign one via
+    // the free-text city — only the relevant key is sent.
+    ...(resTanzania
+      ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
+      : { residenceCity: str(data, `${prefix}ResCity`) || null }),
     documentFileUrl: str(data, `${prefix}DocFileUrl`) || null,
     birthDetailId: null,
   };
@@ -476,9 +483,10 @@ function buildStage4Payload(data: Data, isSelf: boolean): Record<string, unknown
     educationList,
     employmentStatus:
       EMPLOYMENT[job] ?? (job ? job.toUpperCase().replace(/[^A-Z0-9]+/g, "_") : null),
-    organizationName: str(data, "employer") || null,
-    // The unemployed have no occupation (the field is hidden in the UI).
-    occupationTypeId: job === "Unemployed" ? null : intOrNull(data, "occupation") ?? null,
+    // Occupation & employer apply only to the employed (hidden in the UI for
+    // every other status), so null them out otherwise.
+    organizationName: job === "Employed" ? str(data, "employer") || null : null,
+    occupationTypeId: job === "Employed" ? intOrNull(data, "occupation") ?? null : null,
     // Child (under 18) is the "no documents" variant — omit the key entirely.
     ...(isSelf ? { documents: idDocuments(data) } : {}),
   };
@@ -523,19 +531,21 @@ export async function editStage4(
 /** Shared "person" sub-object for emergency contacts, spouses and relatives —
  * exact Stage 5/6 shape (like the parent object, but with gender). */
 async function buildPersonPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
+  const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
   return {
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`),
     lastName: str(data, `${prefix}Last`),
     gender: str(data, `${prefix}Gender`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
-    nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
     // The backend expects the ISO country CODE (e.g. "KEN"), not the lookup id.
-    // Domestic persons pin their location with the street id; foreign persons
-    // with the free-text city.
+    nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
     residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
-    residenceCity: str(data, `${prefix}ResCity`) || null,
-    residenceStreetId: wardId(data, `${prefix}ResStreetId`),
+    // Domestic persons pin their location with the street id; foreign persons
+    // with the free-text city — only the relevant key is sent.
+    ...(resTanzania
+      ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
+      : { residenceCity: str(data, `${prefix}ResCity`) || null }),
     documentFileUrl: str(data, `${prefix}DocFileUrl`) || null,
     birthDetailId: null,
   };

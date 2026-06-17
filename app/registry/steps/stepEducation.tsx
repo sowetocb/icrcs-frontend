@@ -46,7 +46,7 @@ function SchoolBlock({
         </Field>
       </div>
 
-      <Field label={t("fields.schoolName")} required>
+      <Field label={t("fields.schoolName")} optional>
         <TextInput name={`${p}School`} placeholder="Buguruni Primary School" />
       </Field>
 
@@ -149,15 +149,17 @@ export default function StepEducation() {
           <Field label={t("fields.employmentStatus")} required>
             <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobOptions(t)} />
           </Field>
-          {/* Occupation makes no sense for the unemployed — hide it. */}
-          {data.jobStatus !== "Unemployed" && (
-            <Field label={t("fields.occupation")} optional>
-              <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
-            </Field>
+          {/* Occupation & Employer only apply to the employed. */}
+          {data.jobStatus === "Employed" && (
+            <>
+              <Field label={t("fields.occupation")} optional>
+                <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
+              </Field>
+              <Field label={t("fields.employer")} required={employmentRequired} optional={!employmentRequired}>
+                <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
+              </Field>
+            </>
           )}
-          <Field label={t("fields.employer")} required={employmentRequired} optional={!employmentRequired}>
-            <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
-          </Field>
           {/* NIDA applies only to the adult account holder. Minors (always
               registered as dependents) have no National ID, so it's hidden.
               It is optional. */}

@@ -23,10 +23,10 @@ export const genderOptions = (t: Translate): Opt[] => [
   { value: "F", label: t("opt.female") },
 ];
 export const marriageOptions = (t: Translate): Opt[] => [
-  { value: "Single", label: t("opt.single") },
-  { value: "Married", label: t("opt.married") },
-  { value: "Divorced", label: t("opt.divorced") },
-  { value: "Widowed", label: t("opt.widowed") },
+  { value: "SINGLE", label: t("opt.single") },
+  { value: "MARRIED", label: t("opt.married") },
+  { value: "DIVORCED", label: t("opt.divorced") },
+  { value: "WIDOWED", label: t("opt.widowed") },
 ];
 export const jobOptions = (t: Translate): Opt[] => [
   { value: "Employed", label: t("opt.employed") },
