@@ -1,43 +1,112 @@
 @import "tailwindcss";
 
-/* ICRCS Tanzania — Official institutional design tokens (Tailwind v4 @theme) */
+/* ICRCS shared design tokens (Tailwind v4 @theme) — mirrors the single ICRCS
+   source of truth (src/theme/icrcs-theme.js in the Tailwind-3 modules) so every
+   portal (ISDMP, Client/Registration, Biometric Capture) is visually identical.
+   Brand navy/gold + the existing semantic scale are reanchored to the shared
+   values; the cross-portal class vocabulary (primary, icrcs-navy, accent, …) is
+   added alongside. Font is Ubuntu Sans (this portal's choice). */
 @theme {
-  /* Primary palette — deep navy matching the Immigration Department's official blue */
+  /* ── Brand: institutional navy (shared ICRCS) ──────────────────────────── */
   --color-navy-50: #eef2f7;
   --color-navy-100: #d5e0ed;
   --color-navy-200: #a9c0db;
-  --color-navy-500: #1b2e4b;
-  --color-navy-700: #0d1f33;
-  --color-navy-900: #060e1a;
+  --color-navy-500: #132743; /* icrcs navy-light — hover */
+  --color-navy-700: #0b1d3a; /* icrcs navy — primary brand */
+  --color-navy-900: #060f1e; /* icrcs navy-dark */
 
   /* Sidebar-specific deeper blues matching the institutional CMS sidebar */
   --color-sidebar: #1e3557;
   --color-sidebar-hover: #263f65;
   --color-sidebar-active: #2a5cb8;
 
-  /* Gold / amber accent */
-  --color-gold-400: #e2b544;
-  --color-gold: #c9a227;
-  --color-gold-700: #8a6c14;
+  /* Gold accent (shared ICRCS) */
+  --color-gold-400: #e8c84a; /* gold-light */
+  --color-gold: #d4af37; /* gold */
+  --color-gold-700: #8a6c14; /* dark gold — links/labels */
 
-  --color-sovereign: #0d1f33;
+  --color-sovereign: #0b1d3a;
 
-  /* Semantic */
-  --color-success: #2e7d32;
-  --color-warning: #f59e0b;
+  /* ── Shared cross-portal vocabulary (bg-primary, bg-icrcs-navy, …) ──────── */
+  --color-primary: #005bac;
+  --color-primary-light: #0a6ec8;
+  --color-primary-dark: #004a8e;
+  --color-secondary: #0f766e;
+  --color-secondary-light: #16918a;
+  --color-accent: #f59e0b;
+  --color-accent-light: #fbbf24;
+  --color-icrcs-navy: #0b1d3a;
+  --color-icrcs-navy-light: #132743;
+  --color-icrcs-navy-dark: #060f1e;
+  --color-icrcs-gold: #d4af37;
+  --color-icrcs-gold-light: #e8c84a;
+  --color-icrcs-cream: #f5f5f0;
+
+  /* Semantic / state (shared ICRCS) */
+  --color-success: #16a34a;
+  --color-success-light: #22c55e;
+  --color-warning: #d97706;
+  --color-warning-dark: #b45309;
   --color-danger: #dc2626;
 
-  /* Surface / card / ink */
-  --color-surface: #f5f6fa;
+  /* Surface / neutral (shared ICRCS). NOTE: this portal keeps `surface` as the
+     light page background and `card` as the white panel; the shared `bg`/
+     `border`/`text` aliases are added for the cross-portal vocabulary. */
+  --color-bg: #f8fafc;
+  --color-surface: #f8fafc;
   --color-card: #ffffff;
   --color-line: #e2e8f0;
-  --color-ink: #1a1a2e;
+  --color-border: #e2e8f0;
+  --color-ink: #1e293b;
+  --color-text: #1e293b;
   --color-muted: #64748b;
+  --color-muted-light: #94a3b8;
 
-  /* Typography */
+  /* Typography (Ubuntu Sans) */
   --font-display: var(--font-ubuntu-sans), system-ui, sans-serif;
   --font-sans: var(--font-ubuntu-sans), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
+
+  /* Type scale (shared ICRCS) */
+  --text-xs: 13px;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 15px;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 19px;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 22px;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 26px;
+  --text-2xl--line-height: 2rem;
+
+  /* Elevation (shared ICRCS) */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.08),
+    0 4px 10px -2px rgba(0, 0, 0, 0.04);
+
+  /* Motion (shared ICRCS) */
+  --animate-fade-in: icrcs-fade-in 0.3s ease-out;
+  --animate-slide-up: icrcs-slide-up 0.4s ease-out;
+  @keyframes icrcs-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes icrcs-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
   /* Auto-scrolling info cards (login / create-profile). Registered via @theme
      so Tailwind emits the `animate-marquee` utility + keyframes (a raw class
@@ -55,8 +124,8 @@
 
 :root {
   color-scheme: light;
-  --background: #f5f6fa;
-  --foreground: #1a1a2e;
+  --background: #f8fafc;
+  --foreground: #1e293b;
 }
 
 /* Dark theme — overrides the semantic tokens so every `bg-surface`,
@@ -66,10 +135,13 @@
   --background: #0b1220;
   --foreground: #e7edf6;
 
+  --color-bg: #0b1220;
   --color-surface: #0b1220;
   --color-card: #131c30;
   --color-line: #26344c;
+  --color-border: #26344c;
   --color-ink: #e7edf6;
+  --color-text: #e7edf6;
   --color-muted: #93a3bd;
 
   --color-navy-50: #1a2742; /* subtle highlight bg (active nav, status card) */

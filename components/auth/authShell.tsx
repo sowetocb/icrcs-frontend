@@ -57,7 +57,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
       <div className="fixed inset-0 bg-gradient-to-br from-white/60 via-white/40 to-white/60 backdrop-blur-[2px]" />
 
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
-      <header className="relative z-20 border-b border-white/10 bg-[#0d1a2e]">
+      <header className="relative z-20 border-b border-white/10 bg-[#16395c]">
         {/* Language switcher — overlaid in the top-right of the bar. */}
         <div className="absolute right-4 top-2 z-10 flex items-center gap-2 rounded-xl bg-[#1e3557] px-1.5 py-1 shadow-sm">
           <LanguageSwitcher />
