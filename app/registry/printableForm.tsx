@@ -164,29 +164,45 @@ export default function PrintableForm({
 
       {/* ─── Section 1: Personal Information ─── */}
       <Section title={tr("1. Personal Information:", "1. Taarifa Binafsi:")}>
-        <Row label={tr("Full Name", "Jina Kamili")} value={applicantName} />
-        <Row label={tr("Gender", "Jinsia")} value={gender} />
-        <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val("dob")} />
-        <Row label={tr("Citizenship Type", "Aina ya Uraia")} value={citizenshipType || "—"} />
-        <Row label={tr("Nationality", "Utaifa")} value={val("nationalityCountry")} />
+        <RowGroup>
+          <Row label={tr("Full Name", "Jina Kamili")} value={applicantName} />
+          <Row label={tr("Date of Birth", "Tarehe")} value={val("dob")} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Gender", "Jinsia")} value={gender} />
+          <Row label={tr("Marital Status", "Hali ya Ndoa")} value={maritalStatus} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Citizenship", "Uraia")} value={citizenshipType || "—"} />
+          <Row label={tr("Nationality", "Utaifa")} value={val("nationalityCountry")} />
+        </RowGroup>
         <Row label={tr("Country of Birth", "Nchi ya Kuzaliwa")} value={val("pobCountry")} />
-        <Row label={tr("Region", "Mkoa")} value={titleCase(s("pobRegion"))} />
-        <Row label={tr("District", "Wilaya")} value={titleCase(s("pobDistrict"))} />
-        <Row label={tr("Ward", "Kata")} value={titleCase(s("pobWard"))} />
-        <Row label={tr("Street", "Mtaa")} value={titleCase(s("pobStreet"))} />
-        <Row label={tr("Village / Street", "Kijiji / Mtaa")} value={val("pobVillage")} />
-        <Row label={tr("Birth Certificate No.", "Namba ya Cheti cha Kuzaliwa")} value={val("birthCertNo")} />
-        <Row label={tr("Marital Status", "Hali ya Ndoa")} value={maritalStatus} />
-        <Row label={tr("Phone Number", "Namba ya Simu")} value={val("phone")} />
-        <Row label={tr("Email Address", "Barua Pepe")} value={val("email")} />
+        <RowGroup>
+          <Row label={tr("Region", "Mkoa")} value={titleCase(s("pobRegion"))} />
+          <Row label={tr("District", "Wilaya")} value={titleCase(s("pobDistrict"))} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Ward", "Kata")} value={titleCase(s("pobWard"))} />
+          <Row label={tr("Street", "Mtaa")} value={titleCase(s("pobStreet"))} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Village", "Kijiji")} value={val("pobVillage")} />
+          <Row label={tr("Birth Cert No.", "Namba Cheti")} value={val("birthCertNo")} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Phone", "Simu")} value={val("phone")} />
+          <Row label={tr("Email", "Barua Pepe")} value={val("email")} />
+        </RowGroup>
 
         {/* Naturalization details (if applicable) */}
         {s("citizenshipTypeId") === "3" && (
           <>
             <SubTitle>{tr("Naturalization Details", "Taarifa za Urithi wa Uraia")}</SubTitle>
-            <Row label={tr("Certificate Number", "Namba ya Cheti")} value={val("naturalizationCertNo")} />
-            <Row label={tr("Issue Place", "Sehemu ya Kutolewa")} value={val("naturalizationPlace")} />
-            <Row label={tr("Issue Date", "Tarehe ya Kutolewa")} value={val("naturalizationDate")} />
+            <RowGroup>
+              <Row label={tr("Certificate No.", "Namba Cheti")} value={val("naturalizationCertNo")} />
+              <Row label={tr("Issue Place", "Sehemu")} value={val("naturalizationPlace")} />
+            </RowGroup>
+            <Row label={tr("Issue Date", "Tarehe")} value={val("naturalizationDate")} />
           </>
         )}
       </Section>
@@ -194,14 +210,22 @@ export default function PrintableForm({
       {/* ─── Section 2: Residence / Address ─── */}
       <Section title={tr("2. Residence Information:", "2. Taarifa za Makazi:")}>
         <SubTitle>{tr("Current Address", "Anuani ya Sasa")}</SubTitle>
-        <Row label={tr("Country", "Nchi")} value={titleCase(s("curCountry"))} />
-        <Row label={tr("Region", "Mkoa")} value={titleCase(s("curRegion"))} />
-        <Row label={tr("District", "Wilaya")} value={titleCase(s("curDistrict"))} />
-        <Row label={tr("Ward", "Kata")} value={titleCase(s("curWard"))} />
-        <Row label={tr("Street", "Mtaa")} value={titleCase(s("curStreet"))} />
-        <Row label={tr("City", "Jiji")} value={titleCase(s("curCity"))} />
-        <Row label={tr("House No.", "Nyumba Na.")} value={val("curHouseNumber")} />
-        <Row label={tr("Postal Code", "Msimbo wa Posta")} value={val("curPostalCode")} />
+        <RowGroup>
+          <Row label={tr("Country", "Nchi")} value={titleCase(s("curCountry"))} />
+          <Row label={tr("Region", "Mkoa")} value={titleCase(s("curRegion"))} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("District", "Wilaya")} value={titleCase(s("curDistrict"))} />
+          <Row label={tr("Ward", "Kata")} value={titleCase(s("curWard"))} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Street", "Mtaa")} value={titleCase(s("curStreet"))} />
+          <Row label={tr("City", "Jiji")} value={titleCase(s("curCity"))} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("House No.", "Nyumba Na.")} value={val("curHouseNumber")} />
+          <Row label={tr("Postal Code", "Posta")} value={val("curPostalCode")} />
+        </RowGroup>
 
         <SubTitle>{tr("Permanent Address", "Anuani ya Kudumu")}</SubTitle>
         {data.sameAsPerm === true ? (
@@ -211,14 +235,22 @@ export default function PrintableForm({
           />
         ) : (
           <>
-            <Row label={tr("Country", "Nchi")} value={titleCase(s("permCountry"))} />
-            <Row label={tr("Region", "Mkoa")} value={titleCase(s("permRegion"))} />
-            <Row label={tr("District", "Wilaya")} value={titleCase(s("permDistrict"))} />
-            <Row label={tr("Ward", "Kata")} value={titleCase(s("permWard"))} />
-            <Row label={tr("Street", "Mtaa")} value={titleCase(s("permStreet"))} />
-            <Row label={tr("City", "Jiji")} value={titleCase(s("permCity"))} />
-            <Row label={tr("House No.", "Nyumba Na.")} value={val("permHouseNumber")} />
-            <Row label={tr("Postal Code", "Msimbo wa Posta")} value={val("permPostalCode")} />
+            <RowGroup>
+              <Row label={tr("Country", "Nchi")} value={titleCase(s("permCountry"))} />
+              <Row label={tr("Region", "Mkoa")} value={titleCase(s("permRegion"))} />
+            </RowGroup>
+            <RowGroup>
+              <Row label={tr("District", "Wilaya")} value={titleCase(s("permDistrict"))} />
+              <Row label={tr("Ward", "Kata")} value={titleCase(s("permWard"))} />
+            </RowGroup>
+            <RowGroup>
+              <Row label={tr("Street", "Mtaa")} value={titleCase(s("permStreet"))} />
+              <Row label={tr("City", "Jiji")} value={titleCase(s("permCity"))} />
+            </RowGroup>
+            <RowGroup>
+              <Row label={tr("House No.", "Nyumba Na.")} value={val("permHouseNumber")} />
+              <Row label={tr("Postal Code", "Posta")} value={val("permPostalCode")} />
+            </RowGroup>
           </>
         )}
       </Section>
@@ -243,20 +275,28 @@ export default function PrintableForm({
             .map((n) => (
               <div key={n}>
                 <SubTitle>{`${tr("School", "Shule")} ${n}`}</SubTitle>
-                <Row label={tr("Education Level", "Kiwango cha Elimu")} value={eduLevelName(`edu${n}Level`)} />
-                <Row label={tr("School / Institution", "Shule / Taasisi")} value={val(`edu${n}School`)} />
-                <Row label={tr("Completion Year", "Mwaka wa Kuhitimu")} value={val(`edu${n}Year`)} />
-                <Row label={tr("School District", "Wilaya ya Shule")} value={val(`edu${n}District`)} />
-                <Row label={tr("Index / Reg. No.", "Namba ya Usajili")} value={val(`edu${n}IndexNo`)} />
+                <RowGroup>
+                  <Row label={tr("Level", "Kiwango")} value={eduLevelName(`edu${n}Level`)} />
+                  <Row label={tr("School", "Shule")} value={val(`edu${n}School`)} />
+                </RowGroup>
+                <RowGroup>
+                  <Row label={tr("Year", "Mwaka")} value={val(`edu${n}Year`)} />
+                  <Row label={tr("District", "Wilaya")} value={val(`edu${n}District`)} />
+                </RowGroup>
+                <Row label={tr("Index No.", "Namba")} value={val(`edu${n}IndexNo`)} />
               </div>
             ))
         )}
 
         <SubTitle>{tr("Employment", "Ajira")}</SubTitle>
-        <Row label={tr("Employment Status", "Hali ya Ajira")} value={val("jobStatus")} />
-        <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s("occupation")) || "—"} />
-        <Row label={tr("Employer / Organisation", "Mwajiri / Taasisi")} value={val("employer")} />
-        <Row label={tr("National ID (NIDA)", "Namba ya NIDA")} value={val("nidaNumber")} />
+        <RowGroup>
+          <Row label={tr("Status", "Hali")} value={val("jobStatus")} />
+          <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s("occupation")) || "—"} />
+        </RowGroup>
+        <RowGroup>
+          <Row label={tr("Employer", "Mwajiri")} value={val("employer")} />
+          <Row label={tr("NIDA", "NIDA")} value={val("nidaNumber")} />
+        </RowGroup>
       </Section>
 
       {/* ─── Section 5: Emergency Contacts ─── */}
@@ -267,14 +307,16 @@ export default function PrintableForm({
 
       {/* ─── Section 6: Family ─── */}
       <Section title={tr("6. Family Information:", "6. Taarifa za Familia:")}>
-        <Row
-          label={tr("Has Children", "Ana Watoto")}
-          value={hasChildren ? tr("Yes", "Ndiyo") : tr("No", "Hapana")}
-        />
-        <Row
-          label={tr("Currently Married", "Ameoa/Ameolewa")}
-          value={isMarried ? tr("Yes", "Ndiyo") : tr("No", "Hapana")}
-        />
+        <RowGroup>
+          <Row
+            label={tr("Has Children", "Ana Watoto")}
+            value={hasChildren ? tr("Yes", "Ndiyo") : tr("No", "Hapana")}
+          />
+          <Row
+            label={tr("Married", "Ameoa/Ameolewa")}
+            value={isMarried ? tr("Yes", "Ndiyo") : tr("No", "Hapana")}
+          />
+        </RowGroup>
 
         {isMarried &&
           Array.from({ length: spouseCount }, (_, i) => i + 1)
@@ -283,16 +325,14 @@ export default function PrintableForm({
               <div key={`sp${n}`}>
                 <SubTitle>{`${tr("Spouse", "Mwenza")} ${n}`}</SubTitle>
                 <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`sp${n}`)} />
-                <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`sp${n}Dob`)} />
-                <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`sp${n}Gender`)] ?? val(`sp${n}Gender`)} />
-                <Row label={tr("Phone", "Simu")} value={val(`sp${n}Phone`)} />
-                <Row label={tr("Nationality", "Utaifa")} value={val(`sp${n}NatCountry`)} />
-                <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`sp${n}OccType`)) || "—"} />
-                <Row label={tr("Document", "Hati")} value={
-                  s(`sp${n}DocType`)
-                    ? `${optionLabel(DOCUMENT_TYPE_OPTIONS, s(`sp${n}DocType`))}: ${val(`sp${n}DocNumber`)}`
-                    : "—"
-                } />
+                <RowGroup>
+                  <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`sp${n}Gender`)] ?? val(`sp${n}Gender`)} />
+                  <Row label={tr("Phone", "Simu")} value={val(`sp${n}Phone`)} />
+                </RowGroup>
+                <RowGroup>
+                  <Row label={tr("Nationality", "Utaifa")} value={val(`sp${n}NatCountry`)} />
+                  <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`sp${n}OccType`)) || "—"} />
+                </RowGroup>
               </div>
             ))}
 
@@ -303,11 +343,14 @@ export default function PrintableForm({
               <div key={`ch${n}`}>
                 <SubTitle>{`${tr("Child", "Mtoto")} ${n}`}</SubTitle>
                 <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`ch${n}`)} />
-                <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`ch${n}Dob`)} />
-                <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`ch${n}Gender`)] ?? val(`ch${n}Gender`)} />
-                <Row label={tr("Phone", "Simu")} value={val(`ch${n}Phone`)} />
-                <Row label={tr("Nationality", "Utaifa")} value={val(`ch${n}NatCountry`)} />
-                <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`ch${n}OccType`)) || "—"} />
+                <RowGroup>
+                  <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`ch${n}Gender`)] ?? val(`ch${n}Gender`)} />
+                  <Row label={tr("Phone", "Simu")} value={val(`ch${n}Phone`)} />
+                </RowGroup>
+                <RowGroup>
+                  <Row label={tr("Nationality", "Utaifa")} value={val(`ch${n}NatCountry`)} />
+                  <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`ch${n}OccType`)) || "—"} />
+                </RowGroup>
               </div>
             ))}
 
@@ -318,11 +361,14 @@ export default function PrintableForm({
             <div key={`rel${n}`}>
               <SubTitle>{`${tr("Relative", "Ndugu")} ${n}`}</SubTitle>
               <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`rel${n}`)} />
-              <Row label={tr("Relationship", "Uhusiano")} value={optionLabel(RELATIONSHIP_TYPE_OPTIONS, s(`rel${n}RelType`)) || "—"} />
-              <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`rel${n}Dob`)} />
-              <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`rel${n}Gender`)] ?? val(`rel${n}Gender`)} />
-              <Row label={tr("Phone", "Simu")} value={val(`rel${n}Phone`)} />
-              <Row label={tr("Nationality", "Utaifa")} value={val(`rel${n}NatCountry`)} />
+              <RowGroup>
+                <Row label={tr("Relationship", "Uhusiano")} value={optionLabel(RELATIONSHIP_TYPE_OPTIONS, s(`rel${n}RelType`)) || "—"} />
+                <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`rel${n}Gender`)] ?? val(`rel${n}Gender`)} />
+              </RowGroup>
+              <RowGroup>
+                <Row label={tr("Phone", "Simu")} value={val(`rel${n}Phone`)} />
+                <Row label={tr("Nationality", "Utaifa")} value={val(`rel${n}NatCountry`)} />
+              </RowGroup>
               <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`rel${n}OccType`)) || "—"} />
               <Row label={tr("Document", "Hati")} value={
                 s(`rel${n}DocType`)
@@ -416,6 +462,11 @@ function SubTitle({ children }: { children: React.ReactNode }) {
   return <p className="subtitle">{children}</p>;
 }
 
+/** Wrap 2–3 Row elements so they render side-by-side in a single printed line. */
+function RowGroup({ children }: { children: React.ReactNode }) {
+  return <div className="row-group">{children}</div>;
+}
+
 function Row({
   label,
   value,
@@ -464,24 +515,37 @@ function ParentPrintBlock({
     <>
       <SubTitle>{label}</SubTitle>
       <Row label={tr("Full Name", "Jina Kamili")} value={name} />
-      <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`${prefix}Dob`)} />
-      <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
-      <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+      <RowGroup>
+        <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
+        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+      </RowGroup>
       <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
       <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
-      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
-      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
-      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
-      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
-      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
-      <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
+        <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
+      </RowGroup>
       <SubTitle>{tr("Residence", "Makazi")}</SubTitle>
-      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
-      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
-      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
-      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
-      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
-      <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
+        <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
+      </RowGroup>
       {s(`${prefix}DocType`) && (
         <Row
           label={tr("Document", "Hati")}
@@ -524,26 +588,41 @@ function EmergencyPrintBlock({
         {tr(`Emergency Contact ${index}`, `Mtu wa Dharura wa ${index === 1 ? "Kwanza" : "Pili"}`)}
       </SubTitle>
       <Row label={tr("Full Name", "Jina Kamili")} value={name} />
-      <Row label={tr("Relationship", "Uhusiano")} value={optionLabel(RELATIONSHIP_TYPE_OPTIONS, s(`${prefix}RelType`)) || "—"} />
-      <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`${prefix}OccType`)) || "—"} />
-      <Row label={tr("Date of Birth", "Tarehe ya Kuzaliwa")} value={val(`${prefix}Dob`)} />
-      <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
-      <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+      <RowGroup>
+        <Row label={tr("Relationship", "Uhusiano")} value={optionLabel(RELATIONSHIP_TYPE_OPTIONS, s(`${prefix}RelType`)) || "—"} />
+        <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`${prefix}OccType`)) || "—"} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
+        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+      </RowGroup>
       <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
       <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
-      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
-      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
-      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
-      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
-      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
-      <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
+        <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
+      </RowGroup>
       <SubTitle>{tr("Residence", "Makazi")}</SubTitle>
-      <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
-      <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
-      <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
-      <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
-      <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
-      <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
+        <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
+      </RowGroup>
       {s(`${prefix}DocType`) && (
         <Row
           label={tr("Document", "Hati")}
@@ -561,14 +640,22 @@ function SuretyBlock({ index, tr }: { index: number; tr: Tr }) {
     <>
       <SubTitle>{ordinal}</SubTitle>
       <Row label={tr("Full Name", "Jina Kamili")} value="" keepEmpty />
-      <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" keepEmpty />
-      <Row label={tr("Address", "Anuani")} value="" keepEmpty />
-      <Row label={tr("Phone Number", "Namba ya Simu")} value="" keepEmpty />
-      <Row label={tr("Residence", "Anapoishi")} value="" keepEmpty />
-      <Row label={tr("Street", "Mtaa")} value="" keepEmpty />
-      <Row label={tr("House No.", "Nyumba Na.")} value="" keepEmpty />
-      <Row label={tr("Relationship", "Uhusiano")} value="" keepEmpty />
-      <Row label={tr("Signature", "Sahihi")} value="" keepEmpty />
+      <RowGroup>
+        <Row label={tr("Occupation", "Kazi / Cheo")} value="" keepEmpty />
+        <Row label={tr("Phone", "Simu")} value="" keepEmpty />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Address", "Anuani")} value="" keepEmpty />
+        <Row label={tr("Residence", "Anapoishi")} value="" keepEmpty />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value="" keepEmpty />
+        <Row label={tr("House No.", "Nyumba Na.")} value="" keepEmpty />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Relationship", "Uhusiano")} value="" keepEmpty />
+        <Row label={tr("Signature", "Sahihi")} value="" keepEmpty />
+      </RowGroup>
     </>
   );
 }

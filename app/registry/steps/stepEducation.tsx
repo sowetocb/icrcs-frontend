@@ -99,15 +99,31 @@ export default function StepEducation() {
   return (
     <div className="space-y-8">
       <div className="space-y-5">
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-card p-4">
-          <input
-            type="checkbox"
-            checked={neverAttendedSchool}
-            onChange={(e) => handleNeverAttended(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-navy-700"
-          />
-          <span className="text-sm font-medium text-ink">{t("registry.neverAttendedSchool")}</span>
-        </label>
+        <div className="rounded-lg border border-line bg-card p-4">
+          <p className="mb-3 text-sm font-medium text-ink">{t("registry.haveAttendedSchool")}</p>
+          <div className="flex gap-6">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="attendedSchool"
+                checked={!neverAttendedSchool}
+                onChange={() => handleNeverAttended(false)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioYes")}</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="attendedSchool"
+                checked={neverAttendedSchool}
+                onChange={() => handleNeverAttended(true)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
+            </label>
+          </div>
+        </div>
 
         {!neverAttendedSchool && (
           <div className="space-y-5">

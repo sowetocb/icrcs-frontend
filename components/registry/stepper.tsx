@@ -30,8 +30,15 @@ export default function Stepper({
   const { t } = useI18n();
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col border-r border-line bg-card lg:flex">
-      <ol className="flex-1 p-5">
+    <aside className="hidden w-72 shrink-0 flex-col bg-sidebar lg:flex">
+      {/* Header badge */}
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-200/50">
+          {t("registry.stepsLabel")}
+        </p>
+      </div>
+
+      <ol className="flex-1 space-y-0.5 px-3 pb-4">
         {STEPS.map((n) => {
           const active = n === current;
           // Ticked once submitted (or simply passed on the way forward), but the
@@ -46,8 +53,12 @@ export default function Stepper({
                 type="button"
                 onClick={() => onGo(n)}
                 disabled={locked}
-                className={`flex w-full gap-3 rounded-lg p-2 text-left transition ${
-                  locked ? "cursor-not-allowed opacity-60" : "hover:bg-surface"
+                className={`flex w-full gap-3 rounded-lg px-3 py-2.5 text-left transition ${
+                  active
+                    ? "bg-sidebar-active text-white shadow-sm"
+                    : locked
+                      ? "cursor-not-allowed opacity-40"
+                      : "hover:bg-sidebar-hover"
                 }`}
               >
                 <span className="flex flex-col items-center self-stretch">
@@ -56,25 +67,33 @@ export default function Stepper({
                       done
                         ? "bg-success text-white"
                         : active
-                          ? "bg-navy-700 text-white"
-                          : "border border-line bg-card text-muted"
+                          ? "bg-white/20 text-white"
+                          : "border border-blue-200/20 text-blue-200/60"
                     }`}
                   >
                     {done ? <CheckIcon /> : n}
                   </span>
                   {n < STEPS.length && (
-                    <span className="mt-1 w-px flex-1 bg-line" />
+                    <span className="mt-1 w-px flex-1 bg-white/10" />
                   )}
                 </span>
                 <span className="pb-5">
                   <span
                     className={`block text-sm font-semibold ${
-                      active || done ? "text-navy-700" : "text-muted"
+                      active
+                        ? "text-white"
+                        : done
+                          ? "text-blue-100/90"
+                          : "text-blue-200/70"
                     }`}
                   >
                     {t(`registry.s${n}Title`)}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-snug text-muted">
+                  <span
+                    className={`mt-0.5 block text-xs leading-snug ${
+                      active ? "text-blue-100/70" : "text-blue-200/40"
+                    }`}
+                  >
                     {t(`registry.s${n}Desc`)}
                   </span>
                 </span>
@@ -84,11 +103,11 @@ export default function Stepper({
         })}
       </ol>
 
-      <div className="p-5">
+      <div className="border-t border-white/10 p-3">
         <button
           type="button"
           onClick={onSaveExit}
-          className="w-full rounded-lg border border-line bg-card py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-surface"
+          className="w-full rounded-lg border border-white/15 py-2.5 text-sm font-semibold text-blue-200/70 transition hover:bg-sidebar-hover hover:text-white"
         >
           {t("registry.saveExit")}
         </button>

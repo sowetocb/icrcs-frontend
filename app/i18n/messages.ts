@@ -156,6 +156,7 @@ const en = {
 
   },
   registry: {
+    stepsLabel: "Registration Steps",
     saveExit: "Save & Exit",
     next: "Save",
     complete: "Complete Registration",
@@ -184,6 +185,9 @@ const en = {
     previewLoadError: "Could not load your application summary. Please try again.",
     sameAsPerm: "My current address is the same as my permanent address",
     neverAttendedSchool: "I have never attended school",
+    haveAttendedSchool: "Have you attended school?",
+    radioYes: "Yes",
+    radioNo: "No",
     back1: "Back",
     back2: "Back to Personal Info",
     back3: "Back to Address",
@@ -482,7 +486,7 @@ const en = {
     docFile: "Document File", // REVIEW
     eduLevel: "Education Level", // REVIEW
     schoolName: "School Name", // REVIEW
-    schoolDistrict: "School District", // REVIEW
+    schoolDistrict: "City", // REVIEW
     completionYear: "Completion Year", // REVIEW
     employment: "Employment", // REVIEW
     employmentStatus: "Employment Status", // REVIEW
@@ -803,6 +807,7 @@ const sw: typeof en = {
     keyDesc: "Ufunguo wa usalama wa kimwili uliotolewa wakati wa uhakiki wa awali.",
   },
   registry: {
+    stepsLabel: "Hatua za Usajili",
     saveExit: "Hifadhi & Toka",
     next: "Hatua Inayofuata",
     complete: "Kamilisha Usajili",
@@ -831,6 +836,9 @@ const sw: typeof en = {
     previewLoadError: "Haikuweza kupakia muhtasari wa maombi yako. Tafadhali jaribu tena.",
     sameAsPerm: "Anwani yangu ya sasa ni sawa na anwani yangu ya kudumu",
     neverAttendedSchool: "Sijawahi kwenda shule",
+    haveAttendedSchool: "Je, umewahi kwenda shule?",
+    radioYes: "Ndiyo",
+    radioNo: "Hapana",
     back1: "Rudi",
     back2: "Rudi kwenye Taarifa Binafsi",
     back3: "Rudi kwenye Anuani",

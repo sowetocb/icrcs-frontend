@@ -34,9 +34,9 @@ body {
 }
 
 #printable-form {
-  padding: 12mm;
-  font-size: 12px;
-  line-height: 1.375;
+  padding: 10mm;
+  font-size: 11px;
+  line-height: 1.35;
   color: #000;
   background: #fff;
 }
@@ -109,10 +109,10 @@ body {
 }
 
 #printable-form .app-id-banner {
-  margin: 1rem 0;
+  margin: 0.5rem 0;
   border-radius: 0.25rem;
   background: #0d1f33;
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 1rem;
   text-align: center;
 }
 
@@ -125,46 +125,87 @@ body {
 }
 
 #printable-form section {
-  margin-top: 1rem;
-  break-inside: avoid;
+  margin-top: 0.5rem;
 }
 
 #printable-form h2 {
   margin: 0;
   border-bottom: 1px solid #a9c0db;
-  padding-bottom: 0.25rem;
-  font-size: 13px;
+  padding-bottom: 0.2rem;
+  font-size: 12px;
   font-weight: 700;
   color: #0d1f33;
 }
 
 #printable-form .section-body {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 #printable-form .subtitle {
-  margin: 0.75rem 0 0.25rem;
-  font-size: 11px;
+  margin: 0.4rem 0 0.15rem;
+  font-size: 10.5px;
   font-weight: 700;
   color: #0d1f33;
 }
 
+/* Single full-width row — uses same 1:5 proportion as a RowGroup pair (1:2
+   within each half of the 4-col grid = 1/6 total), so values align vertically
+   with the RowGroup first-value column. */
 #printable-form .row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 5fr;
   border: 1px solid #e2e8f0;
+  border-top: none;
+  break-inside: avoid;
+}
+
+#printable-form section > .section-body > .row:first-child,
+#printable-form .subtitle + .row,
+#printable-form .subtitle + .row-group {
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Two-pair row group: Label | Value | Label | Value — fixed 4-column grid
+   so every label and value column align vertically like a proper table. */
+#printable-form .row-group {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 2fr minmax(80px, 1fr) 2fr;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  break-inside: avoid;
+}
+
+/* Each .row inside a group dissolves into the grid (label + value as cells). */
+#printable-form .row-group .row {
+  display: contents;
+  border: none;
+}
+
+/* Internal cell borders */
+#printable-form .row-group .row-label,
+#printable-form .row-group .row-value {
+  width: auto;
+  border-right: 1px solid #e2e8f0;
+}
+
+/* Remove right border on the last cell of each row pair */
+#printable-form .row-group > .row:last-child > .row-value {
+  border-right: none;
 }
 
 #printable-form .row-label {
-  width: 50%;
+  width: auto;
   background: #f5f6fa;
-  padding: 0.375rem 0.75rem;
+  padding: 0.2rem 0.5rem;
   font-weight: 600;
+  font-size: 10px;
   color: #0d1f33;
 }
 
 #printable-form .row-value {
-  width: 50%;
-  padding: 0.375rem 0.75rem;
+  width: auto;
+  padding: 0.2rem 0.5rem;
+  font-weight: 700;
 }
 
 #printable-form .declaration {
@@ -187,9 +228,9 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 2rem;
-  margin-top: 1.5rem;
-  padding-top: 0.5rem;
-  font-size: 11px;
+  margin-top: 1rem;
+  padding-top: 0.35rem;
+  font-size: 10px;
 }
 
 #printable-form .sig-line {
@@ -199,9 +240,9 @@ body {
 }
 
 #printable-form .official-box {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   border: 1px solid #000;
-  padding: 0.75rem;
+  padding: 0.5rem;
 }
 
 #printable-form .official-box p {

@@ -204,15 +204,31 @@ export default function StepFamily() {
     <div className="space-y-8">
       {/* Children */}
       <div className="space-y-4">
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-card p-4">
-          <input
-            type="checkbox"
-            checked={hasChildren}
-            onChange={(e) => set("hasChildren", e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-navy-700"
-          />
-          <span className="text-sm font-medium text-ink">{t("fields.haveChildren")}</span>
-        </label>
+        <div className="rounded-lg border border-line bg-card p-4">
+          <p className="mb-3 text-sm font-medium text-ink">{t("fields.haveChildren")}</p>
+          <div className="flex gap-6">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="hasChildren"
+                checked={hasChildren}
+                onChange={() => set("hasChildren", true)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioYes")}</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="hasChildren"
+                checked={!hasChildren}
+                onChange={() => set("hasChildren", false)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
+            </label>
+          </div>
+        </div>
         {hasChildren && (
           <div className="space-y-5">
             <p className="text-sm text-muted">{t("fields.childrenNote")}</p>
@@ -248,15 +264,31 @@ export default function StepFamily() {
 
       {/* Marital status */}
       <div className="space-y-4">
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-card p-4">
-          <input
-            type="checkbox"
-            checked={isMarried}
-            onChange={(e) => set("isMarried", e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-navy-700"
-          />
-          <span className="text-sm font-medium text-ink">{t("fields.married")}</span>
-        </label>
+        <div className="rounded-lg border border-line bg-card p-4">
+          <p className="mb-3 text-sm font-medium text-ink">{t("fields.married")}</p>
+          <div className="flex gap-6">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="isMarried"
+                checked={isMarried}
+                onChange={() => set("isMarried", true)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioYes")}</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="isMarried"
+                checked={!isMarried}
+                onChange={() => set("isMarried", false)}
+                className="h-4 w-4 border-line accent-navy-700"
+              />
+              <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
+            </label>
+          </div>
+        </div>
 
         {isMarried && (
           <div className="space-y-5">

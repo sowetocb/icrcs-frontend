@@ -374,19 +374,10 @@ export default function RegistryWizard({
       }
     }
 
-    // Step 5: Emergency contacts' place of birth + residence are mandatory
-    // (same cascade rules as the parents in Step 3).
+    // Step 5: Emergency contacts' residence is mandatory; place of birth is
+    // strictly optional.
     if (step === 5) {
       for (const p of ["ec1", "ec2"]) {
-        const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
-        if (pobCountry === "Tanzania") {
-          required = [...required, `${p}PobWard`];
-        } else if (pobCountry) {
-          required = [...required, `${p}Village`];
-        } else {
-          required = [...required, `${p}PobCountry`];
-        }
-
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
           required = [...required, `${p}ResWard`, `${p}ResStreet`];
@@ -504,27 +495,7 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 4: adults must supply their National ID (NIDA) number.
-    if (step === 4) {
-      // Unless they never attended school, at least one school must be filled.
-      if (data.neverAttendedSchool !== true) {
-        const count = Math.max(1, Number(data.eduCount) || 1);
-        let hasSchool = false;
-        for (let i = 1; i <= count; i++) {
-          if (typeof data[`edu${i}School`] === "string" && (data[`edu${i}School`] as string).trim()) {
-            hasSchool = true;
-            break;
-          }
-        }
-        if (!hasSchool) {
-          setErrors(["edu1School"]);
-          setFormError(t("registry.schoolRequired"));
-          return;
-        }
-      }
-
-      // NIDA number is optional — no validation here.
-    }
+    // Stage 4: school name, occupation and NIDA are all optional — no validation.
 
     // Stage 6: if married, at least one spouse must be filled.
     if (step === 6 && data.isMarried === true) {
