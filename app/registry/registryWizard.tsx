@@ -182,7 +182,9 @@ export default function RegistryWizard({
   const router = useRouter();
 
   // The first registration under a profile is the account holder themselves.
-  const [isFirstPerson] = useState(() => !selfDone);
+  // Derived (not state) so it reacts when selfDone updates asynchronously after
+  // the backend sync confirms the account holder's registration exists.
+  const isFirstPerson = !selfDone;
   const [profile] = useState<Profile | null>(() => loadProfile());
   const ownerId = profile?.profileId ?? "";
   const locked = profile ? (isFirstPerson ? PERSONAL_LOCK : CONTACT_LOCK) : [];

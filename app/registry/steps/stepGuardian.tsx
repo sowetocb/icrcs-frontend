@@ -43,7 +43,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
 
       {/* DOB + Gender + Phone */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.dob")} required>
+        <Field label={t("fields.dob")} optional>
           <DateInput name={`${prefix}Dob`} />
         </Field>
         <Field label={t("fields.gender")} required>

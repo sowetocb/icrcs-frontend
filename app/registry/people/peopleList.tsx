@@ -11,6 +11,7 @@ import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/reg
 import { getErrorMessage } from "@/lib/api/client";
 import { getStage9Preview } from "@/lib/api/registration";
 import { previewToForm } from "@/lib/registry/previewToForm";
+import { loadProfile } from "@/lib/auth/profile";
 import PrintableForm from "../printableForm";
 import { printRegistrationForm } from "../printRegistrationForm";
 
@@ -136,6 +137,28 @@ export default function PeopleList() {
 
   function isRemotePerson(person: Person | RegisteredPerson): person is RegisteredPerson {
     return "subjectId" in person;
+  }
+
+  /** Determine if a person is the account holder. For local people this is
+   * the `isCreator` flag; for remote people we compare against the logged-in
+   * profile's full name. */
+  function isAccountHolder(person: Person | RegisteredPerson): boolean {
+    if ("isCreator" in person && person.isCreator) return true;
+    if (isRemotePerson(person)) {
+      const local = people.find((lp) => lp.applicationId === person.subjectId);
+      if (local?.isCreator) return true;
+      // Fall back to matching the profile name.
+      const profile = loadProfile();
+      if (profile) {
+        const profileName = [profile.firstName, profile.middleName, profile.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+          .toLowerCase();
+        if (profileName && person.fullName.trim().toLowerCase() === profileName) return true;
+      }
+    }
+    return false;
   }
 
   const handleDownloadRemote = async (rp: RegisteredPerson) => {
@@ -271,7 +294,7 @@ export default function PeopleList() {
                             <p className="font-semibold text-navy-700">
                               {name}
                             </p>
-                            {"isCreator" in p && p.isCreator && (
+                            {isAccountHolder(p) && (
                               <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
                                 {t("people.creatorBadge")}
                               </span>

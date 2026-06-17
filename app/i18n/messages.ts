@@ -153,7 +153,7 @@ const en = {
     addressDesc: "Valid utility bill or local authority residency letter.",
     keyTitle: "Secure Key",
     keyDesc: "The physical security key issued during pre-clearance.",
-    
+
   },
   registry: {
     saveExit: "Save & Exit",
@@ -528,7 +528,7 @@ const en = {
     phCountry: "Country", // REVIEW
     country: "Country",
     phCountryNat: "Country of nationality", // REVIEW
-    phCityVillageBirth: "City / Village of birth", // REVIEW
+    phCityVillageBirth: "City", // REVIEW
     phCityOpt: "City", // REVIEW
     phVillage: "City", // REVIEW
     phStreet: "Street", // REVIEW
@@ -1174,9 +1174,9 @@ const sw: typeof en = {
     phCountry: "Nchi", // REVIEW
     country: "Nchi",
     phCountryNat: "Nchi ya utaifa", // REVIEW
-    phCityVillageBirth: "Jiji / Kijiji cha kuzaliwa", // REVIEW
+    phCityVillageBirth: "Jiji", // REVIEW
     phCityOpt: "Jiji (hiari)", // REVIEW
-    phVillage: "Mji", // REVIEW
+    phVillage: "Jiji", // REVIEW
     phStreet: "Mtaa", // REVIEW
     phDocNumber: "Ingiza namba ya hati", // REVIEW
     phSelect: "Chagua", // REVIEW

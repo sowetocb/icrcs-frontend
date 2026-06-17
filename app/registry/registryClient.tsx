@@ -17,14 +17,18 @@ import { getRegisteredPeople } from "@/lib/api/registry";
 type Mode = "landing" | "gate" | "wizard" | "success";
 
 export default function RegistryClient() {
-  // Compute initial mode synchronously from localStorage so a page refresh
-  // keeps the user on the same screen (especially the wizard) instead of
-  // bouncing them back to the landing page.
+  // Distinguish page refresh (F5) from fresh navigation (clicking a link).
+  // On refresh while filling forms → stay in the wizard.
+  // On fresh navigation (sidebar click) → always show the landing page.
   const [mode, setMode] = useState<Mode>(() => {
     if (typeof window === "undefined") return "landing";
-    const ownerId = loadProfile()?.profileId ?? "";
-    const draft = loadRegistrationFor(ownerId);
-    if (draft && !draft.completed) return "wizard";
+    const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const isReload = navEntry?.type === "reload";
+    if (isReload) {
+      const ownerId = loadProfile()?.profileId ?? "";
+      const draft = loadRegistrationFor(ownerId);
+      if (draft && !draft.completed) return "wizard";
+    }
     return "landing";
   });
   const [submission, setSubmission] = useState<{
