@@ -221,6 +221,9 @@ export default function RegistryWizard({
   const [submittedStages, setSubmittedStages] = useState<Set<number>>(
     () => new Set(resumable?.submittedStages ?? []),
   );
+  // When the user jumps back to an earlier stage for editing, we remember
+  // the stage they came from so that after saving they are returned to it.
+  const [returnStep, setReturnStep] = useState<number | null>(null);
   // Furthest step the user has ever reached. Drives sidebar navigation so they
   // can jump back and forth across everything they've already visited — even
   // after stepping back to edit an earlier stage. Recovered from the draft's
@@ -393,6 +396,12 @@ export default function RegistryWizard({
     if (n >= 1 && n <= maxStep) {
       setErrors([]);
       setFormError("");
+      // If jumping backwards, record the current step so we can return after save.
+      if (n < step) {
+        setReturnStep(step);
+      } else {
+        setReturnStep(null);
+      }
       setStep(n);
     }
   }
@@ -481,15 +490,7 @@ export default function RegistryWizard({
         }
       }
 
-      const dob = typeof data.dob === "string" ? data.dob : "";
-      const adult = dob ? isAtLeast18(dob) : false;
-      const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
-      // NIDA is required only for the adult account holder — never for a minor.
-      if (isFirstPerson && adult && !nida) {
-        setErrors(["nidaNumber"]);
-        setFormError(t("registry.nidaRequired"));
-        return;
-      }
+      // NIDA number is optional — no validation here.
     }
 
     // Stage 6: if married, at least one spouse must be filled.
@@ -671,7 +672,12 @@ export default function RegistryWizard({
       setSubmittedStages(updatedStages);
     }
 
-    const next = Math.min(step + 1, TOTAL);
+    // If the user jumped back to edit an earlier stage, return them to where
+    // they were; otherwise advance sequentially.
+    const next = returnStep && returnStep > step
+      ? Math.min(returnStep, TOTAL)
+      : Math.min(step + 1, TOTAL);
+    setReturnStep(null);
 
     // After Personal Information: display the Application ID
     const isNewAppId = step === 1 && !applicationId;

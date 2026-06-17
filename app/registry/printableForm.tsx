@@ -9,6 +9,7 @@ import {
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
+import { LOGO_EMBLEM } from "@/lib/assets";
 
 type Data = Record<string, string | boolean>;
 type Tr = (en: string, sw: string) => string;
@@ -126,7 +127,7 @@ export default function PrintableForm({
         <div className="header-row">
           <img
             className="header-logo"
-            src="/logo/immigrationEmblem.png"
+            src={LOGO_EMBLEM}
             alt="Immigration Services Department emblem"
           />
           <div className="header-center">

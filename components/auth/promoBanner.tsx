@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { LOGO_EMBLEM } from "@/lib/assets";
 
 // Wide promotional photos with a caption relevant to each image. Only real
 // image files are listed so no empty placeholder tiles render; add more here as
@@ -28,7 +29,7 @@ function Tile({ src, caption }: { src: string; caption: string }) {
           />
         ) : (
           <Image
-            src="/logo/immigrationEmblem.png"
+            src={LOGO_EMBLEM}
             alt={caption}
             width={56}
             height={56}

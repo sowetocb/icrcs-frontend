@@ -149,16 +149,20 @@ export default function StepEducation() {
           <Field label={t("fields.employmentStatus")} required>
             <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobOptions(t)} />
           </Field>
-          <Field label={t("fields.occupation")} optional>
-            <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
-          </Field>
+          {/* Occupation makes no sense for the unemployed — hide it. */}
+          {data.jobStatus !== "Unemployed" && (
+            <Field label={t("fields.occupation")} optional>
+              <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
+            </Field>
+          )}
           <Field label={t("fields.employer")} required={employmentRequired} optional={!employmentRequired}>
             <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
           </Field>
           {/* NIDA applies only to the adult account holder. Minors (always
-              registered as dependents) have no National ID, so it's hidden. */}
+              registered as dependents) have no National ID, so it's hidden.
+              It is optional. */}
           {isFirstPerson && (
-            <Field label={t("fields.nidaNumber")} required>
+            <Field label={t("fields.nidaNumber")} optional>
               <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
             </Field>
           )}

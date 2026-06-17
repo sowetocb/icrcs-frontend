@@ -64,9 +64,11 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         <Field label={t("fields.docType")} optional>
           <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
         </Field>
-        <Field label={t("fields.docNumber")} optional>
-          <TextInput name={`${prefix}DocNumber`} placeholder="e.g. 19600310-12345-00001-6" />
-        </Field>
+        {data[`${prefix}DocType`] && (
+          <Field label={t("fields.docNumber")} optional>
+            <TextInput name={`${prefix}DocNumber`} placeholder="e.g. 19600310-12345-00001-6" />
+          </Field>
+        )}
       </div>
 
       <DocumentUpload prefix={prefix} />

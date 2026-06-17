@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
+import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
 
 /**
  * Institutional login / registration shell.
@@ -65,13 +65,13 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
 
         <div className="mx-auto flex w-full max-w-7xl items-center gap-5 px-6 py-5 sm:gap-8">
           {/* Left — national coat of arms */}
-          <Image
-            src="/logo/coatOfArms.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={LOGO_COAT_OF_ARMS}
             alt={t("brand.country")}
             width={124}
             height={124}
             className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
-            priority
           />
 
           {/* Center — three titles + national flag strip */}
@@ -95,13 +95,13 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Right — immigration emblem */}
-          <Image
-            src="/logo/immigrationEmblem.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={LOGO_EMBLEM}
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
             className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
-            priority
           />
         </div>
       </header>
@@ -117,13 +117,13 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
                 lettering stay legible against the deep-blue panel. */}
             <div className="flex flex-col items-center">
               <div className="rounded-full bg-white/95 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
-                <Image
-                  src="/logo/immigrationEmblem.png"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={LOGO_EMBLEM}
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
                   className="h-auto w-32 object-contain"
-                  priority
                 />
               </div>
               <div className="mt-5 text-center">

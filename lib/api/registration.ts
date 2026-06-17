@@ -474,7 +474,8 @@ function buildStage4Payload(data: Data, isSelf: boolean): Record<string, unknown
     employmentStatus:
       EMPLOYMENT[job] ?? (job ? job.toUpperCase().replace(/[^A-Z0-9]+/g, "_") : null),
     organizationName: str(data, "employer") || null,
-    occupationTypeId: intOrNull(data, "occupation") ?? null,
+    // The unemployed have no occupation (the field is hidden in the UI).
+    occupationTypeId: job === "Unemployed" ? null : intOrNull(data, "occupation") ?? null,
     // Child (under 18) is the "no documents" variant — omit the key entirely.
     ...(isSelf ? { documents: idDocuments(data) } : {}),
   };

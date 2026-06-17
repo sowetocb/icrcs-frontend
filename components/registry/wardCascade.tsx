@@ -264,6 +264,21 @@ export default function WardCascade({
         </div>
       )}
 
+      {/* Territory — always visible when country picker is shown, but disabled
+          until the user selects Tanzania. */}
+      {showCountry && !isTanzania && (
+        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-1`}>
+          <CascadeSelect
+            value=""
+            label={t("fields.phTerritory")}
+            options={territories}
+            disabled={true}
+            invalid={false}
+            onChange={() => {}}
+          />
+        </div>
+      )}
+
       {isTanzania && (
       <div className={`grid grid-cols-1 gap-3 ${cols}`}>
         <CascadeSelect

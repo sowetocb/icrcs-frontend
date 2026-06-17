@@ -87,9 +87,11 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
         <Field label={t("fields.docType")} optional>
           <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
         </Field>
-        <Field label={t("fields.docNumber")} optional>
-          <TextInput name={`${prefix}DocNumber`} placeholder={t("fields.phDocNumber")} />
-        </Field>
+        {data[`${prefix}DocType`] && (
+          <Field label={t("fields.docNumber")} optional>
+            <TextInput name={`${prefix}DocNumber`} placeholder={t("fields.phDocNumber")} />
+          </Field>
+        )}
       </div>
 
       <DocumentUpload prefix={prefix} />

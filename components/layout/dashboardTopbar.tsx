@@ -6,6 +6,7 @@ import Link from "next/link";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { refreshMyProfile, fetchProfilePicture } from "@/lib/api/auth";
+import { LOGO_EMBLEM } from "@/lib/assets";
 import {
   loadProfile,
   saveProfile,
@@ -85,13 +86,15 @@ export default function DashboardTopbar() {
       <div className="flex h-20 items-center justify-between px-6">
         {/* Left — Brand */}
         <div className="flex items-center gap-3">
-          <Image
-            src="/logo/immigrationEmblem.png"
+          {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
+              logo replacement works without images.localPatterns config. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={LOGO_EMBLEM}
             alt={t("brand.country")}
             width={56}
             height={56}
             className="h-18 w-18 object-contain"
-            priority
           />
           <div className="hidden leading-tight sm:block">
             <p className="text-xs font-medium uppercase tracking-wider text-blue-200/70">
