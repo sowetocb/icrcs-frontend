@@ -1,7 +1,7 @@
 "use client";
 
 import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { jobOptions, useOccupationTypeOptions } from "@/components/registry/blocks";
+import { useEmploymentStatusOptions, useOccupationTypeOptions } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, toOptions, type LookupItem } from "@/lib/api/lookup";
@@ -66,6 +66,7 @@ export default function StepEducation() {
   const { t } = useI18n();
   const { data, set, isFirstPerson } = useWizard();
   const occupations = useOccupationTypeOptions();
+  const jobStatuses = useEmploymentStatusOptions();
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
 
@@ -173,7 +174,7 @@ export default function StepEducation() {
         <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={t("fields.employmentStatus")} required>
-            <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobOptions(t)} />
+            <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
           </Field>
           {/* Occupation & Employer only apply to the employed. */}
           {data.jobStatus === "Employed" && (
@@ -185,14 +186,6 @@ export default function StepEducation() {
                 <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
               </Field>
             </>
-          )}
-          {/* NIDA applies only to the adult account holder. Minors (always
-              registered as dependents) have no National ID, so it's hidden.
-              It is optional. */}
-          {isFirstPerson && (
-            <Field label={t("fields.nidaNumber")} optional>
-              <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
-            </Field>
           )}
         </div>
       </div>

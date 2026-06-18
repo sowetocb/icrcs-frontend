@@ -9,6 +9,7 @@ import {
   getCitizenshipTypes,
   getRelationships,
   getOccupations,
+  getEmploymentStatuses,
   type LookupItem,
 } from "@/lib/api/lookup";
 import WardCascade from "./wardCascade";
@@ -113,6 +114,10 @@ export const useRelationshipTypeOptions = () =>
   useLocalizedOptions(getRelationships, relationshipTypeOptions, "id");
 export const useOccupationTypeOptions = () =>
   useLocalizedOptions(getOccupations, occupationTypeOptions, "id");
+// Employment status: value is the status name (used to gate occupation/employer
+// and resolved to the lookup id in the Stage 4 payload).
+export const useEmploymentStatusOptions = () =>
+  useLocalizedOptions(getEmploymentStatuses, jobOptions, "code");
 
 /** Three-column First / Middle / Last name row, bound by prefix. */
 export function NameRow({ prefix }: { prefix: string }) {

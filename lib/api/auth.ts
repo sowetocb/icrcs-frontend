@@ -1,4 +1,5 @@
 import { apiPost, apiGet, apiPut, apiDelete, apiUpload, ApiError } from "./client";
+import { resolveGenderId, resolveGenderCode } from "./lookup";
 import { loadSession, saveSession, clearSession } from "@/lib/auth/session";
 import { loadProfile, toProxyUrl, type Profile } from "@/lib/auth/profile";
 
@@ -72,7 +73,11 @@ export async function register(
     await delay(400);
     return { preAuthToken: "mock-pre-auth-token" };
   }
-  const raw = (await apiPost("/v1/auth/register", payload)) as Record<string, unknown>;
+  // The backend expects the gender lookup ID (e.g. 1), not the M/F/O code the
+  // form collects. Resolve it; keep the original value if the lookup is down.
+  const genderId = await resolveGenderId(payload.gender);
+  const body = { ...payload, gender: genderId ?? payload.gender };
+  const raw = (await apiPost("/v1/auth/register", body)) as Record<string, unknown>;
   const data = (raw?.data ?? raw ?? {}) as Record<string, unknown>;
   return { preAuthToken: String(data.preAuthToken ?? "") };
 }
@@ -195,6 +200,20 @@ export async function resetPassword(
   });
 }
 
+// Extract a raw gender value from the profile envelope, tolerating the backend's
+// many shapes: a code/name string, a numeric lookup id, a `genderId`/`genderName`
+// key, or a nested `{ id, name, code }` object. Normalised to the M/F/O code by
+// resolveGenderCode at the fetch boundary.
+function rawGender(d: Record<string, unknown>): string {
+  const g = d.gender ?? d.sex ?? d.genderId ?? d.genderName ?? d.sexId;
+  if (g == null) return "";
+  if (typeof g === "object") {
+    const go = g as Record<string, unknown>;
+    return String(go.code ?? go.name ?? go.id ?? "");
+  }
+  return String(g);
+}
+
 // Maps the backend profile envelope ({ data: {...} } or a bare object) to Profile.
 function mapProfile(raw: unknown): Profile {
   const r = (raw ?? {}) as Record<string, unknown>;
@@ -204,7 +223,7 @@ function mapProfile(raw: unknown): Profile {
     firstName: String(d.firstName ?? ""),
     middleName: String(d.middleName ?? ""),
     lastName: String(d.lastName ?? ""),
-    gender: String(d.gender ?? d.sex ?? ""),
+    gender: rawGender(d),
     phoneNumber: String(d.phoneNumber ?? d.phone ?? ""),
     email: String(d.email ?? ""),
     profilePictureUrl: String(d.profilePictureUrl ?? d.profilePicture ?? ""),
@@ -273,7 +292,10 @@ export async function getMyProfile(accessToken: string): Promise<Profile> {
     await delay(200);
     return { ...MOCK_PROFILE, ...loadProfile() };
   }
-  return mapProfile(await apiGet("/v1/profile/me", accessToken));
+  const profile = mapProfile(await apiGet("/v1/profile/me", accessToken));
+  // The backend returns gender as the lookup id; the app uses the M/F/O code.
+  profile.gender = await resolveGenderCode(profile.gender);
+  return profile;
 }
 
 /** Re-fetch the profile from the backend, refreshing the access token if it has
@@ -331,9 +353,14 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
     const current = loadProfile() ?? MOCK_PROFILE;
     return { ...current, ...input };
   }
-  return mapProfile(
-    await withFreshAuth((at) => apiPut("/v1/profile/update", input, at)),
+  // Send gender as the lookup id; normalise the returned id back to the code.
+  const genderId = await resolveGenderId(input.gender);
+  const body = { ...input, gender: genderId ?? input.gender };
+  const profile = mapProfile(
+    await withFreshAuth((at) => apiPut("/v1/profile/update", body, at)),
   );
+  profile.gender = await resolveGenderCode(profile.gender);
+  return profile;
 }
 
 /** POST /v1/profile/picture — multipart upload (field "file", jpg/png ≤500KB).

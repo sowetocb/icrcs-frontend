@@ -7,7 +7,8 @@ import Stepper from "@/components/registry/stepper";
 import HelpfulTip from "@/components/registry/helpfulTip";
 import { useI18n } from "../i18n/localeProvider";
 import { loadRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
-import { loadProfile, type Profile } from "@/lib/auth/profile";
+import { loadProfile, saveProfile, type Profile } from "@/lib/auth/profile";
+import { refreshMyProfile } from "@/lib/api/auth";
 import { generateApplicationId } from "./applicationId";
 import { emailApplicationId } from "./emailApplicationId";
 import {
@@ -31,6 +32,8 @@ import {
   getStage9Preview,
 } from "@/lib/api/registration";
 import { previewToForm } from "@/lib/registry/previewToForm";
+import { missingFieldLabels } from "@/lib/registry/fieldLabels";
+import { resolveGenderCode } from "@/lib/api/lookup";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
 import StepPersonal from "./steps/stepPersonal";
@@ -213,6 +216,9 @@ export default function RegistryWizard({
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
+  // Readable labels of the fields the user skipped on the current step, shown
+  // so they know specifically what to go back and fill.
+  const [missingLabels, setMissingLabels] = useState<string[]>([]);
   const [applicationId, setApplicationId] = useState(
     () => resumable?.applicationId ?? "",
   );
@@ -241,9 +247,45 @@ export default function RegistryWizard({
     setMaxStep((m) => Math.max(m, step));
   }, [step]);
 
+  // The account holder's gender (prefilled from the profile, then locked) must be
+  // the M/F/O code the gender select uses. A profile cached before normalisation
+  // may carry a lookup id ("1"), a name ("MALE"), or — if it was saved before the
+  // backend's gender shape was handled — nothing at all. Normalise what we have;
+  // if it's empty/unresolved, refetch the (now correctly mapped) profile.
+  useEffect(() => {
+    if (!isFirstPerson) return;
+    const g = typeof data.gender === "string" ? data.gender.trim() : "";
+    if (/^[MFO]$/i.test(g)) return; // already a valid code
+    let cancelled = false;
+    (async () => {
+      if (g) {
+        const code = await resolveGenderCode(g);
+        if (cancelled) return;
+        if (/^[MFO]$/i.test(code)) {
+          setData((d) => ({ ...d, gender: code }));
+          return;
+        }
+      }
+      // Empty or unresolved — pull a fresh profile and use its gender.
+      try {
+        const fresh = await refreshMyProfile();
+        saveProfile(fresh);
+        const code = await resolveGenderCode(fresh.gender);
+        if (!cancelled && code) setData((d) => ({ ...d, gender: code }));
+      } catch {
+        // best effort — leave the field for the user
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const set = (name: string, value: string | boolean) => {
     setData((d) => ({ ...d, [name]: value }));
     setErrors((e) => (e.includes(name) ? e.filter((n) => n !== name) : e));
+    setMissingLabels((l) => (l.length ? [] : l));
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
   };
 
@@ -420,6 +462,7 @@ export default function RegistryWizard({
     if (n >= 1 && n <= maxStep) {
       setErrors([]);
       setFormError("");
+      setMissingLabels([]);
       // If jumping backwards, record the current step so we can return after save.
       if (n < step) {
         setReturnStep(step);
@@ -463,8 +506,9 @@ export default function RegistryWizard({
     }
     const missing = missingFields();
     if (missing.length > 0) {
-      setFormError("");
       setErrors(missing);
+      setMissingLabels(missingFieldLabels(missing, t));
+      setFormError("");
       return;
     }
     if (step === 1) {
@@ -493,10 +537,8 @@ export default function RegistryWizard({
         setFormError(t("registry.minorError"));
         return;
       }
-    }
 
-    // Stage 4: NIDA must be exactly 20 digits when provided.
-    if (step === 4) {
+      // NIDA (optional) must be exactly 20 digits when provided.
       const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
       if (nida && nida.length !== 20) {
         setErrors(["nidaNumber"]);
@@ -596,6 +638,7 @@ export default function RegistryWizard({
 
     setErrors([]);
     setFormError("");
+    setMissingLabels([]);
 
     let sid = subjectId;
     let appId = applicationId;
@@ -730,6 +773,7 @@ export default function RegistryWizard({
   function handleBack() {
     setErrors([]);
     setFormError("");
+    setMissingLabels([]);
     if (step === 1) {
       onExit();
       return;
@@ -772,10 +816,26 @@ export default function RegistryWizard({
                   <StepComponent />
                 </WizardProvider>
 
-                {(formError || errors.length > 0) && (
-                  <p role="alert" className="mt-6 text-sm font-medium text-danger">
-                    {formError || t("registry.required")}
-                  </p>
+                {missingLabels.length > 0 && !formError ? (
+                  <div role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger/10 p-4">
+                    <p className="text-sm font-semibold text-danger">
+                      {t("registry.missingIntro")}
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {missingLabels.map((label) => (
+                        <li key={label} className="flex items-start gap-2 text-sm text-danger">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
+                          <span>{label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  (formError || errors.length > 0) && (
+                    <p role="alert" className="mt-6 text-sm font-medium text-danger">
+                      {formError || t("registry.required")}
+                    </p>
+                  )
                 )}
 
                 <div className="mt-8 flex items-center justify-between gap-4">

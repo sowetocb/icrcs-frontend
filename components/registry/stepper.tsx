@@ -30,7 +30,7 @@ export default function Stepper({
   const { t } = useI18n();
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col bg-sidebar lg:flex">
+    <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-72 shrink-0 flex-col self-start overflow-y-auto bg-sidebar lg:flex">
       {/* Header badge */}
       <div className="px-5 pt-5 pb-2">
         <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-200/50">

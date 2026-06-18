@@ -221,7 +221,10 @@ export default function StepDetails({
               onChange={(e) => update("middleName", e.target.value)}
               placeholder="Test"
               className={inputClass}
-            />
+            /> 
+            {errors.firstName && (
+              <FieldError id="middleName-error" message={t("register.required")} />
+            )}
           </div>
           <div className="space-y-1.5">
             <label htmlFor="lastName" className={labelClass}>
@@ -244,7 +247,7 @@ export default function StepDetails({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-1">
             <label htmlFor="gender" className={labelClass}>
               {t("register.gender")}
             </label>
@@ -269,7 +272,7 @@ export default function StepDetails({
               <FieldError id="gender-error" message={t("register.required")} />
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
             <label htmlFor="email" className={labelClass}>
               {t("form.email")}
             </label>

@@ -25,6 +25,15 @@ function DownloadIcon() {
   );
 }
 
+function UserIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
 function SearchIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -392,9 +401,18 @@ export default function PeopleList() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap items-center gap-2">
+                              {isAccountHolder(p) && (
+                                <span
+                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-700"
+                                  title={t("people.creatorBadge")}
+                                  aria-label={t("people.creatorBadge")}
+                                >
+                                  <UserIcon />
+                                </span>
+                              )}
                               <span className="font-semibold text-navy-700">{name}</span>
                               {isAccountHolder(p) && (
-                                <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
                                   {t("people.creatorBadge")}
                                 </span>
                               )}

@@ -1,11 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
+
+/** Modal explaining what the ICRCS system is and does, as a bulleted list. */
+function AboutDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
+  const points = [
+    t("about.point1"),
+    t("about.point2"),
+    t("about.point3"),
+    t("about.point4"),
+    t("about.point5"),
+  ];
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
+    >
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label={t("about.close")}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      />
+
+      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-card shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-[#1e4d8a] to-[#0d2a52] px-6 py-5">
+          <div>
+            <h2 id="about-title" className="font-display text-lg font-bold text-white">
+              {t("about.title")}
+            </h2>
+            <p className="mt-1 text-sm text-blue-100">{t("about.intro")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("about.close")}
+            className="shrink-0 rounded-lg p-1.5 text-white/80 transition hover:bg-white/15 hover:text-white"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <ul className="space-y-3 px-6 py-5">
+          {points.map((point, i) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-ink">
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold" />
+              <span>{point}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="border-t border-line px-6 py-4 text-right">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+          >
+            {t("about.close")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Institutional login / registration shell.
@@ -28,6 +106,7 @@ export default function AuthShell({
   const [statusError, setStatusError] = useState("");
   const [statusResult, setStatusResult] = useState<ApplicationStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // Resolve a localized status label, falling back to a readable form.
   function statusLabel(status: string) {
@@ -119,7 +198,7 @@ export default function AuthShell({
         {/* The split card */}
         <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
           {/* Left panel — deep blue with coat of arms + status check */}
-          <div className={`hidden w-[42%] flex-col items-center gap-8 bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] px-6 py-8 md:flex ${showStatusCheck ? "justify-between" : "justify-start"}`}>
+          <div className="hidden w-[42%] flex-col items-center justify-start gap-5 bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] px-6 py-8 md:flex">
             {/* Immigration emblem + branding — on top.
                 The emblem sits on a light pad so its blue ribbons and gold
                 lettering stay legible against the deep-blue panel. */}
@@ -157,7 +236,7 @@ export default function AuthShell({
                     {t("status.heading")}
                   </span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-whiteuser">
+                <p className="mt-1.5 text-[11px] text-white">
                   {t("status.label")}
                 </p>
                 <form onSubmit={checkStatus} className="mt-2 flex items-center gap-2">
@@ -246,8 +325,20 @@ export default function AuthShell({
             </div>
             )}
 
-            {/* Spacer for vertical balance */}
-            {showStatusCheck && <div />}
+            {/* "About this system" — opens an info dialog. Sits below the status
+                check on login, and below the emblem on create-profile. */}
+            <button
+              type="button"
+              onClick={() => setAboutOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-[12px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              {t("about.trigger")}
+            </button>
           </div>
 
           {/* Right panel — form only */}
@@ -262,6 +353,8 @@ export default function AuthShell({
           </div>
         </div>
       </main>
+
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }

@@ -217,6 +217,12 @@ const MOCK_EDUCATION: LookupItem[] = [
   { id: 6, name: "Certificate" },
   { id: 7, name: "Diploma" },
 ];
+const MOCK_EMPLOYMENT_STATUSES: LookupItem[] = [
+  { id: 1, name: "Employed", code: "Employed" },
+  { id: 2, name: "Self-Employed", code: "Self-Employed" },
+  { id: 3, name: "Unemployed", code: "Unemployed" },
+  { id: 4, name: "Retired", code: "Retired" },
+];
 const MOCK_OCCUPATIONS: LookupItem[] = [
   { id: 2, name: "Government Employee" },
   { id: 3, name: "Private Sector Employee" },
@@ -253,10 +259,69 @@ export function getGenders(): Promise<LookupItem[]> {
   }).catch(() => MOCK_GENDERS);
 }
 
+/** Resolve a stored gender value (the app keeps the M/F/O code) to the gender
+ * lookup ID the backend expects. Matches on code, name, or an already-stored id.
+ * Returns null when nothing matches. */
+export async function resolveGenderId(value: string): Promise<number | null> {
+  if (!value) return null;
+  const v = value.trim().toUpperCase();
+  try {
+    const genders = await getGenders();
+    const match = genders.find(
+      (g) =>
+        (g.code ?? "").toUpperCase() === v ||
+        g.name.toUpperCase() === v ||
+        String(g.id) === value.trim(),
+    );
+    if (match) return match.id;
+  } catch {
+    // lookup unavailable — fall through
+  }
+  return null;
+}
+
+/** Inverse of {@link resolveGenderId}: normalise a gender value coming from the
+ * backend (lookup id like "1", a name like "MALE", or already an M/F/O code) to
+ * the M/F/O code the app uses everywhere. Falls back to a first-letter heuristic
+ * when the lookup is unavailable. */
+export async function resolveGenderCode(value: string): Promise<string> {
+  if (!value) return "";
+  const v = value.trim().toUpperCase();
+  try {
+    const genders = await getGenders();
+    const match = genders.find(
+      (g) =>
+        String(g.id) === value.trim() ||
+        (g.code ?? "").toUpperCase() === v ||
+        g.name.toUpperCase() === v,
+    );
+    if (match?.code) return match.code;
+  } catch {
+    // lookup unavailable — fall through to the heuristic
+  }
+  if (v.startsWith("M")) return "M";
+  if (v.startsWith("F")) return "F";
+  return value;
+}
+
+/** Derive the canonical marital-status enum the backend payload expects from the
+ * lookup's bilingual `statusName` (e.g. "Sijaoa / Sijaolewa (Single)" → SINGLE,
+ * "Mjane / Mgane (Widowed)" → WIDOW). */
+function maritalCodeFromName(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("single")) return "SINGLE";
+  if (n.includes("married")) return "MARRIED";
+  if (n.includes("divorc")) return "DIVORCED";
+  if (n.includes("widow")) return "WIDOW";
+  if (n.includes("separat")) return "SEPARATED";
+  // Fallback: canonical uppercase of the raw name.
+  return name.toUpperCase().replace(/\s+/g, "_");
+}
+
 /** GET /lookup/marital-statuses → { statusName, id }.
  * The backend stores statuses without a separate code field — derive the
- * canonical uppercase name so the registration payload can use it directly
- * ("SINGLE", "MARRIED", etc.). */
+ * canonical enum ("SINGLE", "MARRIED", "DIVORCED", "WIDOW", "SEPARATED") so the
+ * registration payload can use it directly. */
 export function getMaritalStatuses(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_MARITAL_STATUSES);
   return getList("/lookup/marital-statuses", (o) => {
@@ -264,9 +329,41 @@ export function getMaritalStatuses(): Promise<LookupItem[]> {
     return {
       id: num(o.id),
       name,
-      code: name.toUpperCase().replace(/\s+/g, "_"),
+      code: maritalCodeFromName(name),
     };
   }).catch(() => MOCK_MARITAL_STATUSES);
+}
+
+/** GET /v1/lookup/employment-statuses → { statusName, id }. The statusName is
+ * stable enough to use as the option value (code); the backend payload sends the
+ * id, resolved via {@link resolveEmploymentStatusId}. */
+export function getEmploymentStatuses(): Promise<LookupItem[]> {
+  if (BYPASS) return Promise.resolve(MOCK_EMPLOYMENT_STATUSES);
+  return getList("/v1/lookup/employment-statuses", (o) => {
+    const name = str(o.statusName);
+    return { id: num(o.id), name, code: name };
+  }).catch(() => MOCK_EMPLOYMENT_STATUSES);
+}
+
+/** Resolve a stored employment-status value (the form keeps the status name) to
+ * the lookup ID the Stage 4 payload expects. Matches on code, name, or an
+ * already-stored id. Returns null when nothing matches. */
+export async function resolveEmploymentStatusId(value: string): Promise<number | null> {
+  if (!value) return null;
+  const v = value.trim().toUpperCase();
+  try {
+    const items = await getEmploymentStatuses();
+    const match = items.find(
+      (s) =>
+        (s.code ?? "").toUpperCase() === v ||
+        s.name.toUpperCase() === v ||
+        String(s.id) === value.trim(),
+    );
+    if (match) return match.id;
+  } catch {
+    // lookup unavailable — fall through
+  }
+  return null;
 }
 
 /** GET /lookup/educations → { levelName, id } */

@@ -93,7 +93,7 @@ function PhotoUpload() {
 }
 
 export default function StepPersonal() {
-  const { data } = useWizard();
+  const { data, isFirstPerson } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
@@ -140,9 +140,19 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      <Field label={t("fields.nationality")} required>
-        <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
-      </Field>
+      {/* Nationality + NIDA share a row — both are single-line fields, so they
+          line up cleanly. NIDA applies only to the adult account holder; for
+          dependents (minors with no National ID) nationality spans full width. */}
+      <div className={`grid grid-cols-1 gap-4 ${isFirstPerson ? "sm:grid-cols-2" : ""}`}>
+        <Field label={t("fields.nationality")} required>
+          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
+        </Field>
+        {isFirstPerson && (
+          <Field label={t("fields.nidaNumber")} optional>
+            <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
+          </Field>
+        )}
+      </div>
 
       <Field label={t("fields.placeOfBirth")} required>
         {/* Single country picker (lookup-connected, with flag). The Region/

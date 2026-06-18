@@ -1,7 +1,12 @@
 import { apiGet, apiPost, apiPut } from "./client";
 import { withFreshAuth } from "./auth";
 import { loadSession } from "@/lib/auth/session";
-import { getCountries } from "./lookup";
+import {
+  getCountries,
+  getMaritalStatuses,
+  resolveGenderId,
+  resolveEmploymentStatusId,
+} from "./lookup";
 import {
   uploadAttachment,
   PASSPORT_PHOTO_TYPE,
@@ -24,13 +29,6 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } | null {
 // Auth bypass also short-circuits registry submissions (UI works without a backend).
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const MARITAL: Record<string, string> = {
-  Single: "SINGLE",
-  Married: "MARRIED",
-  Divorced: "DIVORCED",
-  Widowed: "WIDOWED",
-};
 
 type Data = Record<string, string | boolean>;
 
@@ -73,6 +71,28 @@ async function resolveCountryCode(name: string): Promise<string | null> {
   }
   const local = COUNTRIES.find((c) => c.name.toLowerCase() === name.toLowerCase());
   return local ? alpha2ToAlpha3(local.code) : null;
+}
+
+/** Resolve a stored marital-status value (the form keeps the enum code, e.g.
+ * "SINGLE", "WIDOW") to the marital-status lookup ID the backend expects.
+ * Matches on code, name, or an already-stored id. Returns null when nothing
+ * matches. */
+async function resolveMaritalStatusId(value: string): Promise<number | null> {
+  if (!value) return null;
+  const v = value.trim().toUpperCase();
+  try {
+    const statuses = await getMaritalStatuses();
+    const match = statuses.find(
+      (s) =>
+        (s.code ?? "").toUpperCase() === v ||
+        s.name.toUpperCase() === v ||
+        String(s.id) === value.trim(),
+    );
+    if (match) return match.id;
+  } catch {
+    // lookup unavailable — fall through
+  }
+  return null;
 }
 
 /** Non-citizen self-service lookup: verify a traveller by their travel
@@ -200,9 +220,9 @@ async function buildStage1Payload(
     firstName: str(data, "applicantFirst"),
     middleName: str(data, "applicantMiddle"),
     lastName: str(data, "applicantLast"),
-    sex: str(data, "gender"),
+    sex: await resolveGenderId(str(data, "gender")),
     dateOfBirth: str(data, "dob"),
-    maritalStatus: MARITAL[marriage] ?? (marriage.toUpperCase() || "SINGLE"),
+    maritalStatus: await resolveMaritalStatusId(marriage),
     nationalityCode: await resolveCountryCode(str(data, "nationalityCountry")),
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
@@ -439,14 +459,6 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
 // Stage 4 — Education & Employment
 // ──────────────────────────────────────────────────────────────────────────────
 
-const EMPLOYMENT: Record<string, string> = {
-  Employed: "EMPLOYED",
-  "Self-employed": "SELF_EMPLOYED",
-  Unemployed: "UNEMPLOYED",
-  Student: "STUDENT",
-  Retired: "RETIRED",
-};
-
 function idDocuments(data: Data): Record<string, unknown>[] {
   const nida = str(data, "nidaNumber");
   if (!nida) return [];
@@ -455,7 +467,7 @@ function idDocuments(data: Data): Record<string, unknown>[] {
   ];
 }
 
-function buildStage4Payload(data: Data, isSelf: boolean): Record<string, unknown> {
+async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<string, unknown>> {
   const never = data.neverAttendedSchool === true;
   const job = str(data, "jobStatus");
 
@@ -481,8 +493,7 @@ function buildStage4Payload(data: Data, isSelf: boolean): Record<string, unknown
 
   return {
     educationList,
-    employmentStatus:
-      EMPLOYMENT[job] ?? (job ? job.toUpperCase().replace(/[^A-Z0-9]+/g, "_") : null),
+    employmentStatus: await resolveEmploymentStatusId(job),
     // Occupation & employer apply only to the employed (hidden in the UI for
     // every other status), so null them out otherwise.
     organizationName: job === "Employed" ? str(data, "employer") || null : null,
@@ -501,8 +512,9 @@ export async function submitStage4(
     await delay(300);
     return { mock: true };
   }
+  const payload = await buildStage4Payload(data, isSelf);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage4`, buildStage4Payload(data, isSelf), at),
+    apiPost(`/v1/registration/${subjectId}/stage4`, payload, at),
   );
 }
 
@@ -515,12 +527,9 @@ export async function editStage4(
     await delay(300);
     return { mock: true };
   }
+  const payload = await buildStage4Payload(data, isSelf);
   return withFreshAuth((at) =>
-    apiPut(
-      `/v1/registration/${subjectId}/stage4`,
-      buildStage4Payload(data, isSelf),
-      at,
-    ),
+    apiPut(`/v1/registration/${subjectId}/stage4`, payload, at),
   );
 }
 
@@ -536,7 +545,7 @@ async function buildPersonPayload(data: Data, prefix: string): Promise<Record<st
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`),
     lastName: str(data, `${prefix}Last`),
-    gender: str(data, `${prefix}Gender`) || null,
+    gender: await resolveGenderId(str(data, `${prefix}Gender`)),
     phoneNumber: phone(data, `${prefix}Phone`),
     // The backend expects the ISO country CODE (e.g. "KEN"), not the lookup id.
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),

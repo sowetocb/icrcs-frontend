@@ -4,7 +4,7 @@
 // draft so display-only values the preview lacks (TZ region/district/ward
 // names, the passport photo data-URL, friendly attachment names) are kept.
 
-import { getCountries } from "@/lib/api/lookup";
+import { getCountries, getGenders, getMaritalStatuses, getEmploymentStatuses } from "@/lib/api/lookup";
 
 type Data = Record<string, string | boolean>;
 type Obj = Record<string, unknown>;
@@ -42,13 +42,70 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
     // fall back to the raw code
   }
 
+  // Gender lookup id / name → the M/F/O code the form + display use. The backend
+  // now stores gender by lookup id, so the preview may echo "1"/"2" rather than
+  // "M"/"F"; map it back so the wizard/print stay consistent.
+  let genderToCode: (v: string) => string = (v) => v;
+  try {
+    const genders = await getGenders();
+    const gmap = new Map<string, string>();
+    for (const g of genders) {
+      const code = (g.code ?? "").toUpperCase();
+      if (!code) continue;
+      gmap.set(String(g.id), code);
+      gmap.set(g.name.toUpperCase(), code);
+      gmap.set(code, code);
+    }
+    genderToCode = (v) => (v ? gmap.get(v.trim().toUpperCase()) ?? v : "");
+  } catch {
+    // fall back to the raw value
+  }
+
+  // Marital-status lookup id / name → the enum code the form + display use. The
+  // backend now stores marital status by lookup id, so the preview may echo
+  // "1"/"2" rather than "SINGLE"/"MARRIED"; map it back.
+  let maritalToCode: (v: string) => string = (v) => v;
+  try {
+    const statuses = await getMaritalStatuses();
+    const mmap = new Map<string, string>();
+    for (const s of statuses) {
+      const code = (s.code ?? "").toUpperCase();
+      if (!code) continue;
+      mmap.set(String(s.id), code);
+      mmap.set(s.name.toUpperCase(), code);
+      mmap.set(code, code);
+    }
+    maritalToCode = (v) => (v ? mmap.get(v.trim().toUpperCase()) ?? v : "");
+  } catch {
+    // fall back to the raw value
+  }
+
+  // Employment-status lookup id / name → the status name the form + display use.
+  // The backend stores employment status by lookup id, so the preview may echo
+  // "1" rather than "Employed"; map it back.
+  let employmentToCode: (v: string) => string = (v) => v;
+  try {
+    const items = await getEmploymentStatuses();
+    const emap = new Map<string, string>();
+    for (const s of items) {
+      const code = s.code ?? s.name;
+      if (!code) continue;
+      emap.set(String(s.id), code);
+      emap.set(s.name.toUpperCase(), code);
+      emap.set(code.toUpperCase(), code);
+    }
+    employmentToCode = (v) => (v ? emap.get(v.trim().toUpperCase()) ?? v : "");
+  } catch {
+    // fall back to the raw value
+  }
+
   // ── Personal details ──────────────────────────────────────────────────────
   const p = obj(d.personalDetails);
   if (p.firstName != null) out.applicantFirst = str(p.firstName);
   if (p.middleName != null) out.applicantMiddle = str(p.middleName);
   if (p.lastName != null) out.applicantLast = str(p.lastName);
-  if (p.sex != null) out.gender = str(p.sex);
-  if (p.maritalStatus != null) out.marriage = str(p.maritalStatus);
+  if (p.sex != null) out.gender = genderToCode(str(p.sex));
+  if (p.maritalStatus != null) out.marriage = maritalToCode(str(p.maritalStatus));
   if (p.citizenshipTypeId != null) out.citizenshipTypeId = str(p.citizenshipTypeId);
   if (p.nationalityCode != null) out.nationalityCountry = codeToName(str(p.nationalityCode));
   if (p.phoneNumber != null) out.phone = str(p.phoneNumber);
@@ -91,7 +148,7 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
 
   // ── Employment ────────────────────────────────────────────────────────────
   const emp = obj(d.employment);
-  if (emp.employmentStatus != null) out.jobStatus = str(emp.employmentStatus);
+  if (emp.employmentStatus != null) out.jobStatus = employmentToCode(str(emp.employmentStatus));
   if (emp.organizationName != null) out.employer = str(emp.organizationName);
   if (emp.occupationTypeId != null) out.occupation = str(emp.occupationTypeId);
 
@@ -117,7 +174,7 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
     out[`${prefix}First`] = str(r.firstName);
     out[`${prefix}Middle`] = str(r.middleName);
     out[`${prefix}Last`] = str(r.lastName);
-    if (r.gender != null) out[`${prefix}Gender`] = str(r.gender);
+    if (r.gender != null) out[`${prefix}Gender`] = genderToCode(str(r.gender));
     out[`${prefix}Phone`] = str(r.phoneNumber);
     if (r.nationalityCode != null) out[`${prefix}NatCountry`] = codeToName(str(r.nationalityCode));
     if (r.residenceCountryCode != null) out[`${prefix}ResCountry`] = codeToName(str(r.residenceCountryCode));
@@ -135,7 +192,7 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
       out[`${prefix}First`] = str(person.firstName);
       out[`${prefix}Middle`] = str(person.middleName);
       out[`${prefix}Last`] = str(person.lastName);
-      if (person.gender != null) out[`${prefix}Gender`] = str(person.gender);
+      if (person.gender != null) out[`${prefix}Gender`] = genderToCode(str(person.gender));
       if (person.phoneNumber != null) out[`${prefix}Phone`] = str(person.phoneNumber);
     });
   }
@@ -152,7 +209,7 @@ export async function previewToForm(previewData: unknown): Promise<Data> {
       out[`${prefix}First`] = str(person.firstName);
       out[`${prefix}Middle`] = str(person.middleName);
       out[`${prefix}Last`] = str(person.lastName);
-      if (person.gender != null) out[`${prefix}Gender`] = str(person.gender);
+      if (person.gender != null) out[`${prefix}Gender`] = genderToCode(str(person.gender));
       if (person.phoneNumber != null) out[`${prefix}Phone`] = str(person.phoneNumber);
       if (person.nationalityCode != null) out[`${prefix}NatCountry`] = codeToName(str(person.nationalityCode));
     });
