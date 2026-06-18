@@ -15,27 +15,12 @@ import { loadProfile } from "@/lib/auth/profile";
 import PrintableForm from "../printableForm";
 import { printRegistrationForm } from "../printRegistrationForm";
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return (parts[0][0] + (parts[parts.length - 1][0] ?? "")).toUpperCase();
-}
-
 function DownloadIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
-function StatusIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   );
 }
@@ -108,31 +93,6 @@ export default function PeopleList() {
     const hh = String(date.getHours()).padStart(2, "0");
     const min = String(date.getMinutes()).padStart(2, "0");
     return `${dd}/${mm}/${date.getFullYear()} ${hh}:${min}`;
-  }
-
-  function stageLabel(stage: number) {
-    if (stage >= 1 && stage <= 5) return t(`registry.stage${stage}`);
-    return `Stage ${stage}`;
-  }
-  // Mirrors the 5-stage process timeline in statusResult.tsx:
-  //   1 Submitted · 2 Enrolled · 3 Assessed · 4 Approved · 5 Status Issued
-  function getPostSubmissionStageLabel(status: string): string {
-    const s = status.toUpperCase();
-    if (s === "COMPLETED" || s === "ACTIVE" || s === "ISSUED" || s === "STATUS_ISSUED")
-      return t("registry.stage5");
-    if (s === "APPROVED" || s === "PENDING_ISSUANCE") return t("registry.stage4");
-    if (s === "ASSESSED" || s === "PENDING_APPROVAL" || s === "IN_REVIEW")
-      return t("registry.stage3");
-    if (s === "ENROLLED" || s === "PENDING_ASSESSMENT" || s === "BIOMETRICS")
-      return t("registry.stage2");
-    return t("registry.stage1");
-  }
-
-  function getRemoteStageLabel(p: RegisteredPerson): string {
-    if (p.status === "PENDING" && p.currentStage < 6) {
-      return stageLabel(p.currentStage);
-    }
-    return getPostSubmissionStageLabel(p.status);
   }
 
   function isRemotePerson(person: Person | RegisteredPerson): person is RegisteredPerson {
@@ -228,7 +188,7 @@ export default function PeopleList() {
         <div className="flex flex-1">
           <CitizenSidebar />
         <main className="flex-1 px-6 py-10 lg:px-10">
-          <div className="mx-auto w-full max-w-4xl">
+          <div className="mx-auto w-full max-w-6xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="font-display text-3xl font-black tracking-tight text-navy-700">
@@ -271,107 +231,84 @@ export default function PeopleList() {
                 <p className="text-muted">{t("people.empty")}</p>
               </div>
             ) : (
-              <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {displayPeople.map((p) => {
-                  const remote = isRemotePerson(p);
-                  const name = remote ? p.fullName : p.name;
-                  const id = remote ? p.subjectId : p.applicationId;
-                  const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
-                  const sc = statusColor(rawStatus);
+              <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-card">
+                <table className="w-full min-w-[720px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-muted">
+                      <th className="px-5 py-4">{t("people.colApplicationId")}</th>
+                      <th className="px-5 py-4">{t("people.colName")}</th>
+                      <th className="px-5 py-4">{t("people.colStatus")}</th>
+                      <th className="px-5 py-4">{t("people.colRegisteredOn")}</th>
+                      <th className="px-5 py-4 text-right">{t("people.colActions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayPeople.map((p) => {
+                      const remote = isRemotePerson(p);
+                      const name = remote ? p.fullName : p.name;
+                      const id = remote ? p.subjectId : p.applicationId;
+                      const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
+                      const registeredOn = remote ? formatDate(p.createdAt) : p.submittedDate;
+                      const sc = statusColor(rawStatus);
 
-                  return (
-                    <div
-                      key={id}
-                      className="rounded-2xl border border-line bg-card p-5 transition hover:border-gold/30 hover:shadow-sm"
-                    >
-                      {/* Header: Avatar + Name + Status badge */}
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-50 text-sm font-bold text-navy-700">
-                          {initials(name)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-navy-700">
-                              {name}
-                            </p>
-                            {isAccountHolder(p) && (
-                              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
-                                {t("people.creatorBadge")}
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-0.5 font-mono text-sm font-bold text-navy-500">
+                      return (
+                        <tr
+                          key={id}
+                          className="border-b border-line last:border-b-0 transition hover:bg-surface"
+                        >
+                          <td className="px-5 py-4 font-mono text-sm font-bold text-navy-500">
                             {id}
-                          </p>
-                        </div>
-                        {/* Status badge with dynamic coloring */}
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sc.bg} ${sc.text}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-                          {getStatusLabel(rawStatus, t)}
-                        </span>
-                      </div>
-
-                      {/* Details section */}
-                      <div className="mt-3 space-y-2 text-sm text-navy-600">
-                        {remote ? (
-                          <>
-                            {/* Current stage */}
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-navy-700">{t("registry.checkCurrent")}:</span>
-                              <span className="rounded-md bg-navy-50 px-2 py-0.5 text-xs font-semibold text-navy-700">
-                                {getRemoteStageLabel(p)}
-                              </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-navy-700">{name}</span>
+                              {isAccountHolder(p) && (
+                                <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
+                                  {t("people.creatorBadge")}
+                                </span>
+                              )}
                             </div>
-                            <div>
-                              <span className="font-semibold">Email:</span> {p.email}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sc.bg} ${sc.text}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
+                              {getStatusLabel(rawStatus, t)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-navy-600">
+                            {registeredOn}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end">
+                              {remote ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadRemote(p)}
+                                  disabled={downloadingId === p.subjectId}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  <DownloadIcon />
+                                  {downloadingId === p.subjectId
+                                    ? t("people.preparing")
+                                    : t("people.download")}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setPrintPerson(p)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
+                                >
+                                  <DownloadIcon />
+                                  {t("people.download")}
+                                </button>
+                              )}
                             </div>
-                            <div>
-                              <span className="font-semibold">Phone:</span> {p.phoneNumber}
-                            </div>
-                            <div>
-                              <span className="font-semibold">{t("registry.statusCreatedAt")}:</span> {formatDate(p.createdAt)}
-                            </div>
-                            {/* Check status link */}
-                            <div className="pt-2 flex flex-wrap items-center gap-2">
-                              <Link
-                                href={`/registry/status?id=${encodeURIComponent(p.subjectId)}`}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
-                              >
-                                <StatusIcon />
-                                {t("registry.statusAction")}
-                              </Link>
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadRemote(p)}
-                                disabled={downloadingId === p.subjectId}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                <DownloadIcon />
-                                {downloadingId === p.subjectId
-                                  ? t("people.preparing")
-                                  : t("people.download")}
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-xs text-muted">
-                              {t("people.submittedOn").replace("{date}", p.submittedDate)}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => setPrintPerson(p)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
-                            >
-                              <DownloadIcon />
-                              {t("people.download")}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

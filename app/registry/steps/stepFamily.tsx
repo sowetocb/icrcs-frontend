@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import {
   useGenderOptions,
@@ -169,6 +171,7 @@ export default function StepFamily() {
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
   const isMarried = data.isMarried === true;
+  const [maritalConflict, setMaritalConflict] = useState(false);
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
@@ -272,7 +275,16 @@ export default function StepFamily() {
                 type="radio"
                 name="isMarried"
                 checked={isMarried}
-                onChange={() => set("isMarried", true)}
+                onChange={() => {
+                  // Block "Yes" when the marital status from Step 1 is not "Married"
+                  const marital = typeof data.marriage === "string" ? data.marriage : "";
+                  if (marital && marital !== "Married") {
+                    setMaritalConflict(true);
+                    return;
+                  }
+                  setMaritalConflict(false);
+                  set("isMarried", true);
+                }}
                 className="h-4 w-4 border-line accent-navy-700"
               />
               <span className="text-sm font-medium text-ink">{t("registry.radioYes")}</span>
@@ -282,12 +294,21 @@ export default function StepFamily() {
                 type="radio"
                 name="isMarried"
                 checked={!isMarried}
-                onChange={() => set("isMarried", false)}
+                onChange={() => {
+                  setMaritalConflict(false);
+                  set("isMarried", false);
+                }}
                 className="h-4 w-4 border-line accent-navy-700"
               />
               <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
             </label>
           </div>
+
+          {maritalConflict && (
+            <p role="alert" className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
+              {t("registry.marriageConflict").replace("{status}", t(`opt.${(typeof data.marriage === "string" ? data.marriage : "Single").toLowerCase()}`))}
+            </p>
+          )}
         </div>
 
         {isMarried && (
