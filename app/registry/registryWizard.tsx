@@ -495,7 +495,15 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 4: school name, occupation and NIDA are all optional — no validation.
+    // Stage 4: NIDA must be exactly 20 digits when provided.
+    if (step === 4) {
+      const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
+      if (nida && nida.length !== 20) {
+        setErrors(["nidaNumber"]);
+        setFormError(t("registry.nidaExactDigits"));
+        return;
+      }
+    }
 
     // Stage 6: if married, at least one spouse must be filled.
     if (step === 6 && data.isMarried === true) {

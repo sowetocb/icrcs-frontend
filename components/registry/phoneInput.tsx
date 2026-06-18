@@ -54,8 +54,11 @@ export default function PhoneInput({ name }: { name: string }) {
   const display = chunk(national);
 
   function commit(dial: string, natDigits: string) {
+    // Strip leading zeros — users often type local-format numbers (e.g.
+    // "0624839009") but the stored value must be international (+255 624 839 009).
+    const trimmed = natDigits.replace(/^0+/, "");
     // Store empty when no national digits so the field still reads as "required".
-    set(name, natDigits ? `${dial} ${chunk(natDigits)}` : "");
+    set(name, trimmed ? `${dial} ${chunk(trimmed)}` : "");
   }
 
   return (

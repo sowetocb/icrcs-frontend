@@ -54,6 +54,14 @@ export default function StepAttachments() {
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
+  // Track which document types already have an upload from a prior stage (1-6)
+  // or from the current session. These are "locked" — the user can replace the
+  // file but cannot un-tick the checkbox (the document is already committed).
+  const [lockedTypes] = useState<Set<number>>(() => {
+    const s = new Set<number>();
+    for (const a of saved) s.add(a.typeId);
+    return s;
+  });
   // Pre-tick the mandatory type and any already-uploaded ones.
   const [ticked, setTicked] = useState<Record<number, boolean>>(() => {
     const init: Record<number, boolean> = {};
@@ -110,8 +118,15 @@ export default function StepAttachments() {
     e.target.value = "";
   }
 
+  /** A checkbox is disabled (non-uncheckable) when the document type is
+   * mandatory OR was already uploaded in a prior stage (1-6). The user can
+   * still replace the file via the upload button, but cannot remove it. */
+  function isCheckboxLocked(typeId: number, mandatory: boolean): boolean {
+    return mandatory || lockedTypes.has(typeId);
+  }
+
   function toggle(typeId: number, mandatory: boolean) {
-    if (mandatory) return; // the mandatory document stays ticked
+    if (isCheckboxLocked(typeId, mandatory)) return;
     setTicked((prev) => ({ ...prev, [typeId]: !prev[typeId] }));
   }
 
@@ -130,7 +145,7 @@ export default function StepAttachments() {
                   <input
                     type="checkbox"
                     checked={isTicked}
-                    disabled={type.mandatory}
+                    disabled={isCheckboxLocked(type.id, type.mandatory)}
                     onChange={() => toggle(type.id, type.mandatory)}
                     className="h-4 w-4 shrink-0 rounded border-line accent-navy-700 disabled:opacity-60"
                   />

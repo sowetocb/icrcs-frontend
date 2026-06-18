@@ -92,14 +92,14 @@ export default function LoginForm() {
   return (
     <div className="w-full">
       {/* Heading */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h2 className="font-display text-2xl font-bold text-navy-700">
           {t("brand.system")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-navy-700">
             {t("form.email")}
@@ -198,7 +198,7 @@ export default function LoginForm() {
         </Link>
       </form>
 
-      <p className="mt-5 text-center text-sm text-muted">
+      <p className="mt-3 text-center text-sm text-muted">
         {t("form.noAccount")}{" "}
         <Link href="/create-profile" className="font-semibold text-[#1e4d8a] hover:text-gold-700">
           {t("form.register")}
@@ -206,7 +206,7 @@ export default function LoginForm() {
       </p>
 
       {APP_VERSION && (
-        <p className="mt-6 text-center text-xs text-muted/70">v{APP_VERSION}</p>
+        <p className="mt-4 text-center text-xs text-muted/70">v{APP_VERSION}</p>
       )}
     </div>
   );

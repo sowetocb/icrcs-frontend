@@ -76,7 +76,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/70 sm:text-sm">
+            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-base">
               {t("brand.country")}
             </p>
             <p className="font-display text-base font-bold text-white sm:text-xl">
@@ -127,7 +127,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
                 />
               </div>
               <div className="mt-5 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200/70">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-200/80">
                   {t("brand.country")}
                 </p>
                 <p className="mt-1 font-display text-base font-bold text-white">
@@ -241,12 +241,12 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Right panel — form only */}
-          <div className="flex w-full flex-col justify-center px-8 py-10 sm:px-12 md:w-[58%]">
+          <div className="flex w-full flex-col justify-center px-8 py-8 sm:px-12 md:w-[58%]">
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
             {/* Footer */}
-            <p className="mt-6 text-center text-xs text-muted">
+            <p className="mt-4 text-center text-xs text-muted">
               {t("footer")}
             </p>
           </div>
