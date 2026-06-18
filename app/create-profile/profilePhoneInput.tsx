@@ -1,0 +1,119 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { COUNTRIES, flagEmoji, TANZANIA, type Country } from "@/lib/countries";
+import CountryMenu from "@/components/registry/countryMenu";
+
+// Infer the country from a stored "+255786849280" value (longest dial match).
+function detectCountry(stored: string): Country {
+  const digits = stored.replace(/\D/g, "");
+  if (!digits) return TANZANIA;
+  let best = TANZANIA;
+  let bestLen = -1;
+  for (const c of COUNTRIES) {
+    const d = c.dial.replace(/\D/g, "");
+    if (digits.startsWith(d) && d.length > bestLen) {
+      best = c;
+      bestLen = d.length;
+    }
+  }
+  return best;
+}
+
+/**
+ * Phone field with a country-code + flag picker. The user types the local
+ * number directly; a leading 0 is trimmed and the dial code is prepended, so
+ * "0786849280" is stored as "+255786849280".
+ */
+export default function ProfilePhoneInput({
+  id,
+  value,
+  onChange,
+  invalid,
+  ariaLabel,
+  describedBy,
+  placeholder,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  invalid?: boolean;
+  ariaLabel?: string;
+  describedBy?: string;
+  placeholder?: string;
+}) {
+  const [country, setCountry] = useState<Country>(() => detectCountry(value));
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const dialDigits = country.dial.replace(/\D/g, "");
+  const allDigits = value.replace(/\D/g, "");
+  const national = allDigits.startsWith(dialDigits)
+    ? allDigits.slice(dialDigits.length)
+    : allDigits;
+
+  function commit(dial: string, natDigits: string) {
+    // Strip leading zeros — users type local-format numbers (e.g. "0786849280")
+    // but the stored value must be international ("+255786849280").
+    const trimmed = natDigits.replace(/^0+/, "");
+    onChange(trimmed ? `${dial}${trimmed}` : "");
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        className={`flex items-stretch overflow-hidden rounded-lg border bg-surface transition focus-within:ring-2 ${
+          invalid
+            ? "border-danger focus-within:border-danger focus-within:ring-danger/15"
+            : "border-line focus-within:border-navy-500 focus-within:bg-card focus-within:ring-navy-500/15"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex shrink-0 items-center gap-1.5 border-r border-line bg-card px-3 text-sm hover:bg-line/40"
+          aria-label={country.name}
+        >
+          <span className="text-base leading-none">{flagEmoji(country.code)}</span>
+          <span className="font-mono text-navy-700">{country.dial}</span>
+          <svg className="text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        <input
+          id={id}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          value={national}
+          onChange={(e) => commit(country.dial, e.target.value.replace(/\D/g, ""))}
+          placeholder={placeholder ?? "786 849 280"}
+          aria-label={ariaLabel}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted/70"
+        />
+      </div>
+
+      {open && (
+        <CountryMenu
+          onClose={() => setOpen(false)}
+          showDial
+          onSelect={(c) => {
+            setCountry(c);
+            commit(c.dial, national);
+          }}
+        />
+      )}
+    </div>
+  );
+}

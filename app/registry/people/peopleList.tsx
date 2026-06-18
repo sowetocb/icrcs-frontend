@@ -25,6 +25,26 @@ function DownloadIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+type StatusCategory = "completed" | "pending" | "rejected";
+
+/** Collapse the many raw backend status values into the three buckets used by
+ *  the summary cards and the status filter. */
+function statusCategory(status: string): StatusCategory {
+  const s = status.toUpperCase();
+  if (s === "APPROVED" || s === "COMPLETED" || s === "ACTIVE") return "completed";
+  if (s === "REJECTED" || s === "DENIED" || s === "CANCELLED") return "rejected";
+  return "pending";
+}
+
 /** Map a raw backend status string to a CSS colour family. */
 function statusColor(status: string): {
   bg: string;
@@ -59,6 +79,10 @@ export default function PeopleList() {
   const [printPerson, setPrintPerson] = useState<Person | null>(null);
   // Subject id currently being prepared for download (fetching the preview).
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // Search + filter controls.
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | StatusCategory>("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "30d">("all");
 
   // Read from localStorage after mount to avoid SSR/client hydration mismatch.
   useEffect(() => {
@@ -98,6 +122,50 @@ export default function PeopleList() {
   function isRemotePerson(person: Person | RegisteredPerson): person is RegisteredPerson {
     return "subjectId" in person;
   }
+
+  /** Normalise either person shape into the fields the table/filters need. */
+  function rowOf(p: Person | RegisteredPerson) {
+    const remote = isRemotePerson(p);
+    const rawStatus = remote ? p.status : p.status === "submitted" ? "SUBMITTED" : "PENDING";
+    const createdRaw = remote ? p.createdAt : p.submittedDate;
+    return {
+      remote,
+      name: remote ? p.fullName : p.name,
+      id: remote ? p.subjectId : p.applicationId,
+      rawStatus,
+      registeredOn: remote ? formatDate(p.createdAt) : p.submittedDate,
+      registeredAt: new Date(createdRaw),
+    };
+  }
+
+  // Summary counts across all registered people (before search/filtering).
+  const counts = displayPeople.reduce(
+    (acc, p) => {
+      acc.total += 1;
+      acc[statusCategory(rowOf(p).rawStatus)] += 1;
+      return acc;
+    },
+    { total: 0, completed: 0, pending: 0, rejected: 0 },
+  );
+
+  // Apply search + status + date-of-registration filters.
+  const filteredPeople = displayPeople.filter((p) => {
+    const { name, id, rawStatus, registeredAt } = rowOf(p);
+
+    const q = search.trim().toLowerCase();
+    if (q && !name.toLowerCase().includes(q) && !id.toLowerCase().includes(q)) return false;
+
+    if (statusFilter !== "all" && statusCategory(rawStatus) !== statusFilter) return false;
+
+    if (dateFilter !== "all") {
+      if (Number.isNaN(registeredAt.getTime())) return false;
+      const days = dateFilter === "today" ? 1 : dateFilter === "7d" ? 7 : 30;
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      if (registeredAt.getTime() < cutoff) return false;
+    }
+
+    return true;
+  });
 
   /** Determine if a person is the account holder. For local people this is
    * the `isCreator` flag; for remote people we compare against the logged-in
@@ -231,7 +299,64 @@ export default function PeopleList() {
                 <p className="text-muted">{t("people.empty")}</p>
               </div>
             ) : (
-              <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-card">
+              <>
+                {/* Summary cards */}
+                <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                  {([
+                    { key: "total", label: t("people.statTotal"), value: counts.total, ring: "bg-navy-700 text-white" },
+                    { key: "completed", label: t("people.statCompleted"), value: counts.completed, ring: "bg-success/15 text-success" },
+                    { key: "pending", label: t("people.statPending"), value: counts.pending, ring: "bg-warning/15 text-warning" },
+                    { key: "rejected", label: t("people.statRejected"), value: counts.rejected, ring: "bg-danger/15 text-danger" },
+                  ] as const).map((card) => (
+                    <div
+                      key={card.key}
+                      className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4"
+                    >
+                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-black ${card.ring}`}>
+                        {card.value}
+                      </span>
+                      <span className="text-sm font-semibold text-muted">{card.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Search + filters */}
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                      <SearchIcon />
+                    </span>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={t("people.searchPlaceholder")}
+                      className="w-full rounded-lg border border-line bg-card py-2.5 pl-10 pr-3 text-sm text-navy-700 outline-none transition focus:border-gold/50"
+                    />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                    className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
+                  >
+                    <option value="all">{t("people.filterAllStatus")}</option>
+                    <option value="completed">{t("people.statCompleted")}</option>
+                    <option value="pending">{t("people.statPending")}</option>
+                    <option value="rejected">{t("people.statRejected")}</option>
+                  </select>
+                  <select
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+                    className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
+                  >
+                    <option value="all">{t("people.filterAllDates")}</option>
+                    <option value="today">{t("people.filterToday")}</option>
+                    <option value="7d">{t("people.filter7Days")}</option>
+                    <option value="30d">{t("people.filter30Days")}</option>
+                  </select>
+                </div>
+
+                <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
                 <table className="w-full min-w-[720px] border-collapse text-left">
                   <thead>
                     <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-muted">
@@ -243,7 +368,13 @@ export default function PeopleList() {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayPeople.map((p) => {
+                    {filteredPeople.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">
+                          {t("people.noResults")}
+                        </td>
+                      </tr>
+                    ) : filteredPeople.map((p) => {
                       const remote = isRemotePerson(p);
                       const name = remote ? p.fullName : p.name;
                       const id = remote ? p.subjectId : p.applicationId;
@@ -309,7 +440,8 @@ export default function PeopleList() {
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </main>

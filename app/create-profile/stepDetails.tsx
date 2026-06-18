@@ -6,6 +6,7 @@ import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getGenders, type LookupItem } from "@/lib/api/lookup";
+import ProfilePhoneInput from "./profilePhoneInput";
 
 export type Gender = "" | "M" | "F" | "O";
 
@@ -273,16 +274,13 @@ export default function StepDetails({
             <label htmlFor="phoneNumber" className={labelClass}>
               {t("register.phone")}
             </label>
-            <input
+            <ProfilePhoneInput
               id="phoneNumber"
-              type="tel"
-              autoComplete="tel"
               value={form.phoneNumber}
-              onChange={(e) => update("phoneNumber", e.target.value)}
-              placeholder={t("register.phonePlaceholder")}
-              aria-invalid={phoneInvalid}
-              aria-describedby={errors.phoneNumber ? "phoneNumber-error" : undefined}
-              className={`${inputClass} ${errors.phoneNumber ? errorRing : ""}`}
+              onChange={(v) => update("phoneNumber", v)}
+              invalid={phoneInvalid}
+              ariaLabel={t("register.phone")}
+              describedBy={errors.phoneNumber ? "phoneNumber-error" : undefined}
             />
             {errors.phoneNumber && (
               <FieldError id="phoneNumber-error" message={t("register.required")} />
