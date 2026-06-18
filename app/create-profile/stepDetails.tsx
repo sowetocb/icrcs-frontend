@@ -76,16 +76,16 @@ function Spinner() {
   );
 }
 
-function Requirement({ met, label }: { met: boolean; label: string }) {
+/** A single password requirement that has not yet been met. */
+function UnmetRequirement({ label }: { label: string }) {
   return (
-    <li className="flex items-center gap-2">
-      <span className={met ? "text-success" : "text-muted/50"}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      </span>
-      <span className={met ? "text-ink" : "text-muted"}>{label}</span>
+    <li className="flex items-center gap-1.5 text-xs text-danger">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+      <span>{label}</span>
     </li>
   );
 }
@@ -191,7 +191,7 @@ export default function StepDetails({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <label htmlFor="firstName" className={labelClass}>
               {t("register.firstName")}
@@ -209,6 +209,19 @@ export default function StepDetails({
             {errors.firstName && (
               <FieldError id="firstName-error" message={t("register.required")} />
             )}
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="middleName" className={labelClass}>
+              {t("register.middleName")}
+            </label>
+            <input
+              id="middleName"
+              autoComplete="additional-name"
+              value={form.middleName}
+              onChange={(e) => update("middleName", e.target.value)}
+              placeholder="Test"
+              className={inputClass}
+            />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="lastName" className={labelClass}>
@@ -230,21 +243,7 @@ export default function StepDetails({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="middleName" className={labelClass}>
-            {t("register.middleName")}
-          </label>
-          <input
-            id="middleName"
-            autoComplete="additional-name"
-            value={form.middleName}
-            onChange={(e) => update("middleName", e.target.value)}
-            placeholder="Test"
-            className={inputClass}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <label htmlFor="gender" className={labelClass}>
               {t("register.gender")}
@@ -271,6 +270,26 @@ export default function StepDetails({
             )}
           </div>
           <div className="space-y-1.5">
+            <label htmlFor="email" className={labelClass}>
+              {t("form.email")}
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={(e) => update("email", e.target.value)}
+              placeholder={t("form.emailPlaceholder")}
+              aria-invalid={emailInvalid}
+              aria-describedby={errors.email ? "email-error" : undefined}
+              className={`${inputClass} ${errors.email ? errorRing : ""}`}
+            />
+            {errors.email && (
+              <FieldError id="email-error" message={t("form.emailInvalid")} />
+            )}
+          </div>
+        </div>
+        <div className="space-y-1.5">
             <label htmlFor="phoneNumber" className={labelClass}>
               {t("register.phone")}
             </label>
@@ -286,27 +305,6 @@ export default function StepDetails({
               <FieldError id="phoneNumber-error" message={t("register.required")} />
             )}
           </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="email" className={labelClass}>
-            {t("form.email")}
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-            placeholder={t("form.emailPlaceholder")}
-            aria-invalid={emailInvalid}
-            aria-describedby={errors.email ? "email-error" : undefined}
-            className={`${inputClass} ${errors.email ? errorRing : ""}`}
-          />
-          {errors.email && (
-            <FieldError id="email-error" message={t("form.emailInvalid")} />
-          )}
-        </div>
 
         {/* Password */}
         <div className="space-y-1.5">
@@ -333,6 +331,14 @@ export default function StepDetails({
               <EyeIcon open={showPassword} />
             </button>
           </div>
+          {/* Only requirements that are not yet met are shown, individually. */}
+          {form.password.length > 0 && !allMet && (
+            <ul className="space-y-1 pl-0.5">
+              {!hasMin && <UnmetRequirement label={t("password.reqMin")} />}
+              {!hasCapital && <UnmetRequirement label={t("password.reqCapital")} />}
+              {!hasSpecial && <UnmetRequirement label={t("password.reqSpecial")} />}
+            </ul>
+          )}
         </div>
 
         {/* Confirm password */}
@@ -363,19 +369,6 @@ export default function StepDetails({
           {confirmInvalid && (
             <FieldError id="confirm-error" message={t("password.mismatch")} />
           )}
-        </div>
-
-        {/* Requirements */}
-        <div className="rounded-lg border border-line bg-surface/60 px-4 py-3">
-          <p className="text-sm font-semibold text-navy-700">
-            {t("password.requirements")}
-          </p>
-          <ul className="mt-2 space-y-1.5 pl-1 text-sm">
-            <Requirement met={hasMin} label={t("password.reqMin")} />
-            <Requirement met={hasCapital} label={t("password.reqCapital")} />
-            <Requirement met={hasSpecial} label={t("password.reqSpecial")} />
-            <Requirement met={matches} label={t("password.reqMatch")} />
-          </ul>
         </div>
 
         {submitError && (

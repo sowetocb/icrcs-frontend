@@ -14,7 +14,15 @@ import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
  * - Split card: left = deep blue panel with emblem + status check,
  *               right = form only
  */
-export default function AuthShell({ children }: { children: React.ReactNode }) {
+export default function AuthShell({
+  children,
+  showStatusCheck = false,
+}: {
+  children: React.ReactNode;
+  /** Render the "Security: Status Check" widget in the left panel. Shown on the
+   *  login screen only; hidden on create-profile / forgot flows. */
+  showStatusCheck?: boolean;
+}) {
   const { t } = useI18n();
   const [statusId, setStatusId] = useState("");
   const [statusError, setStatusError] = useState("");
@@ -111,7 +119,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
         {/* The split card */}
         <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
           {/* Left panel — deep blue with coat of arms + status check */}
-          <div className="hidden w-[42%] flex-col items-center justify-between gap-8 bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] px-6 py-8 md:flex">
+          <div className={`hidden w-[42%] flex-col items-center gap-8 bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] px-6 py-8 md:flex ${showStatusCheck ? "justify-between" : "justify-start"}`}>
             {/* Immigration emblem + branding — on top.
                 The emblem sits on a light pad so its blue ribbons and gold
                 lettering stay legible against the deep-blue panel. */}
@@ -136,7 +144,8 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            {/* Status check — below the emblem */}
+            {/* Status check — below the emblem. Shown on the login screen only. */}
+            {showStatusCheck && (
             <div className="w-full">
               <div className="rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
@@ -235,9 +244,10 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
                 );
               })()}
             </div>
+            )}
 
             {/* Spacer for vertical balance */}
-            <div />
+            {showStatusCheck && <div />}
           </div>
 
           {/* Right panel — form only */}
