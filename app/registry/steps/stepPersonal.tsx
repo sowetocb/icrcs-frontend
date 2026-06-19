@@ -129,7 +129,7 @@ function BirthCertUpload() {
 }
 
 export default function StepPersonal() {
-  const { data, isFirstPerson } = useWizard();
+  const { data } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
@@ -176,18 +176,19 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      {/* Nationality + NIDA share a row — both are single-line fields, so they
-          line up cleanly. NIDA applies only to the adult account holder; for
-          dependents (minors with no National ID) nationality spans full width. */}
-      <div className={`grid grid-cols-1 gap-4 ${isFirstPerson ? "sm:grid-cols-2" : ""}`}>
-        <Field label={t("fields.nationality")} required>
-          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
-        </Field>
-        {isFirstPerson && (
-          <Field label={t("fields.nidaNumber")} optional>
-            <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
+      {/* Nationality (wider) + optional NIDA and Birth Certificate Number. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div className="sm:col-span-2">
+          <Field label={t("fields.nationality")} required>
+            <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
           </Field>
-        )}
+        </div>
+        <Field label={t("fields.nidaNumber")} optional>
+          <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
+        </Field>
+        <Field label={t("fields.birthCertNo")} optional>
+          <TextInput name="birthCertNo" placeholder="TZ1234567890" />
+        </Field>
       </div>
 
       <Field label={t("fields.placeOfBirth")} required>
@@ -210,14 +211,9 @@ export default function StepPersonal() {
       </Field>
 
       {bornInTanzania && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t("fields.birthCertNo")} optional>
-            <TextInput name="birthCertNo" placeholder="TZ1234567890" />
-          </Field>
-          <Field label={t("fields.birthCertFile")} optional>
-            <BirthCertUpload />
-          </Field>
-        </div>
+        <Field label={t("fields.birthCertFile")} optional>
+          <BirthCertUpload />
+        </Field>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -10,14 +10,16 @@ Built with **Next.js 16** (React 19) and integrated with backend REST APIs. Acce
 
 Registered users can:
 
-* **Verify Application Status without Logging In** (public status check) via the landing page
-* **Create a Verified Profile** with OTP-based email verification
-* **Register Themselves and Dependents** (under 18) via a comprehensive 6-step wizard
-* **Upload Supporting Documents** (birth certificates, national IDs, and passport photos)
-* **Track Application Status** through a 6-stage pipeline (Submitted → Under Review → Biometric Appointment → Final Approval → Completed → Certificate Issued)
-* **Download and Print Registration Forms** as formatted A4 PDFs
+* **Verify Application Status without Logging In** (public status check) via the login page
+* **Create a Verified Profile** with OTP-based email verification and a country-code phone picker
+* **Confirm Citizenship at a Gate** before registering — Tanzanian citizens proceed; verified non-citizens see their **immigration status** and may register a Tanzanian-origin **minor**
+* **Register Themselves and Dependents** (under 18) via a comprehensive 9-stage wizard
+* **Upload Supporting Documents** (birth certificates, national IDs, and passport photos), with the Stage 1 photo and birth certificate carried into the Uploads stage
+* **Track Application Status** through a staged pipeline (Submitted → Under Review → Biometric Appointment → Final Approval → Completed → Certificate Issued)
+* **Download and Print Registration Forms** as formatted A4 PDFs, compiled from the server `/review` record
 * **Manage Personal Profile Details** including profile picture uploads
 * **Reset Forgotten Passwords** via OTP verification
+* **Read the "About ICRCS" Applicant Guide** from the login / create-profile screens (full step-by-step guide in English and Swahili)
 * **Switch Interface Language** instantly between English and Swahili
 * **Toggle Between Light and Dark Themes** seamlessly
 
@@ -29,7 +31,8 @@ Registered users can:
 
 * **Sovereign Login** — Email and password authentication with secure session management.
 * **OTP Verification** — 6-digit code sent during profile creation with a countdown timer and resend capability.
-* **Password Strength Validation** — Enforces secure passwords (uppercase, lowercase, digits, special characters).
+* **Country-code Phone Picker** — Profile creation and the wizard use a flag + dial-code picker; a leading `0` is trimmed and the dial code prepended (e.g. `0786849280` → `+255786849280`).
+* **Password Strength Validation** — Enforces secure passwords; unmet requirements are listed individually beneath the field as you type (no always-on checklist).
 * **Multi-Step Password Reset** — Identifier entry → OTP verification → secure new password creation.
 * **Automatic Keep-Alive** — Proactive token refresh every 4 minutes and tab visibility synchronization.
 * **Idle Timeout & Auto-Logout** — 30-minute inactivity detection with a 60-second warning countdown synced cross-tab via `localStorage`.
@@ -42,7 +45,20 @@ Registered users can:
 * **Official Emblems** — Header features the official Coat of Arms and Immigration Emblem across all pages.
 * **National Color Gradients** — Tanzania flag-inspired blue, yellow, green, and black accents.
 * **Promotional Hero Section** — Welcoming and patriotic slogans with auto-scrolling "Why ICRCS" info cards on login/signup screens.
+* **Security Status Check** — The public Application-ID status checker appears on the **login screen only**.
+* **About ICRCS Dialog** — An "About this system" button (login / create-profile) opens the full **Applicant Guide** — what the system is, who must register, the step-by-step process, required documents, and contact info — in both English and Swahili.
 * **Professional Typography** — Modern Montserrat and JetBrains Mono fonts for maximum clarity.
+
+---
+
+### Citizenship Gate (pre-registration)
+
+An independent gate runs before the wizard to branch by citizenship:
+
+* **Tanzanian citizens** continue straight into the registration wizard.
+* **Non-citizens** supply Nationality + Travel Document Type + Document Number, then their permit is looked up:
+  * **Verified** → a card shows their **immigration status** (permit type, number, validity), then asks whether they have a **Tanzanian-origin minor** to register. Choosing *Yes* enters the wizard as a **minor registration** (the foreign account holder's identity is not bound to it).
+  * **Not found** → guidance to visit the nearest immigration office.
 
 ---
 
@@ -52,20 +68,23 @@ A comprehensive **9-stage** registration flow synced with the backend (`/v1/regi
 
 | Stage | Section | Details |
 | :--- | :--- | :--- |
-| **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, contact. Mandatory **passport photo** uploaded to `/v1/files/upload?attachmentTypeId=5` against the new `subjectId`. Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
+| **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, optional **NIDA number** (account holder only), and contact. Mandatory **passport photo** and an optional **birth certificate** are captured here and carried into Stage 8 uploads. Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
 | **2** | **Address** | Permanent + Current address (Country → Region → District → Ward cascade), house number, postal code, with a "same as" checkbox that copies and disables the second address. |
 | **3** | **Parents** | Father & Mother sub-forms: full name, DOB, phone, nationality, place of birth, residence, and optional ID document (Type/Number + file upload → `attachmentTypeId=12`, bound to `documentFileUrl`). |
-| **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.), employment status, occupation, employer, NIDA. |
+| **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.) — a "Primary education is mandatory" notice shows when the applicant attended school. Employment status (lookup-driven); occupation & employer apply only when **Employed**. |
 | **5** | **Emergency Contacts** | Two contacts, each a full person sub-form with optional ID document upload. |
 | **6** | **Family** | "Have children?" / "Married?" toggles; **Spouses repeater** (≥1 if married) and **Relatives repeater** (≥2), each with optional document uploads. |
 | **7** | **Referees** (print-only) | No data submitted — "Download and Print Referees Form" fetches the compiled form from `GET /stage7`; the signed scan is uploaded in Stage 8. |
 | **8** | **Uploads** | Structured attachment grid; each file uploaded to `/v1/files/upload?attachmentTypeId=N`, then the collection finalised. Stage 8 is gated on the passport photo — a network failure at Stage 1 is **retried here** without data loss. |
-| **9** | **Preview & Declaration** | Server-compiled summary via `GET /stage9/preview`; confirmation checkbox enables final `POST /stage9?confirmed=true`. |
+| **9** | **Preview & Declaration** | Server-compiled summary via `GET /v1/registration/{subjectId}/review`; confirmation checkbox enables final `POST /stage9?confirmed=true`. |
 
 * **Save & Exit / Resume** — Drafts persist in the browser **keyed by Application ID** and **survive logout / idle auto-logout** (owner-scoped, cleared cross-user on login), so an unsubmitted registration can be resumed.
-* **Cascading Address Selectors** — Country-driven Region → District → Ward cascade backed by the lookup API; flags on every country dropdown.
-* **Locked Fields Logic** — The primary creator's details are locked from their profile; dependents inherit contact details (email/phone) but must fill unique personal details.
-* **Resilient photo upload** — Stage 1 text data is saved first; a failed photo upload is non-fatal and retried at the Stage 8 gate.
+* **Cascading Address Selectors** — Country-driven Region → District → Ward cascade backed by the lookup API; flags on every country dropdown, with **Tanzania pinned to the top** of every country list.
+* **Locked Fields Logic** — The primary creator's details are locked from their profile; dependents inherit contact details (email/phone) but must fill unique personal details. When a verified **non-citizen registers a minor**, the creator's names are **not** prefilled or locked and the subject is validated as a minor.
+* **Lookup values sent by ID** — Gender, marital status, and employment status are submitted to the backend by their **lookup ID** (resolved at payload time), while the dropdown shows the exact label returned by the lookup API (e.g. `Ke (Female)`, `Me (Male)`).
+* **Specific validation feedback** — Skipping required fields lists exactly which fields are missing (by readable label), not just a red border.
+* **Sticky steps sidebar** — The stage stepper stays fixed in view while the form scrolls.
+* **Resilient uploads** — Stage 1 text data is saved first; a failed passport-photo upload is non-fatal and retried at the Stage 8 gate. The Stage 1 birth certificate is uploaded once the `subjectId` exists and merged into the Stage 8 attachments.
 
 ---
 
@@ -85,18 +104,21 @@ A comprehensive **9-stage** registration flow synced with the backend (`/v1/regi
 
 ### Registered People Dashboard
 
-* Lists all registered citizens and dependents associated with the user account.
-* Displays crucial metadata: Subject ID, Full Name, Current Status, Stage Label, Email, Phone, and Registration Date.
-* **Account Holder Badge** — Easily distinguishes the primary registrant from dependents.
-* **Incomplete Resumption** — Clickable links to resume incomplete drafts right where they were left off.
+* **Table layout** of everyone registered under the account — Application ID, Applicant Name, Status, Registration Date, and a Download (PDF) action — that scales cleanly beyond a few records.
+* **Summary cards** — Total Registered, Completed, Pending, and Rejected counts.
+* **Search & filters** — Search by name or Application ID, plus Status and date-of-registration filters.
+* **Account Holder marker** — The account holder is shown with a person icon + badge. Exactly **one** row is marked (the profile match, else the earliest registrant).
+* **Earliest-first ordering** — The first person registered under the account stays at the top of the list.
+* **Download PDF** — Fetches the server `/review` record and renders the printable form for download.
 
 ---
 
 ### Printable Registration Form
 
-* **A4 Print-Optimized CSS** — Formats the entire 6-step registration summary into a professional document layout.
+* **A4 Print-Optimized CSS** — Formats the full registration summary into a professional document layout.
+* **Server-compiled data** — Built from `GET /v1/registration/{subjectId}/review` (display-ready names + nested locations) merged over the local draft.
 * **Institutional Branding** — Features official emblems, headers, and signature lines.
-* **Download & Print Actions** — Instantly accessible from the submission success page or the dashboard.
+* **Download & Print Actions** — Instantly accessible from the submission success page or the Registered People list.
 
 ---
 
@@ -148,7 +170,7 @@ app/
 ├── registry/               # Citizen registration module
 │   ├── people/             # Registered people list
 │   ├── status/             # Application status checker & results
-│   └── steps/              # 6-step wizard step components
+│   └── steps/              # 9-stage wizard step components
 ├── theme/                  # Theme provider (dark/light)
 ├── layout.tsx              # Root app layout
 ├── globals.css             # Tailwind imports & semantic tokens
@@ -286,7 +308,8 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 | Auth Guard (Protected Routes) | ✅ Done |
 | Institutional Branding & Header | ✅ Done |
 | Dashboard (Hero, Checklist, Requirements) | ✅ Done |
-| Registration Wizard (6 Steps, Backend Sync) | ✅ Done |
+| Registration Wizard (9 Stages, Backend Sync) | ✅ Done |
+| Citizenship Gate (Non-Citizen Permit Check & Minor Registration) | ✅ Done |
 | Application ID Generation & Email | ✅ Done |
 | Save & Exit / Resume Registration | ✅ Done |
 | Self vs Dependent Registration | ✅ Done |
@@ -716,7 +739,7 @@ Each stage has a `submitStageN` (POST) and `editStageN` (PUT) function pair:
 | **7** | `/v1/registration/{id}/stage7` | — (GET only) | None (print-only) |
 | **8** | `/v1/registration/{id}/stage8` | — | `buildStage8Payload` |
 | **9** | `/v1/registration/{id}/stage9?confirmed=true` | — | Empty body |
-| **Preview** | `/v1/registration/{id}/stage9/preview` | — (GET) | None |
+| **Review** | `/v1/registration/{id}/review` | — (GET) | None — compiled summary for Preview & PDF |
 
 **Domestic/Foreign routing:** Stages 1, 2, 3, 5, and 6 split into `/domestic` or `/foreign` variants based on whether any person in that stage resides outside Tanzania. The `isTanzania()` helper and `peopleSuffix()` function determine the suffix. There is no bare endpoint (e.g., no `/stage1` without a suffix).
 

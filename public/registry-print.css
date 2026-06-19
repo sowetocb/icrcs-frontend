@@ -128,6 +128,19 @@ body {
   margin-top: 0.5rem;
 }
 
+/* Force certain sections (Education, Witness) to start on a fresh page so their
+   content isn't split across the page boundary. */
+#printable-form section.page-break {
+  break-before: page;
+  page-break-before: always; /* legacy alias for wider engine support */
+}
+
+/* Breathing room at the very bottom of each printed page so content never sits
+   flush against the bottom edge. */
+#printable-form {
+  padding-bottom: 18mm;
+}
+
 #printable-form h2 {
   margin: 0;
   border-bottom: 1px solid #a9c0db;

@@ -364,7 +364,7 @@ export default function PeopleList() {
                   <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
                     <table className="w-full min-w-[720px] border-collapse text-left text-[13px]">
                       <thead>
-                        <tr className="border-b border-line text-[11px] font-semibold uppercase tracking-wider text-muted">
+                        <tr className="border-b border-line text-[15px] font-semibold uppercase tracking-wider text-muted">
                           <th className="px-4 py-3 font-semibold">{t("people.colApplicationId")}</th>
                           <th className="px-4 py-3 font-semibold">{t("people.colName")}</th>
                           <th className="px-4 py-3 font-semibold">{t("people.colStatus")}</th>
@@ -377,7 +377,7 @@ export default function PeopleList() {
                           <tr>
                             <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
                               {t("people.noResults")}
-                            </td>
+                            </td> 
                           </tr>
                         ) : filteredPeople.map((p) => {
                           const remote = isRemotePerson(p);

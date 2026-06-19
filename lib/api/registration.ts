@@ -55,6 +55,17 @@ const wardId = (data: Data, key: string): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
+// Identifier fields (birth-cert / NIDA) the backend wants as a JSON number when
+// numeric. Sent as a number only when it's all digits AND fits JS's safe-integer
+// range; otherwise kept as a string so no digits are lost (alphanumeric values,
+// or a 20-digit NIDA that exceeds 2^53) — and null when empty.
+const numOrStr = (data: Data, key: string): number | string | null => {
+  const v = str(data, key);
+  if (!v) return null;
+  if (/^\d+$/.test(v) && Number.isSafeInteger(Number(v))) return Number(v);
+  return v;
+};
+
 /** Resolve a country name to its ISO alpha-3 code (e.g. "TZA"). Prefers the
  * backend lookup, but falls back to a local name → alpha-2 → alpha-3 mapping
  * because /v1/lookup/countries can return an empty list. */
@@ -238,13 +249,14 @@ async function buildStage1Payload(
     firstName: str(data, "applicantFirst"),
     middleName: str(data, "applicantMiddle"),
     lastName: str(data, "applicantLast"),
-    sex: await resolveGenderId(str(data, "gender")),
+    gender: await resolveGenderId(str(data, "gender")),
     dateOfBirth: str(data, "dob"),
     maritalStatus: await resolveMaritalStatusId(marriage),
     nationalityCode: await resolveCountryCode(str(data, "nationalityCountry")),
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
-    birthCertificateNo: str(data, "birthCertNo") || null,
+    birthCertificateNo: numOrStr(data, "birthCertNo"),
+    nidaNo: numOrStr(data, "nidaNumber"),
   };
 
   if (bornInTanzania) {
