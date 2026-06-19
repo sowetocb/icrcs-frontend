@@ -307,6 +307,302 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 
 ---
 
+## State Management Implementation
+
+The application uses a **layered, framework-agnostic state management strategy** without external state libraries (no Redux, Zustand, Jotai, etc.). All state is managed through a combination of **browser `localStorage` for persistence**, **React Context for cross-component sharing**, **component-level `useState` for UI state**, and **module-level caching for API data**.
+
+### Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                      Root Layout (app/layout.tsx)                │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐    │
+│  │ThemeProvider │  │LocaleProvider│  │ SessionKeepAlive     │    │
+│  │(light-only) │  │(Context)     │  │ + IdleLogout          │    │
+│  └─────────────┘  └──────────────┘  └──────────────────────┘    │
+│                          │                    │                   │
+│                    useI18n()          loadSession()/saveSession() │
+│                          │                    │                   │
+│  ┌───────────────────────┴────────────────────┴──────────────┐   │
+│  │                    Page Components                         │   │
+│  │  ┌──────────┐  ┌───────────┐  ┌───────────────────────┐   │   │
+│  │  │LoginForm │  │ProfileFlow│  │RegistryClient         │   │   │
+│  │  │(useState)│  │(useState) │  │  └─RegistryWizard     │   │   │
+│  │  └──────────┘  └───────────┘  │     └─WizardProvider  │   │   │
+│  │                                │       (Context)       │   │   │
+│  │                                └───────────────────────┘   │   │
+│  └────────────────────────────────────────────────────────────┘   │
+│                          │                                        │
+│  ┌───────────────────────┴────────────────────────────────────┐   │
+│  │                  localStorage Layer                         │   │
+│  │  ┌────────────┐ ┌────────────┐ ┌──────────┐ ┌───────────┐ │   │
+│  │  │icrcs-      │ │icrcs-      │ │icrcs-    │ │icrcs-     │ │   │
+│  │  │session     │ │profile     │ │registra- │ │people     │ │   │
+│  │  │(tokens)    │ │(user data) │ │tion      │ │(submitted)│ │   │
+│  │  └────────────┘ └────────────┘ │(draft)   │ └───────────┘ │   │
+│  │  ┌────────────┐                └──────────┘                │   │
+│  │  │icrcs-locale│                                            │   │
+│  │  └────────────┘                                            │   │
+│  └────────────────────────────────────────────────────────────┘   │
+│                          │                                        │
+│  ┌───────────────────────┴────────────────────────────────────┐   │
+│  │               Module-Level API Cache                        │   │
+│  │  cache: Map<path, Promise<LookupItem[]>>  (lib/api/lookup)  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 1. Persistent State — `localStorage` Stores
+
+All persistent client-side state is serialized to `localStorage` via thin read/write/clear modules. Each store has a dedicated key and **guards against SSR** with `typeof window === "undefined"` checks.
+
+| Store | Key | Module | Shape | Purpose |
+|---|---|---|---|---|
+| **Session** | `icrcs-session` | `lib/auth/session.ts` | `{ accessToken, refreshToken }` | JWT tokens from login; read on every API call and by `AuthGuard`. |
+| **Profile** | `icrcs-profile` | `lib/auth/profile.ts` | `{ profileId, firstName, middleName, lastName, gender, phoneNumber, email, profilePictureUrl }` | Account holder's identity; prefills and locks wizard fields. |
+| **Profile Photo** | `icrcs-profile-photo:<identity>` | `lib/auth/profile.ts` | `{ url, dataUrl }` | Per-user cached photo data URL; self-invalidates when backend URL changes. Survives logout. |
+| **Registration Draft** | `icrcs-registration` | `app/registry/registrationStore.ts` | `{ step, maxStep, completed, applicationId, ownerId, subjectId, submittedStages[], data }` | Single in-progress wizard draft; survives logout and idle auto-logout. Owner-scoped. |
+| **People** | `icrcs-people` | `app/registry/peopleStore.ts` | `Person[]` with `{ applicationId, submittedDate, name, isCreator, status, step, data }` | Everyone registered under the account; drives the "Registered People" dashboard. |
+| **Locale** | `icrcs-locale` | `app/i18n/localeProvider.tsx` | `"en" \| "sw"` | User's language preference; hydrated post-mount to avoid SSR mismatch. |
+| **Last Activity** | `icrcs-last-activity` | `components/auth/idleLogout.tsx` | Unix timestamp (ms) | Tracks last interaction for idle timeout; throttled writes (5s). |
+
+#### Store Lifecycle Rules
+
+* **Session & Profile** — Written on login (`saveSession`, `saveProfile`); cleared on logout and idle auto-logout (`clearSession`, `clearProfile`).
+* **Registration Draft** — Written on every wizard "Next" and "Save & Exit"; cleared when a new registration starts (`clearRegistration`) or when cross-user login detects a foreign draft. **Intentionally survives logout** so in-progress work is never lost.
+* **People** — Upserted on each wizard stage submission and on final completion; cleared on logout / idle logout (but not the draft).
+* **Photo Cache** — Keyed per-user identity (email or profileId); survives logout so the avatar is restored on next sign-in.
+* **Locale** — Persisted on language switch; hydrated in a `useEffect` to avoid SSR/client hydration mismatch.
+
+#### Owner-Scoping & Cross-User Isolation
+
+```typescript
+// On login, stale drafts from a previous user are dropped:
+const draft = loadRegistration();
+if (draft && (draft.ownerId ?? "") !== (profile.profileId ?? "")) {
+  clearRegistration();
+  clearPeople();
+}
+```
+
+The `loadRegistrationFor(ownerId, subjectId?)` function enforces owner-scoping — it returns `null` when the stored draft belongs to a different user or a different registration.
+
+---
+
+### 2. React Contexts
+
+Three React Contexts provide cross-component state sharing. None use global stores — they are **scoped to their provider trees**.
+
+#### `LocaleContext` — Internationalization
+
+| Property | Type | Description |
+|---|---|---|
+| `locale` | `"en" \| "sw"` | Active language |
+| `setLocale` | `(locale) => void` | Switch language + persist to `localStorage` |
+| `t` | `(path: string) => string` | Dot-path translation resolver (700+ keys) |
+
+**Provider:** `LocaleProvider` in `app/layout.tsx` (wraps entire app).
+**Consumer hook:** `useI18n()` — throws if used outside provider.
+**Hydration strategy:** Renders with `DEFAULT_LOCALE` ("en") on SSR; reads `localStorage` in a `useEffect` post-mount to avoid hydration mismatch. Also syncs `<html lang>`.
+
+#### `WizardContext` — Registration Form State
+
+| Property | Type | Description |
+|---|---|---|
+| `data` | `Record<string, string \| boolean>` | All form field values (flat key-value map) |
+| `set` | `(name, value) => void` | Update a field and clear its error |
+| `errors` | `string[]` | Field names currently in error |
+| `locked` | `string[]` | Field names that are read-only (prefilled from profile) |
+| `isFirstPerson` | `boolean` | True when registering the account holder (not a dependent) |
+| `onGoToStep` | `(step: number) => void` | Navigate to a completed step (used by Preview) |
+
+**Provider:** `WizardProvider` in `components/registry/field.tsx` — instantiated in `RegistryWizard` (wraps each step) and `CitizenshipGate` (wraps the foreigner verification fields).
+**Consumer hook:** `useWizard()` — throws if used outside provider.
+**Data shape:** A flat `Record<string, string | boolean>` rather than nested objects. Field names like `applicantFirst`, `fatherPobCountry`, `ec1ResWard`, `sp2Gender`, `ch3NatCountry` encode both the entity and the attribute. This keeps the context API simple — every form input calls `set(fieldName, value)`.
+
+#### `ThemeProvider` — Theme (Light-Only)
+
+A minimal provider that guarantees light mode by removing any persisted `dark` class and the `icrcs-theme` localStorage key. The `themeNoFlashScript` is a render-blocking inline script that strips `dark` before first paint.
+
+---
+
+### 3. Component-Level State (`useState`)
+
+Each page/component manages its own ephemeral UI state via `useState`. No lifting beyond what's necessary. Key patterns:
+
+#### Registration Orchestrator — `RegistryClient`
+
+```
+mode: "landing" | "gate" | "wizard" | "success"   — current screen
+registeringMinor: boolean                          — foreign profile's minor flow
+submission: { id, date, data } | null              — completed registration
+selfDone: boolean                                  — account holder's own registration exists
+hasIncomplete: boolean                             — a draft is in progress
+```
+
+Drives the top-level screen routing: Landing → CitizenshipGate → RegistryWizard → RegistrySuccess. The `selfDone` and `hasIncomplete` flags are derived from **both** localStorage (synchronous, instant) and the backend API (async, authoritative), merged in a `useEffect`.
+
+#### Registration Wizard — `RegistryWizard`
+
+The most state-heavy component, managing the 9-step form:
+
+| State | Type | Purpose |
+|---|---|---|
+| `step` | `number` | Current wizard step (1–9) |
+| `maxStep` | `number` | Furthest step ever reached (drives sidebar navigation) |
+| `data` | `Record<string, string \| boolean>` | All field values across all 9 steps (single flat map) |
+| `errors` | `string[]` | Field names failing validation on the current step |
+| `formError` | `string` | Human-readable error message |
+| `missingLabels` | `string[]` | Translated labels of missing required fields |
+| `applicationId` | `string` | Issued after Stage 1 (backend) |
+| `subjectId` | `string` | Backend registration ID (used for Stages 2–9) |
+| `submittedStages` | `Set<number>` | Stages already POSTed (revisits use PUT) |
+| `returnStep` | `number \| null` | Step to return to after editing an earlier stage |
+| `submitting` | `boolean` | Async submission in progress |
+| `locked` | `string[]` | Derived: fields locked from the profile |
+
+**Initialization from draft:** On mount, the wizard reads the saved draft via `loadRegistrationFor(ownerId)` and restores `step`, `maxStep`, `data`, `subjectId`, and `submittedStages`. Profile fields are prefilled as a base layer, then draft data is merged on top.
+
+**Save on every transition:** Every "Next" click persists the full state to `localStorage` via `saveRegistration(...)` — so progress survives a browser crash, tab close, or idle auto-logout.
+
+#### Login Form — `LoginForm`
+
+```
+email, password, showPassword, errors, loginError, submitting
+```
+
+On successful login: `saveSession(tokens)` → `saveProfile(profile)` → cross-user draft cleanup → redirect to `/dashboard`.
+
+#### Profile Creation — `CreateProfileFlow`
+
+```
+step: 1 | 2        — Details → OTP
+details             — form data carried between steps
+preAuthToken        — backend pre-auth token for OTP verification
+```
+
+Two-step flow (Details → OTP) with state lifted to the parent so Step 2 can reference the email from Step 1.
+
+#### Citizenship Gate — `CitizenshipGate`
+
+```
+choice: "yes" | "no" | ""    — citizen or foreigner
+data                          — foreigner verification fields (via WizardProvider)
+status: "idle" | "verifying" | "notfound" | "found"
+details: ForeignerDetails | null
+hasMinor: "yes" | "no" | ""
+```
+
+Manages the foreigner permit-verification flow with its own mini-state machine.
+
+---
+
+### 4. API-Layer Module Cache — Lookup Data
+
+The lookup service (`lib/api/lookup.ts`) uses a **module-level `Map` cache** for reference data:
+
+```typescript
+const cache = new Map<string, Promise<LookupItem[]>>();
+```
+
+* **Keyed by request path** (e.g., `/lookup/regions/1`, `/lookup/wards/42`).
+* **Caches the in-flight `Promise`**, not the resolved value — so concurrent requests for the same data share one network call.
+* **Failure clears the cache entry** (`cache.delete(path)`) to allow a retry on the next request.
+* **Lifetime:** Per page session — the cache resets on full page reload but persists across client-side navigations.
+
+The `useLookup` hook (`components/lookup/useLookup.ts`) wraps these cached loaders with React-friendly `{ options, loading, error }` state and re-fetches when dependency arrays change (e.g., when a parent cascade value is selected).
+
+---
+
+### 5. Session & Token Management
+
+#### Proactive Keep-Alive — `SessionKeepAlive`
+
+A headless component (`components/auth/sessionKeepAlive.tsx`) mounted at the root layout that:
+
+* Refreshes the access token every **4 minutes** via `refresh(refreshToken)`.
+* Re-refreshes immediately when the tab becomes visible after being backgrounded.
+* On a **401/403** refresh failure, clears the session (forces re-login); transient errors are silently retried.
+
+#### Idle Timeout — `IdleLogout`
+
+A headless component (`components/auth/idleLogout.tsx`) that:
+
+* Tracks user activity (mouse, keyboard, scroll, touch) via DOM event listeners.
+* After **30 minutes** of inactivity, shows a modal warning with a **60-second countdown**.
+* If the user clicks "Stay Logged In", the timer resets; otherwise, auto-logout fires.
+* Activity timestamps are written to `localStorage` (`icrcs-last-activity`), throttled to every 5s.
+* On tab re-focus (`visibilitychange`), re-checks elapsed idle time — so a tab backgrounded for 31 minutes triggers the warning immediately on return.
+
+#### Auth Guard — `AuthGuard`
+
+A wrapper component (`components/auth/authGuard.tsx`) that:
+
+* Checks `loadSession()` on every pathname change.
+* Redirects to `/login` if no session exists.
+* Listens for `StorageEvent` on `icrcs-session` — if another tab clears the session (logout), all tabs redirect simultaneously.
+* Renders a loading spinner while checking, so protected content never flashes.
+
+---
+
+### 6. Cross-Tab & Cross-Device Synchronization
+
+| Mechanism | Scope | Detail |
+|---|---|---|
+| **`StorageEvent` listener** | Cross-tab (same browser) | `AuthGuard` watches for `icrcs-session` removal — logout in one tab forces all tabs to `/login`. |
+| **`icrcs-last-activity` in localStorage** | Cross-tab (same browser) | `IdleLogout` shares the activity timestamp so only one timer runs across tabs; an active tab keeps all tabs alive. |
+| **Backend progress sync** | Cross-device | `RegistryClient` calls `getRegisteredPeople()` on mount and reconciles: if the backend is ahead of the local draft (e.g., a stage submitted on another device), the local draft is advanced; if the backend considers a registration complete, the stale local draft is cleared. |
+
+---
+
+### 7. Data Flow Summary — Registration Lifecycle
+
+```
+1. LOGIN
+   └─ saveSession(tokens) → saveProfile(profile) → clear foreign drafts
+
+2. WIZARD OPEN (RegistryClient mount)
+   ├─ loadPeople() → selfDone?       ← localStorage (synchronous)
+   ├─ loadRegistrationFor(ownerId) → hasIncomplete?  ← localStorage
+   └─ getRegisteredPeople() → reconcile with backend  ← API (async)
+
+3. WIZARD STEP N (RegistryWizard)
+   ├─ User fills fields → set(name, value) → setData(...)  ← useState
+   ├─ "Next" click:
+   │   ├─ Validate required fields (missingFields())
+   │   ├─ Submit to backend (submitStageN / editStageN)
+   │   ├─ submittedStages.add(N)
+   │   ├─ saveRegistration({ step: N+1, data, subjectId, ... })  → localStorage
+   │   └─ upsertPerson({ applicationId, status: "in_progress" }) → localStorage
+   └─ "Save & Exit":
+       └─ saveRegistration({ step: N, data, ... }) → localStorage → /dashboard
+
+4. FINAL SUBMIT (Stage 9)
+   ├─ submitStage9(subjectId)  → backend
+   ├─ saveRegistration({ completed: true }) → localStorage
+   ├─ addPerson({ status: "submitted" })    → localStorage
+   └─ setMode("success") → RegistrySuccess screen
+
+5. IDLE TIMEOUT / LOGOUT
+   ├─ clearSession() → clearProfile() → clearPeople()
+   └─ Registration draft intentionally NOT cleared (survives for resume)
+```
+
+---
+
+### Design Rationale
+
+| Decision | Rationale |
+|---|---|
+| **No Redux / Zustand** | The app has clear page-scoped state boundaries. A global store would add complexity with no benefit — Context + localStorage covers all sharing needs. |
+| **Flat `Record<string, Value>` for wizard data** | With 100+ fields across 9 steps, a flat map with prefixed keys (`ec1ResWard`, `sp2Gender`) is simpler than deeply nested objects and trivially serializable. |
+| **localStorage over IndexedDB** | All persisted data is small JSON. localStorage is synchronous (critical for SSR guards and auth checks) and universally supported. |
+| **Draft survives logout** | A user who is auto-logged-out after 30 minutes of inactivity (e.g., answering the door) should not lose 8 stages of entered data. The draft is owner-scoped and cleaned up on cross-user login. |
+| **Module-level cache for lookups** | Geographic cascade data (territories, regions, districts, wards, streets) can be hundreds of items. Caching the Promise (not just the result) deduplicates concurrent requests without any state management library. |
+| **WizardContext for form fields** | Deeply nested step components (field → section → step → wizard) need access to the data map and error list. Context avoids 4+ levels of prop drilling while keeping the provider scope narrow (only the wizard). |
+
+---
+
 ## License
 
 © 2026 United Republic of Tanzania — Immigration Services Department. All rights reserved.

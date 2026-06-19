@@ -17,9 +17,12 @@ import { fetchForeignerDetails, type ForeignerDetails } from "@/lib/api/registra
  */
 export default function CitizenshipGate({
   onCitizen,
+  onRegisterMinor,
   onExit,
 }: {
   onCitizen: () => void;
+  /** A verified non-citizen choosing to register a Tanzanian-origin minor. */
+  onRegisterMinor: () => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
@@ -55,7 +58,7 @@ export default function CitizenshipGate({
     // After a verified permit, the primary action depends on the minor answer.
     if (status === "found") {
       if (hasMinor === "yes") {
-        onCitizen();
+        onRegisterMinor();
         return;
       }
       if (hasMinor === "no") {

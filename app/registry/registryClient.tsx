@@ -23,6 +23,9 @@ export default function RegistryClient() {
   // document load, so a sidebar click after a refresh wrongly looked like a
   // reload and auto-resumed the wizard.)
   const [mode, setMode] = useState<Mode>("landing");
+  // True when a verified non-citizen (foreign) profile is registering a
+  // Tanzanian-origin minor rather than themselves.
+  const [registeringMinor, setRegisteringMinor] = useState(false);
   const [submission, setSubmission] = useState<{
     id: string;
     date: string;
@@ -172,14 +175,17 @@ export default function RegistryClient() {
       stage: 0,
       data,
     });
-    // Add to the list of people registered under this profile.
-    const isCreator = loadPeople().filter(isSubmitted).length === 0;
+    // Add to the list of people registered under this profile. A minor
+    // registered by a foreign profile is never the account holder.
+    const isCreator =
+      !registeringMinor && loadPeople().filter(isSubmitted).length === 0;
     const name =
       [data.applicantFirst, data.applicantMiddle, data.applicantLast]
         .filter((v): v is string => typeof v === "string" && v.trim() !== "")
         .join(" ") || "—";
     addPerson({ applicationId: id, submittedDate: date, name, isCreator, status: "submitted", data });
     setSubmission({ id, date, data });
+    setRegisteringMinor(false);
     setMode("success");
   }
 
@@ -187,6 +193,7 @@ export default function RegistryClient() {
     // Rule 2: cannot start a new registration while one is incomplete.
     if (hasIncomplete) return;
     clearRegistration();
+    setRegisteringMinor(false);
     // Citizenship is verified on an independent gate before the wizard.
     setMode("gate");
   }
@@ -212,7 +219,14 @@ export default function RegistryClient() {
           <div className="flex flex-1">
             <CitizenSidebar />
             <CitizenshipGate
-              onCitizen={() => setMode("wizard")}
+              onCitizen={() => {
+                setRegisteringMinor(false);
+                setMode("wizard");
+              }}
+              onRegisterMinor={() => {
+                setRegisteringMinor(true);
+                setMode("wizard");
+              }}
               onExit={() => setMode("landing")}
             />
           </div>
@@ -221,6 +235,7 @@ export default function RegistryClient() {
         {mode === "wizard" && (
           <RegistryWizard
             selfDone={selfDone}
+            registeringMinor={registeringMinor}
             onExit={() => setMode("landing")}
             onComplete={handleComplete}
           />
