@@ -107,6 +107,12 @@ export type ForeignerDetails = {
   fullName?: string;
   nationality?: string;
   documentNumber?: string;
+  /** The traveller's current immigration status (e.g. "Resident Permit — Class A"). */
+  immigrationStatus?: string;
+  permitType?: string;
+  permitNumber?: string;
+  issueDate?: string;
+  expiryDate?: string;
 };
 
 export async function fetchForeignerDetails(input: {
@@ -115,8 +121,20 @@ export async function fetchForeignerDetails(input: {
   documentNumber: string;
 }): Promise<ForeignerDetails | null> {
   if (BYPASS) {
-    await delay(400);
-    return null;
+    await delay(500);
+    // Mock: a document number containing "notfound" returns no record (so the
+    // not-found path stays testable); anything else returns a verified permit.
+    if (input.documentNumber.trim().toLowerCase().includes("notfound")) return null;
+    return {
+      fullName: "Foreign Applicant",
+      nationality: input.nationality,
+      documentNumber: input.documentNumber,
+      immigrationStatus: "Resident Permit — Class A",
+      permitType: "Residence Permit",
+      permitNumber: "RP-2026-004821",
+      issueDate: "2024-03-01",
+      expiryDate: "2027-02-28",
+    };
   }
   try {
     const params = new URLSearchParams({

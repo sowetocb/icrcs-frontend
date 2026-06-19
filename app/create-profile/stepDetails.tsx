@@ -100,20 +100,11 @@ export default function StepDetails({
   const { t } = useI18n();
 
   // Gender options come from the lookup API; fall back to the static list when
-  // it's unavailable. Normalise each to the M/F/O code used across the app, and
-  // localise the M/F labels (the lookup names are uppercase English enums).
+  // it's unavailable. The value is the M/F/O code used across the app, but the
+  // label renders exactly what the API returns (e.g. "Ke (Female)", "Me (Male)").
   const { options: genderItems } = useLookup(getGenders, []);
   const genderOptions = (genderItems.length ? genderItems : FALLBACK_GENDERS).map(
-    (item) => {
-      const value = genderCode(item);
-      const label =
-        value === "M"
-          ? t("register.genderMale")
-          : value === "F"
-            ? t("register.genderFemale")
-            : item.name;
-      return { value, label };
-    },
+    (item) => ({ value: genderCode(item), label: item.name }),
   );
 
   const [form, setForm] = useState<RegistrationDetails>(defaultValues);

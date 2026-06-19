@@ -5,7 +5,7 @@ import { WizardProvider, Field, Select, TextInput } from "@/components/registry/
 import CountrySelect from "@/components/registry/countrySelect";
 import { travelDocumentOptions } from "@/components/registry/blocks";
 import { useI18n } from "../i18n/localeProvider";
-import { fetchForeignerDetails } from "@/lib/api/registration";
+import { fetchForeignerDetails, type ForeignerDetails } from "@/lib/api/registration";
 
 /**
  * Independent citizenship gate shown before the registration wizard.
@@ -26,7 +26,10 @@ export default function CitizenshipGate({
   const [choice, setChoice] = useState<"yes" | "no" | "">("");
   const [data, setData] = useState<Record<string, string | boolean>>({});
   const [errors, setErrors] = useState<string[]>([]);
-  const [status, setStatus] = useState<"idle" | "verifying" | "notfound">("idle");
+  const [status, setStatus] = useState<"idle" | "verifying" | "notfound" | "found">("idle");
+  // The verified permit record + whether the user has a Tanzanian-origin minor.
+  const [details, setDetails] = useState<ForeignerDetails | null>(null);
+  const [hasMinor, setHasMinor] = useState<"yes" | "no" | "">("");
 
   const set = (name: string, value: string | boolean) => {
     setData((d) => ({ ...d, [name]: value }));
@@ -36,6 +39,8 @@ export default function CitizenshipGate({
   function pick(value: "yes" | "no") {
     setChoice(value);
     setStatus("idle");
+    setDetails(null);
+    setHasMinor("");
     setErrors([]);
   }
 
@@ -46,6 +51,20 @@ export default function CitizenshipGate({
       return;
     }
     if (choice !== "no") return;
+
+    // After a verified permit, the primary action depends on the minor answer.
+    if (status === "found") {
+      if (hasMinor === "yes") {
+        onCitizen();
+        return;
+      }
+      if (hasMinor === "no") {
+        onExit();
+        return;
+      }
+      setErrors(["hasMinor"]);
+      return;
+    }
 
     const required = ["gateNationality", "gateDocType", "gateDocNumber"];
     const missing = required.filter(
@@ -58,17 +77,34 @@ export default function CitizenshipGate({
     }
     setErrors([]);
     setStatus("verifying");
-    const details = await fetchForeignerDetails({
+    const found = await fetchForeignerDetails({
       nationality: String(data.gateNationality || ""),
       documentTypeId: String(data.gateDocType || ""),
       documentNumber: String(data.gateDocNumber || ""),
     });
-    // No backend record → guide them to an immigration office. (When the lookup
-    // later returns a record, this is where the matched flow would continue.)
-    setStatus(details ? "idle" : "notfound");
+    if (found) {
+      setDetails(found);
+      setHasMinor("");
+      setStatus("found");
+    } else {
+      setDetails(null);
+      setStatus("notfound");
+    }
   }
 
   const verifying = status === "verifying";
+  const found = status === "found";
+  // Label for the primary button: register the minor, finish, or verify.
+  const primaryLabel =
+    choice === "yes"
+      ? t("gate.continue")
+      : found
+        ? hasMinor === "no"
+          ? t("gate.done")
+          : t("gate.registerMinor")
+        : verifying
+          ? t("gate.verifying")
+          : t("gate.submit");
 
   return (
     <main className="flex-1 px-6 py-8 lg:px-10">
@@ -140,6 +176,90 @@ export default function CitizenshipGate({
               </div>
             )}
 
+            {found && details && (
+              <div className="mt-6 space-y-5">
+                {/* Verified permit + immigration status */}
+                <div className="rounded-xl border border-success/30 bg-success/10 p-5">
+                  <div className="flex items-center gap-2">
+                    <svg className="text-success" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                    <p className="text-sm font-bold text-navy-700">{t("gate.foundTitle")}</p>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">{t("gate.foundBody")}</p>
+
+                  <div className="mt-4 rounded-lg border border-success/20 bg-card px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                      {t("gate.statusLabel")}
+                    </p>
+                    <p className="mt-0.5 font-display text-lg font-bold text-success">
+                      {details.immigrationStatus || "—"}
+                    </p>
+                  </div>
+
+                  <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                    {([
+                      [t("gate.holderLabel"), details.fullName],
+                      [t("gate.permitTypeLabel"), details.permitType],
+                      [t("gate.permitNumberLabel"), details.permitNumber],
+                      [t("gate.expiryLabel"), details.expiryDate],
+                    ] as const)
+                      .filter(([, v]) => !!v)
+                      .map(([label, value]) => (
+                        <div key={label} className="flex justify-between gap-3 sm:block">
+                          <dt className="text-muted">{label}</dt>
+                          <dd className="font-semibold text-navy-700">{value}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                </div>
+
+                {/* Minor registration question */}
+                <div className="rounded-xl border border-line bg-surface/50 p-5">
+                  <p className="text-sm font-semibold text-navy-700">{t("gate.minorQuestion")}</p>
+                  <p className="mt-1 text-xs text-muted">{t("gate.minorHint")}</p>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {([
+                      ["yes", t("fields.citizenYes")],
+                      ["no", t("fields.citizenNo")],
+                    ] as const).map(([value, label]) => (
+                      <label
+                        key={value}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm font-medium transition ${
+                          hasMinor === value
+                            ? "border-navy-700 bg-navy-50 text-navy-700"
+                            : "border-line text-ink hover:border-navy-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="hasMinor"
+                          checked={hasMinor === value}
+                          onChange={() => {
+                            setHasMinor(value);
+                            setErrors((e) => e.filter((n) => n !== "hasMinor"));
+                          }}
+                          className="h-4 w-4 shrink-0 accent-navy-700"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  {errors.includes("hasMinor") && (
+                    <p role="alert" className="mt-2 text-sm font-medium text-danger">
+                      {t("gate.minorRequired")}
+                    </p>
+                  )}
+                  {hasMinor === "no" && (
+                    <p className="mt-3 text-sm leading-relaxed text-muted">
+                      {t("gate.noMinorNote")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="mt-8 flex items-center justify-between gap-4">
               <button
                 type="button"
@@ -164,12 +284,8 @@ export default function CitizenshipGate({
                     <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                   </svg>
                 )}
-                {choice === "no"
-                  ? verifying
-                    ? t("gate.verifying")
-                    : t("gate.submit")
-                  : t("gate.continue")}
-                {choice === "yes" && (
+                {primaryLabel}
+                {(choice === "yes" || (found && hasMinor === "yes")) && (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <line x1="5" y1="12" x2="19" y2="12" />
                     <polyline points="12 5 19 12 12 19" />

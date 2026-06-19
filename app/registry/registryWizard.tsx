@@ -45,9 +45,11 @@ import StepFamily from "./steps/stepFamily";
 import StepReferees from "./steps/stepReferees";
 import StepAttachments, { parseAttachments } from "./steps/stepAttachments";
 import StepPreviewDeclaration from "./steps/stepPreviewDeclaration";
-import { PASSPORT_PHOTO_TYPE, type UploadedAttachment } from "@/lib/api/files";
+import { PASSPORT_PHOTO_TYPE, uploadAttachmentDataUrl, type UploadedAttachment } from "@/lib/api/files";
 
 const TOTAL = 9;
+// Backend attachment type for the birth certificate (matches ATTACHMENT_TYPES).
+const BIRTH_CERT_TYPE = 1;
 const STEP_COMPONENTS = [
   StepPersonal,       // 1
   StepAddress,        // 2
@@ -173,20 +175,30 @@ function profileToPersonal(p: Profile): Record<string, string | boolean> {
 
 export default function RegistryWizard({
   selfDone,
+  registeringMinor = false,
   onExit,
   onComplete,
 }: {
   selfDone: boolean;
+  /** A non-citizen (foreign) profile registering a Tanzanian-origin minor. The
+   * account holder is NOT the subject, so their personal details are neither
+   * prefilled nor locked, and the subject is validated as a minor. */
+  registeringMinor?: boolean;
   onExit: () => void;
   onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
 }) {
   const { t } = useI18n();
   const router = useRouter();
 
-  // The first registration under a profile is the account holder themselves.
-  // Derived (not state) so it reacts when selfDone updates asynchronously after
-  // the backend sync confirms the account holder's registration exists.
-  const isFirstPerson = !selfDone;
+  // The first registration under a profile is the account holder themselves —
+  // EXCEPT when a foreign profile is registering a minor, where the subject is a
+  // dependent, not the account holder. Derived (not state) so it reacts when
+  // selfDone updates asynchronously after the backend sync confirms the account
+  // holder's registration exists.
+  const isFirstPerson = !selfDone && !registeringMinor;
+  // Contact details are inherited (not the names) when the subject isn't the
+  // account holder — i.e. a normal dependent or a foreign profile's minor.
+  const inheritsContact = selfDone || registeringMinor;
   const [profile] = useState<Profile | null>(() => loadProfile());
   const ownerId = profile?.profileId ?? "";
   const locked = profile ? (isFirstPerson ? PERSONAL_LOCK : CONTACT_LOCK) : [];
@@ -203,7 +215,7 @@ export default function RegistryWizard({
   const [data, setData] = useState<Record<string, string | boolean>>(() => {
     const prof = loadProfile();
     const base: Record<string, string | boolean> = prof
-      ? selfDone
+      ? inheritsContact
         ? { phone: prof.phoneNumber, email: prof.email }
         : profileToPersonal(prof)
       : {};
@@ -289,29 +301,61 @@ export default function RegistryWizard({
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
   };
 
-  // Merge the passport photo (uploaded at Stage 1) into the attachments list so
-  // Stage 8 registers it with the backend — which requires the passport photo.
-  function mergePhotoAttachment(
+  // Merge a typed attachment uploaded in an earlier stage into the attachments
+  // list so Stage 8 registers it with the backend (the photo and birth
+  // certificate are uploaded at Stage 1, before the Uploads stage).
+  function mergeAttachment(
     d: Record<string, string | boolean>,
     att: UploadedAttachment,
+    typeId: number,
+    name: string,
   ): Record<string, string | boolean> {
-    const list = parseAttachments(d.attachments).filter(
-      (a) => a.typeId !== PASSPORT_PHOTO_TYPE,
-    );
+    const list = parseAttachments(d.attachments).filter((a) => a.typeId !== typeId);
     list.push({
-      id: `att-${PASSPORT_PHOTO_TYPE}`,
-      typeId: PASSPORT_PHOTO_TYPE,
-      name: "Passport Size Photo",
+      id: `att-${typeId}`,
+      typeId,
+      name,
       fileId: att.fileId,
       fileUrl: att.fileUrl,
       mimeType: att.mimeType,
       fileSizeBytes: att.fileSizeBytes,
       fileHash: att.fileHash,
     });
-    return { ...d, attachments: JSON.stringify(list), passportPhotoUploaded: "true" };
+    return { ...d, attachments: JSON.stringify(list) };
+  }
+
+  // Merge the passport photo (uploaded at Stage 1) into the attachments list so
+  // Stage 8 registers it with the backend — which requires the passport photo.
+  function mergePhotoAttachment(
+    d: Record<string, string | boolean>,
+    att: UploadedAttachment,
+  ): Record<string, string | boolean> {
+    return {
+      ...mergeAttachment(d, att, PASSPORT_PHOTO_TYPE, "Passport Size Photo"),
+      passportPhotoUploaded: "true",
+    };
   }
   function recordPhotoAttachment(att: UploadedAttachment) {
     setData((d) => mergePhotoAttachment(d, att));
+  }
+
+  // Upload the Stage 1 birth certificate (held as a data URL) once the subject id
+  // exists, and carry it into the Stage 8 attachments (type 1). Best-effort: a
+  // failure never blocks Stage 1.
+  async function uploadBirthCertificate(sid: string) {
+    const dataUrl = typeof data.birthCertFileData === "string" ? data.birthCertFileData : "";
+    if (!dataUrl || !sid) return;
+    // Skip if it's already in the attachments (e.g. re-saving an edited Stage 1).
+    if (parseAttachments(data.attachments).some((a) => a.typeId === BIRTH_CERT_TYPE)) return;
+    const name =
+      (typeof data.birthCertFileName === "string" && data.birthCertFileName) ||
+      "Birth Certificate";
+    try {
+      const att = await uploadAttachmentDataUrl(sid, BIRTH_CERT_TYPE, dataUrl, name);
+      if (att) setData((d) => mergeAttachment(d, att, BIRTH_CERT_TYPE, name));
+    } catch {
+      // best effort — the user can still upload it at the Uploads stage
+    }
   }
 
   function validateDob(dob: string) {
@@ -672,6 +716,8 @@ export default function RegistryWizard({
               set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
             }
           }
+          // Carry the birth certificate (captured locally) into Stage 8 uploads.
+          await uploadBirthCertificate(sid);
         } else if (step === 2) {
           await (edit ? editStage2(sid, data) : submitStage2(sid, data));
         } else if (step === 3) {

@@ -12,6 +12,7 @@ import {
   SessionExpiredError,
 } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
+import { useGenderOptions } from "@/components/registry/blocks";
 import {
   loadProfile,
   saveProfile,
@@ -49,6 +50,8 @@ function initials(p: Profile | null): string {
 export default function ProfileView() {
   const { t } = useI18n();
   const router = useRouter();
+  // Gender options come from the lookup, rendered with the exact API label.
+  const genders = useGenderOptions();
   const fileRef = useRef<HTMLInputElement>(null);
   // Once the user edits a field, don't let a late background refresh clobber it.
   const dirtyRef = useRef(false);
@@ -355,9 +358,11 @@ export default function ProfileView() {
               className={inputClass}
             >
               <option value="">{t("register.genderSelect")}</option>
-              <option value="M">{t("register.genderMale")}</option>
-              <option value="F">{t("register.genderFemale")}</option>
-              <option value="O">{t("register.genderOther")}</option>
+              {genders.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="space-y-1.5">

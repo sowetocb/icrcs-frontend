@@ -104,8 +104,14 @@ function useLocalizedOptions(
   });
 }
 
-export const useGenderOptions = () =>
-  useLocalizedOptions(getGenders, genderOptions, "code");
+// Gender renders the exact label returned by the lookup API (e.g. "Ke (Female)",
+// "Me (Male)"); the option value stays the M/F/O code the backend payload uses.
+export const useGenderOptions = (): Opt[] => {
+  const { t } = useI18n();
+  const { options: items } = useLookup(getGenders, []);
+  if (!items.length) return genderOptions(t);
+  return items.map((i) => ({ value: i.code ?? String(i.id), label: i.name }));
+};
 export const useMarriageOptions = () =>
   useLocalizedOptions(getMaritalStatuses, marriageOptions, "code");
 export const useCitizenshipTypeOptions = () =>

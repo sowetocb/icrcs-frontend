@@ -31,13 +31,18 @@ export default function CountryMenu({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return COUNTRIES;
-    return COUNTRIES.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.dial.includes(q) ||
-        c.code.toLowerCase() === q,
-    );
+    const base = !q
+      ? COUNTRIES
+      : COUNTRIES.filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            c.dial.includes(q) ||
+            c.code.toLowerCase() === q,
+        );
+    // The system is used mostly by Tanzanians — pin Tanzania to the top.
+    const tz = base.filter((c) => c.code === "TZ");
+    const rest = base.filter((c) => c.code !== "TZ");
+    return [...tz, ...rest];
   }, [query]);
 
   return (

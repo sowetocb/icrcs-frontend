@@ -78,3 +78,44 @@ export async function uploadAttachment(
     fileHash: String(d.fileHash ?? d.hash ?? ""),
   };
 }
+
+/** Convert a `data:` URL back into a File (for re-uploading a locally captured
+ * file once the registration's subject id is known). */
+function dataUrlToFile(dataUrl: string, fileName: string): File | null {
+  const m = dataUrl.match(/^data:([^;,]*)(;base64)?,(.*)$/);
+  if (!m) return null;
+  const mime = m[1] || "application/octet-stream";
+  const isBase64 = !!m[2];
+  try {
+    const raw = isBase64 ? atob(m[3]) : decodeURIComponent(m[3]);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return new File([bytes], fileName || "upload", { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+/** Upload a typed attachment held locally as a data URL (e.g. the Stage 1 birth
+ * certificate, captured before the subject id exists). Returns null on failure. */
+export async function uploadAttachmentDataUrl(
+  subjectId: string,
+  attachmentTypeId: number,
+  dataUrl: string,
+  fileName: string,
+): Promise<UploadedAttachment | null> {
+  if (!dataUrl || !subjectId) return null;
+  if (BYPASS) {
+    await delay(300);
+    return {
+      fileId: `mock-file-${attachmentTypeId}`,
+      fileUrl: `uploads/mock-${attachmentTypeId}-${fileName}`,
+      mimeType: "application/octet-stream",
+      fileSizeBytes: 0,
+      fileHash: `mockhash-${attachmentTypeId}`,
+    };
+  }
+  const file = dataUrlToFile(dataUrl, fileName);
+  if (!file) return null;
+  return uploadAttachment(subjectId, attachmentTypeId, file);
+}

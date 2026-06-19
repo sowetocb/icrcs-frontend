@@ -674,10 +674,23 @@ const en = {
     travelDocType: "Travel Document Type", // REVIEW
     verifying: "Verifying…", // REVIEW
     notFoundTitle: "Record Not Found", // REVIEW
-    notFoundBody: "We could not find a matching record. Please check your details and try again.", // REVIEW
+    notFoundBody: "We could not find a matching record. Please check your details and try again. If the issue persists visit the nearest immigration office for further assistance.", // REVIEW
     back: "Back", // REVIEW
     continue: "Continue", // REVIEW
     submit: "Submit", // REVIEW
+    foundTitle: "Permit Verified",
+    foundBody: "We found a matching immigration record.",
+    statusLabel: "Immigration Status",
+    holderLabel: "Holder",
+    permitTypeLabel: "Permit Type",
+    permitNumberLabel: "Permit Number",
+    expiryLabel: "Valid Until",
+    minorQuestion: "Do you have a minor of Tanzanian origin you can register?",
+    minorHint: "A child of Tanzanian origin (e.g. a Tanzanian spouse's child) can be registered under your record.",
+    minorRequired: "Please select Yes or No.",
+    registerMinor: "Register the minor",
+    noMinorNote: "Thank you. No further action is required at this time.",
+    done: "Done",
   },
   preview: {
     fullName: "Full Name", // REVIEW
@@ -1402,10 +1415,23 @@ const sw: typeof en = {
     travelDocType: "Aina ya Hati ya Safari", // REVIEW
     verifying: "Inahakiki…", // REVIEW
     notFoundTitle: "Rekodi Haikupatikana", // REVIEW
-    notFoundBody: "Hatukuweza kupata rekodi inayolingana. Tafadhali angalia taarifa zako na ujaribu tena.", // REVIEW
+    notFoundBody: "Hatukuweza kupata rekodi inayolingana. Tafadhali angalia taarifa zako na ujaribu tena. Kama unashindwa kupata taarifa zako, tafadhali tembelea ofisi ya uhamiaji iliyo karibu nawe kwa msaada zaidi", // REVIEW
     back: "Rudi", // REVIEW
     continue: "Endelea", // REVIEW
     submit: "Wasilisha", // REVIEW
+    foundTitle: "Kibali Kimethibitishwa",
+    foundBody: "Tumepata rekodi ya uhamiaji inayolingana.",
+    statusLabel: "Hadhi ya Uhamiaji",
+    holderLabel: "Mmiliki",
+    permitTypeLabel: "Aina ya Kibali",
+    permitNumberLabel: "Namba ya Kibali",
+    expiryLabel: "Inakwisha",
+    minorQuestion: "Je, una mtoto mdogo mwenye asili ya Kitanzania unayeweza kumsajili?",
+    minorHint: "Mtoto mwenye asili ya Kitanzania (mfano mtoto wa mwenzi wa Kitanzania) anaweza kusajiliwa chini ya rekodi yako.",
+    minorRequired: "Tafadhali chagua Ndiyo au Hapana.",
+    registerMinor: "Msajili mtoto",
+    noMinorNote: "Asante. Hakuna hatua zaidi zinazohitajika kwa sasa.",
+    done: "Maliza",
   },
   preview: {
     fullName: "Jina Kamili", // REVIEW

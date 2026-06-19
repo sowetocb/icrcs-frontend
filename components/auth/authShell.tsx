@@ -6,17 +6,22 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
+import { ABOUT_GUIDE } from "./aboutGuide";
 
-/** Modal explaining what the ICRCS system is and does, as a bulleted list. */
+/** A gold bullet list item. */
+function Bullet({ text }: { text: string }) {
+  return (
+    <li className="flex items-start gap-2.5 text-sm leading-relaxed text-ink">
+      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+      <span>{text}</span>
+    </li>
+  );
+}
+
+/** Modal showing the full "About ICRCS" applicant guide for the active locale. */
 function AboutDialog({ onClose }: { onClose: () => void }) {
-  const { t } = useI18n();
-  const points = [
-    t("about.point1"),
-    t("about.point2"),
-    t("about.point3"),
-    t("about.point4"),
-    t("about.point5"),
-  ];
+  const { t, locale } = useI18n();
+  const guide = ABOUT_GUIDE[locale];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -41,13 +46,16 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
       />
 
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-card shadow-2xl">
+      <div className="relative z-10 flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
+        {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-[#1e4d8a] to-[#0d2a52] px-6 py-5">
           <div>
-            <h2 id="about-title" className="font-display text-lg font-bold text-white">
-              {t("about.title")}
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/80">
+              {guide.systemName}
+            </p>
+            <h2 id="about-title" className="mt-1 font-display text-xl font-bold text-white">
+              {guide.heading}
             </h2>
-            <p className="mt-1 text-sm text-blue-100">{t("about.intro")}</p>
           </div>
           <button
             type="button"
@@ -62,15 +70,61 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <ul className="space-y-3 px-6 py-5">
-          {points.map((point, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-ink">
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold" />
-              <span>{point}</span>
-            </li>
-          ))}
-        </ul>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-6 py-5">
+          <p className="text-sm leading-relaxed text-muted">{guide.intro}</p>
 
+          {guide.sections.map((section, i) => (
+            <section key={i} className="mt-6">
+              <h3 className="font-display text-base font-bold text-navy-700">
+                {section.title}
+              </h3>
+              {section.intro && (
+                <p className="mt-1.5 text-sm leading-relaxed text-ink">{section.intro}</p>
+              )}
+
+              {section.items && (
+                <ul className="mt-2.5 space-y-1.5">
+                  {section.items.map((item, j) => (
+                    <Bullet key={j} text={item} />
+                  ))}
+                </ul>
+              )}
+
+              {section.groups && (
+                <div className="mt-3 space-y-4">
+                  {section.groups.map((group, j) => (
+                    <div key={j}>
+                      <p className="text-sm font-semibold text-navy-700">{group.title}</p>
+                      <ul className="mt-1.5 space-y-1.5">
+                        {group.items.map((item, k) => (
+                          <Bullet key={k} text={item} />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {section.steps && (
+                <div className="mt-3 space-y-4">
+                  {section.steps.map((step, j) => (
+                    <div key={j} className="rounded-xl border border-line bg-surface/50 p-4">
+                      <p className="text-sm font-semibold text-navy-700">{step.title}</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {step.lines.map((line, k) => (
+                          <Bullet key={k} text={line} />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+
+        {/* Footer */}
         <div className="border-t border-line px-6 py-4 text-right">
           <button
             type="button"
