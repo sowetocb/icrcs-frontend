@@ -603,6 +603,230 @@ A wrapper component (`components/auth/authGuard.tsx`) that:
 
 ---
 
+## API Consumption
+
+The frontend communicates with two backend services via a **same-origin proxy** pattern. All network calls are routed through Next.js API route handlers, so the browser never makes cross-origin requests (no CORS configuration required).
+
+### Architecture — Same-Origin Proxy
+
+```
+ Browser                         Next.js Server                        Backend
+┌──────────┐  /api/proxy/...   ┌──────────────────┐   BACKEND_API_..  ┌──────────┐
+│  Client  │ ────────────────► │ app/api/proxy/    │ ────────────────► │ Main API │
+│  Code    │ ◄──────────────── │ [...path]/route.ts│ ◄──────────────── │ (Spring) │
+│          │                   │                   │                   └──────────┘
+│ fetch()  │                   │   routing:        │   LOOKUP_API_..   ┌──────────┐
+│ via      │                   │   /lookup/*  ──────────────────────► │ Lookup   │
+│ apiGet() │                   │   /v1/*     → BACKEND                │ Service  │
+│ apiPost()│                   │                   │                   └──────────┘
+└──────────┘                   └──────────────────┘
+```
+
+**Key design decisions:**
+
+* **`NEXT_PUBLIC_API_BASE_URL`** is set to `/api/proxy` — the browser calls the same origin.
+* **`BACKEND_API_BASE_URL`** is a **server-side runtime** variable — changing the backend URL doesn't require a rebuild.
+* **`LOOKUP_API_BASE_URL`** (optional) separates the Lookup microservice; paths starting with `/lookup/` are routed there, everything else goes to the main backend.
+* The proxy relays **Authorization headers**, forces `Content-Type: application/json` for non-multipart requests, and handles **binary responses** (e.g., profile photos) without corruption.
+* **Idempotent retries:** GET/HEAD requests are retried up to 3 times on network failure (250ms backoff); POST/PUT are never retried to avoid duplicate writes.
+* **Request logging:** Every proxied request is logged to the terminal with method, path, redacted body, status, and duration.
+
+---
+
+### HTTP Client Layer — `lib/api/client.ts`
+
+A thin wrapper around the native `fetch` API providing typed, consistent request functions:
+
+| Function | Method | Body | Use Case |
+|---|---|---|---|
+| `apiGet<T>(path, token?)` | GET | — | Read resources, lookup lists |
+| `apiPost<T>(path, body, token?)` | POST | JSON | Create resources, login, submit stages |
+| `apiPut<T>(path, body, token?)` | PUT | JSON | Edit submitted stages |
+| `apiDelete<T>(path, token?)` | DELETE | — | Remove profile photo |
+| `apiUpload<T>(path, form, token?)` | POST | FormData | File uploads (multipart) |
+
+**Error handling:**
+
+```
+fetch() → res.json() → if (!res.ok) throw new ApiError(status, message, data)
+```
+
+* `ApiError` carries the HTTP `status`, a human-readable `message` (extracted from `{ message }` or `{ error }` in the response), and the raw `data` payload.
+* `getErrorMessage(err, fallback)` filters out technical/infrastructure errors (gateway timeouts, `ETIMEDOUT`, `fetch failed`, 502/503/504) and returns the user-friendly `fallback` string instead.
+
+---
+
+### Auth Token Lifecycle — `withFreshAuth`
+
+All authenticated API calls are wrapped in `withFreshAuth`, which implements a **transparent single-retry token refresh**:
+
+```
+1. Call the API with the current accessToken from localStorage
+2. If 401/403 → read refreshToken from localStorage
+3. POST /v1/auth/refresh → get new tokens → saveSession()
+4. Retry the original call with the fresh accessToken
+5. If refresh also fails → clearSession() → throw SessionExpiredError
+```
+
+**Special case:** A 403 response that carries a structured `errorCode` (e.g., `REGISTRATION_PARENT_NOT_APPROVED`) is treated as a **business-rule rejection**, not an expired session — it surfaces the backend's error message directly instead of masking it behind a "session expired" redirect.
+
+---
+
+### API Modules
+
+The frontend organizes backend communication into 6 focused modules:
+
+#### 1. `lib/api/auth.ts` — Authentication & Profile
+
+| Function | Endpoint | Purpose |
+|---|---|---|
+| `register(payload)` | `POST /v1/auth/register` | Create account + trigger email OTP |
+| `resendOtp(email)` | `POST /v1/auth/resend-otp` | Re-send verification code |
+| `verifyOtp(code, preAuthToken)` | `POST /v1/auth/verify-otp` | Confirm OTP → session tokens |
+| `login(identifier, password)` | `POST /v1/auth/login` | Sign in → session tokens |
+| `refresh(refreshToken)` | `POST /v1/auth/refresh` | Rotate access token |
+| `logout(refreshToken)` | `POST /v1/auth/logout` | Invalidate refresh token |
+| `forgotPassword(identifier)` | `POST /v1/auth/forgot-password` | Step 1: send reset OTP |
+| `verifyResetOtp(profileId, code)` | `POST /v1/auth/verify-reset-otp` | Step 2: confirm reset code |
+| `resetPassword(profileId, pw, confirm)` | `POST /v1/auth/reset-password` | Step 3: set new password |
+| `getMyProfile(accessToken)` | `GET /v1/profile/me` | Fetch full profile |
+| `refreshMyProfile()` | `GET /v1/profile/me` | Re-fetch with auto token refresh |
+| `updateProfile(input)` | `PUT /v1/profile/update` | Update name, gender, phone |
+| `uploadProfilePicture(file)` | `POST /v1/profile/picture` | Multipart photo upload |
+| `deleteProfilePicture()` | `DELETE /v1/profile/picture` | Remove photo |
+| `fetchProfilePicture(path)` | `GET /api/proxy/<path>` | Fetch photo bytes → data URL |
+
+**Token normalization:** The `normalizeTokens` function uses a `deepFindString` utility that searches arbitrary nesting (`{ data: { tokens: { accessToken } } }`) for token keys, tolerating both camelCase and snake_case — making the frontend resilient to backend response shape variations.
+
+**Gender resolution:** Gender values are converted at the fetch boundary — the app uses `M/F/O` codes internally, but the backend expects numeric lookup IDs. `resolveGenderId` / `resolveGenderCode` translate in both directions.
+
+#### 2. `lib/api/registration.ts` — 9-Stage Registration
+
+Each stage has a `submitStageN` (POST) and `editStageN` (PUT) function pair:
+
+| Stage | Endpoint | Domestic/Foreign Split | Payload Builder |
+|---|---|---|---|
+| **1** | `/v1/registration/stage1/{domestic\|foreign}` | By birth country | `buildStage1Payload` |
+| **1.5** | `/v1/registration/{id}/naturalization` | — | Conditional (cert no.) |
+| **2** | `/v1/registration/{id}/stage2/{domestic\|foreign}` | By permanent address | `buildStage2Payload` |
+| **3** | `/v1/registration/{id}/stage3/{domestic\|foreign}` | By parents' residence | `buildStage3Payload` |
+| **4** | `/v1/registration/{id}/stage4` | — | `buildStage4Payload` |
+| **5** | `/v1/registration/{id}/stage5/{domestic\|foreign}` | By contacts' residence | `buildStage5Payload` |
+| **6** | `/v1/registration/{id}/stage6/{domestic\|foreign}` | By family residence | `buildStage6Payload` |
+| **7** | `/v1/registration/{id}/stage7` | — (GET only) | None (print-only) |
+| **8** | `/v1/registration/{id}/stage8` | — | `buildStage8Payload` |
+| **9** | `/v1/registration/{id}/stage9?confirmed=true` | — | Empty body |
+| **Preview** | `/v1/registration/{id}/stage9/preview` | — (GET) | None |
+
+**Domestic/Foreign routing:** Stages 1, 2, 3, 5, and 6 split into `/domestic` or `/foreign` variants based on whether any person in that stage resides outside Tanzania. The `isTanzania()` helper and `peopleSuffix()` function determine the suffix. There is no bare endpoint (e.g., no `/stage1` without a suffix).
+
+**Payload transformation layer:** Each `buildStageNPayload` function transforms the flat wizard data map into the backend's nested JSON structure, resolving:
+* Country names → ISO alpha-3 codes (via lookup API + local fallback)
+* Gender codes (`M/F/O`) → numeric lookup IDs
+* Marital status enums → numeric lookup IDs
+* Employment status names → numeric lookup IDs
+* Phone numbers → E.164 format (stripping spaces and leading zeros)
+* Street/Ward names → numeric cascade IDs
+
+**Stage 1 photo decoupling:** The passport photo upload is intentionally decoupled from Stage 1 submission — Stage 1 JSON is submitted first to obtain the `subjectId`, then the photo is uploaded against that ID. A photo upload failure is non-fatal; the wizard retries at Stage 8.
+
+**Additional registration endpoints:**
+
+| Function | Endpoint | Purpose |
+|---|---|---|
+| `uploadPassportPhoto(subjectId, dataUrl)` | `POST /v1/files/upload` | Decoupled photo upload |
+| `fetchForeignerDetails(input)` | `GET /v1/registration/travel-document?...` | Foreigner permit verification |
+| `openRefereesForm(subjectId)` | `GET /v1/registration/{id}/stage7` | Download printable referees form |
+
+#### 3. `lib/api/registry.ts` — Registry Queries
+
+| Function | Endpoint | Purpose |
+|---|---|---|
+| `getRegisteredPeople()` | `GET /v1/registration/all` | All registrations under the account |
+| `getApplicationStatus(id)` | `GET /v1/registration/{id}/status` | Public status lookup (no auth) |
+
+**Response normalization:** Both functions accept arbitrary response shapes (camelCase, snake_case, nested `{ data }` wrappers) via `normalize*` functions that map every known key variant to a stable typed output.
+
+#### 4. `lib/api/files.ts` — File Uploads
+
+| Function | Endpoint | Purpose |
+|---|---|---|
+| `uploadAttachment(subjectId, typeId, file)` | `POST /v1/files/upload` | Upload any typed attachment |
+| `uploadAttachmentDataUrl(subjectId, typeId, dataUrl, name)` | `POST /v1/files/upload` | Upload from data URL (deferred uploads) |
+
+The upload sends a `FormData` with fields `file`, `subjectId`, and `attachmentTypeId`. Returns `UploadedAttachment` metadata (fileId, fileUrl, mimeType, fileSizeBytes, fileHash) used by Stage 8 to register files against the application.
+
+#### 5. `lib/api/lookup.ts` — Reference Data
+
+Two upstream sources, unified under a single module:
+
+| Source | Base Path | Data |
+|---|---|---|
+| **Lookup Microservice** | `/lookup/*` | Geographic cascade, demographic enums |
+| **Main Backend** | `/v1/lookup/*` | Countries, document types, attachment types |
+
+**Geographic cascade:**
+
+```
+Territory → Region → District → Ward → Street
+  GET /lookup/territories
+  GET /lookup/regions/{territoryId}
+  GET /lookup/districts/{regionId}
+  GET /lookup/wards/by-district/{districtId}
+  GET /lookup/streets/{wardId}
+  GET /lookup/street-info/{streetId}  (reverse hierarchy)
+```
+
+**Demographic enums:**
+
+| Function | Endpoint | Notes |
+|---|---|---|
+| `getGenders()` | `GET /lookup/genders` | Attaches M/F/O code |
+| `getMaritalStatuses()` | `GET /lookup/marital-statuses` | Derives canonical enum (SINGLE, MARRIED, etc.) |
+| `getEducationLevels()` | `GET /lookup/educations` | |
+| `getOccupations()` | `GET /lookup/occupations` | |
+| `getRelationships()` | `GET /lookup/relationships` | |
+| `getCitizenshipTypes()` | `GET /lookup/citizenship` | |
+| `getEmploymentStatuses()` | `GET /v1/lookup/employment-statuses` | Main backend, not lookup service |
+| `getCountries()` | `GET /v1/lookup/countries` | Main backend (has countryId + isoCode) |
+| `getDocumentTypes()` | `GET /v1/lookup/document-types` | |
+| `getAttachmentTypes()` | `GET /v1/lookup/attachment-types` | |
+
+**Caching strategy:** All lookups are cached per session in a module-level `Map<string, Promise<LookupItem[]>>`. The cache stores the **in-flight Promise** (not the resolved value), so concurrent requests share one network call. Failures clear the cache entry to allow retry. See [API-Layer Module Cache](#4-api-layer-module-cache--lookup-data) in State Management above.
+
+**Mock fallbacks:** Every lookup function provides `MOCK_*` arrays as fallbacks — if the backend is unreachable, the UI remains functional with representative data.
+
+#### 6. Server Route Handlers — `app/api/`
+
+| Route | Handler | Purpose |
+|---|---|---|
+| `app/api/proxy/[...path]/route.ts` | `forward()` | Same-origin proxy to backend (all methods) |
+| `app/api/registration/email-id/route.ts` | `POST` | Server-to-server: email Application ID to applicant |
+
+The email handler uses `API_SECRET_KEY` (optional bearer token) for backend-to-backend auth and fails gracefully (the registration flow continues even if the email can't be sent).
+
+---
+
+### Auth Bypass — Offline Development
+
+Setting `NEXT_PUBLIC_AUTH_BYPASS=true` (the default) short-circuits all API calls with mock data and `delay()` simulations. Every API function checks `BYPASS` at the top and returns synthetic responses (`MOCK_TOKENS`, `MOCK_PROFILE`, `MOCK_COUNTRIES`, etc.) — so the full UI works without a running backend.
+
+---
+
+### Error Handling Pipeline
+
+```
+Backend → Proxy (502 on network failure)
+  → apiGet/Post/Put (throws ApiError)
+    → withFreshAuth (retries on 401/403, surfaces business 403s)
+      → Component (catches, calls getErrorMessage(err, fallback))
+        → UI (shows fallback for infra errors, backend message for business errors)
+```
+
+The `getErrorMessage` function filters a regex of technical tokens (`upstream_unreachable`, `fetch failed`, `ETIMEDOUT`, etc.) and gateway status codes (502/503/504), ensuring users never see raw infrastructure error messages.
+
+---
+
 ## License
 
 © 2026 United Republic of Tanzania — Immigration Services Department. All rights reserved.

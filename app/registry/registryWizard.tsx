@@ -591,6 +591,27 @@ export default function RegistryWizard({
       }
     }
 
+    // Stage 4: if the user said they attended school, at least the primary
+    // education (first school) must be filled in.
+    if (step === 4 && data.neverAttendedSchool !== true) {
+      const filled = (n: string) =>
+        typeof data[n] === "string" && (data[n] as string).trim() !== "";
+      const hasSchool =
+        filled("edu1Level") &&
+        filled("edu1School") &&
+        filled("edu1Year") &&
+        filled("edu1District") &&
+        filled("edu1IndexNo");
+      if (!hasSchool) {
+        const missing = ["edu1Level", "edu1School", "edu1Year", "edu1District", "edu1IndexNo"].filter(
+          (n) => !filled(n),
+        );
+        setErrors(missing);
+        setFormError(t("registry.schoolRequired"));
+        return;
+      }
+    }
+
     // Stage 6: if married, at least one spouse must be filled.
     if (step === 6 && data.isMarried === true) {
       const spouseCount = Math.max(1, Number(data.spouseCount) || 1);

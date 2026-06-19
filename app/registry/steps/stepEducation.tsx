@@ -38,23 +38,23 @@ function SchoolBlock({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.eduLevel")} optional>
+        <Field label={t("fields.eduLevel")} required>
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
-        <Field label={t("fields.completionYear")} optional>
+        <Field label={t("fields.completionYear")} required>
           <TextInput name={`${p}Year`} type="number" placeholder="2014" />
         </Field>
       </div>
 
-      <Field label={t("fields.schoolName")} optional>
+      <Field label={t("fields.schoolName")} required>
         <TextInput name={`${p}School`} placeholder="Buguruni Primary School" />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.schoolDistrict")} optional>
+        <Field label={t("fields.schoolDistrict")} required>
           <TextInput name={`${p}District`} placeholder="Ilala" />
         </Field>
-        <Field label={t("fields.indexNo")} optional>
+        <Field label={t("fields.indexNo")} required>
           <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" />
         </Field>
       </div>
