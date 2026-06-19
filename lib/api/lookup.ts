@@ -240,12 +240,18 @@ const MOCK_CITIZENSHIP_TYPES: LookupItem[] = [
   { id: 4, name: "Decent" },
 ];
 
-/** Map a gender name ("MALE"/"FEMALE") to the M/F/O code the backend expects
- * everywhere. The lookup itself doesn't return a code, so we derive it. */
+/** Map a gender name to the M/F/O code used internally. The lookup returns
+ * bilingual names like "Ke (Female)" / "Me (Male)", so match the English keyword
+ * (FEMALE before MALE — "female" contains "male") rather than the first letter,
+ * which would mis-map the Swahili prefix "Ke" to "O". This drives the option
+ * value + display code only; the visible label still renders the exact API name. */
 function genderCodeFromName(name: string): string {
-  const n = name.trim().toUpperCase();
-  if (n.startsWith("M")) return "M";
-  if (n.startsWith("F")) return "F";
+  const n = name.toUpperCase();
+  if (n.includes("FEMALE")) return "F";
+  if (n.includes("MALE")) return "M";
+  const trimmed = n.trim();
+  if (trimmed.startsWith("F")) return "F";
+  if (trimmed.startsWith("M")) return "M";
   return "O";
 }
 

@@ -6,11 +6,11 @@ import CitizenSidebar from "@/components/layout/citizenSidebar";
 import DashboardTopbar from "@/components/layout/dashboardTopbar";
 import AuthGuard from "@/components/auth/authGuard";
 import { useI18n } from "../../i18n/localeProvider";
-import { clearPeople, loadPeople, type Person } from "../peopleStore";
+import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
-import { getStage9Preview } from "@/lib/api/registration";
-import { previewToForm } from "@/lib/registry/previewToForm";
+import { getRegistrationReview } from "@/lib/api/registration";
+import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { loadProfile } from "@/lib/auth/profile";
 import PrintableForm from "../printableForm";
 import { printRegistrationForm } from "../printRegistrationForm";
@@ -157,8 +157,35 @@ export default function PeopleList() {
     { total: 0, completed: 0, pending: 0, rejected: 0 },
   );
 
-  // Apply search + status + date-of-registration filters.
-  const filteredPeople = displayPeople.filter((p) => {
+  // Sort earliest-first: the first person registered under the account stays on
+  // top. NaN dates (unparseable local drafts) sink to the bottom, keeping order.
+  const sortedPeople = [...displayPeople].sort((a, b) => {
+    const ta = rowOf(a).registeredAt.getTime();
+    const tb = rowOf(b).registeredAt.getTime();
+    return (Number.isNaN(ta) ? Infinity : ta) - (Number.isNaN(tb) ? Infinity : tb);
+  });
+
+  // Exactly ONE account holder: the registration that matches the profile name,
+  // otherwise the earliest registrant. (The per-record isCreator flag could be
+  // set on more than one row, so it can't be trusted on its own.)
+  const accountHolderId = (() => {
+    const profile = loadProfile();
+    const profileName = profile
+      ? [profile.firstName, profile.middleName, profile.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+          .toLowerCase()
+      : "";
+    if (profileName) {
+      const match = sortedPeople.find((p) => rowOf(p).name.trim().toLowerCase() === profileName);
+      if (match) return rowOf(match).id;
+    }
+    return sortedPeople.length ? rowOf(sortedPeople[0]).id : "";
+  })();
+
+  // Apply search + status + date-of-registration filters (keeping the sort).
+  const filteredPeople = sortedPeople.filter((p) => {
     const { name, id, rawStatus, registeredAt } = rowOf(p);
 
     const q = search.trim().toLowerCase();
@@ -176,26 +203,9 @@ export default function PeopleList() {
     return true;
   });
 
-  /** Determine if a person is the account holder. For local people this is
-   * the `isCreator` flag; for remote people we compare against the logged-in
-   * profile's full name. */
+  /** The account holder is a single, deterministic row (see accountHolderId). */
   function isAccountHolder(person: Person | RegisteredPerson): boolean {
-    if ("isCreator" in person && person.isCreator) return true;
-    if (isRemotePerson(person)) {
-      const local = people.find((lp) => lp.applicationId === person.subjectId);
-      if (local?.isCreator) return true;
-      // Fall back to matching the profile name.
-      const profile = loadProfile();
-      if (profile) {
-        const profileName = [profile.firstName, profile.middleName, profile.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim()
-          .toLowerCase();
-        if (profileName && person.fullName.trim().toLowerCase() === profileName) return true;
-      }
-    }
-    return false;
+    return rowOf(person).id === accountHolderId;
   }
 
   const handleDownloadRemote = async (rp: RegisteredPerson) => {
@@ -218,15 +228,15 @@ export default function PeopleList() {
         phone: rp.phoneNumber,
       };
 
-      // Fetch all stages from the server-compiled preview and merge over the
+      // Fetch all stages from the server-compiled review and merge over the
       // base so the PDF reflects everything the user filled. Falls back to the
-      // base data if the preview is unavailable.
+      // base data if the review is unavailable.
       let data = baseData;
       try {
-        const preview = await getStage9Preview(rp.subjectId);
-        if (preview) data = { ...baseData, ...(await previewToForm(preview)) };
+        const review = await getRegistrationReview(rp.subjectId);
+        if (review) data = { ...baseData, ...(await reviewToForm(review)) };
       } catch {
-        // preview unavailable — print the base data
+        // review unavailable — print the base data
       }
 
       const date = new Date(rp.createdAt);
@@ -264,28 +274,15 @@ export default function PeopleList() {
         <DashboardTopbar />
         <div className="flex flex-1">
           <CitizenSidebar />
-        <main className="flex-1 px-6 py-10 lg:px-10">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="font-display text-3xl font-black tracking-tight text-navy-700">
-                  {t("people.title")}
-                </h1>
-                <p className="mt-2 text-muted">{t("people.subtitle")}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                {people.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearPeople();
-                      setPeople([]);
-                    }}
-                    className="rounded-lg border border-line bg-card px-4 py-2.5 text-sm font-semibold text-danger transition hover:bg-danger/10"
-                  >
-                    {t("people.clear")}
-                  </button>
-                )}
+          <main className="flex-1 px-6 py-10 lg:px-10">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="font-display text-3xl font-black tracking-tight text-navy-700">
+                    {t("people.title")}
+                  </h1>
+                  <p className="mt-2 text-muted">{t("people.subtitle")}</p>
+                </div>
                 <Link
                   href="/registry"
                   className="rounded-lg bg-gold px-5 py-2.5 text-sm font-bold text-navy-900 transition hover:bg-gold-400"
@@ -293,186 +290,185 @@ export default function PeopleList() {
                   {t("people.startCta")}
                 </Link>
               </div>
-            </div>
 
-            {fetchError ? (
-              <div className="mt-8 rounded-2xl border border-danger/20 bg-danger/10 p-6 text-center text-sm text-danger">
-                {fetchError}
-              </div>
-            ) : loading ? (
-              <div className="mt-8 rounded-2xl border border-line bg-card p-10 text-center text-muted">
-                Loading registered people…
-              </div>
-            ) : displayPeople.length === 0 ? (
-              <div className="mt-8 rounded-2xl border border-dashed border-line bg-card p-10 text-center">
-                <p className="text-muted">{t("people.empty")}</p>
-              </div>
-            ) : (
-              <>
-                {/* Summary cards */}
-                <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                  {([
-                    { key: "total", label: t("people.statTotal"), value: counts.total, ring: "bg-navy-700 text-white" },
-                    { key: "completed", label: t("people.statCompleted"), value: counts.completed, ring: "bg-success/15 text-success" },
-                    { key: "pending", label: t("people.statPending"), value: counts.pending, ring: "bg-warning/15 text-warning" },
-                    { key: "rejected", label: t("people.statRejected"), value: counts.rejected, ring: "bg-danger/15 text-danger" },
-                  ] as const).map((card) => (
-                    <div
-                      key={card.key}
-                      className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4"
-                    >
-                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-black ${card.ring}`}>
-                        {card.value}
-                      </span>
-                      <span className="text-sm font-semibold text-muted">{card.label}</span>
-                    </div>
-                  ))}
+              {fetchError ? (
+                <div className="mt-8 rounded-2xl border border-danger/20 bg-danger/10 p-6 text-center text-sm text-danger">
+                  {fetchError}
                 </div>
-
-                {/* Search + filters */}
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="relative flex-1">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                      <SearchIcon />
-                    </span>
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder={t("people.searchPlaceholder")}
-                      className="w-full rounded-lg border border-line bg-card py-2.5 pl-10 pr-3 text-sm text-navy-700 outline-none transition focus:border-gold/50"
-                    />
+              ) : loading ? (
+                <div className="mt-8 rounded-2xl border border-line bg-card p-10 text-center text-muted">
+                  Loading registered people…
+                </div>
+              ) : displayPeople.length === 0 ? (
+                <div className="mt-8 rounded-2xl border border-dashed border-line bg-card p-10 text-center">
+                  <p className="text-muted">{t("people.empty")}</p>
+                </div>
+              ) : (
+                <>
+                  {/* Summary cards */}
+                  <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    {([
+                      { key: "total", label: t("people.statTotal"), value: counts.total, ring: "bg-navy-700 text-white" },
+                      { key: "completed", label: t("people.statCompleted"), value: counts.completed, ring: "bg-success/15 text-success" },
+                      { key: "pending", label: t("people.statPending"), value: counts.pending, ring: "bg-warning/15 text-warning" },
+                      { key: "rejected", label: t("people.statRejected"), value: counts.rejected, ring: "bg-danger/15 text-danger" },
+                    ] as const).map((card) => (
+                      <div
+                        key={card.key}
+                        className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4"
+                      >
+                        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-black ${card.ring}`}>
+                          {card.value}
+                        </span>
+                        <span className="text-sm font-semibold text-muted">{card.label}</span>
+                      </div>
+                    ))}
                   </div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                    className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
-                  >
-                    <option value="all">{t("people.filterAllStatus")}</option>
-                    <option value="completed">{t("people.statCompleted")}</option>
-                    <option value="pending">{t("people.statPending")}</option>
-                    <option value="rejected">{t("people.statRejected")}</option>
-                  </select>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
-                    className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
-                  >
-                    <option value="all">{t("people.filterAllDates")}</option>
-                    <option value="today">{t("people.filterToday")}</option>
-                    <option value="7d">{t("people.filter7Days")}</option>
-                    <option value="30d">{t("people.filter30Days")}</option>
-                  </select>
-                </div>
 
-                <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
-                <table className="w-full min-w-[720px] border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-line text-xs font-semibold uppercase tracking-wide text-muted">
-                      <th className="px-5 py-4">{t("people.colApplicationId")}</th>
-                      <th className="px-5 py-4">{t("people.colName")}</th>
-                      <th className="px-5 py-4">{t("people.colStatus")}</th>
-                      <th className="px-5 py-4">{t("people.colRegisteredOn")}</th>
-                      <th className="px-5 py-4 text-right">{t("people.colActions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPeople.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">
-                          {t("people.noResults")}
-                        </td>
-                      </tr>
-                    ) : filteredPeople.map((p) => {
-                      const remote = isRemotePerson(p);
-                      const name = remote ? p.fullName : p.name;
-                      const id = remote ? p.subjectId : p.applicationId;
-                      const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
-                      const registeredOn = remote ? formatDate(p.createdAt) : p.submittedDate;
-                      const sc = statusColor(rawStatus);
+                  {/* Search + filters */}
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                        <SearchIcon />
+                      </span>
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder={t("people.searchPlaceholder")}
+                        className="w-full rounded-lg border border-line bg-card py-2.5 pl-10 pr-3 text-sm text-navy-700 outline-none transition focus:border-gold/50"
+                      />
+                    </div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                      className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
+                    >
+                      <option value="all">{t("people.filterAllStatus")}</option>
+                      <option value="completed">{t("people.statCompleted")}</option>
+                      <option value="pending">{t("people.statPending")}</option>
+                      <option value="rejected">{t("people.statRejected")}</option>
+                    </select>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+                      className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
+                    >
+                      <option value="all">{t("people.filterAllDates")}</option>
+                      <option value="today">{t("people.filterToday")}</option>
+                      <option value="7d">{t("people.filter7Days")}</option>
+                      <option value="30d">{t("people.filter30Days")}</option>
+                    </select>
+                  </div>
 
-                      return (
-                        <tr
-                          key={id}
-                          className="border-b border-line last:border-b-0 transition hover:bg-surface"
-                        >
-                          <td className="px-5 py-4 font-mono text-sm font-bold text-navy-500">
-                            {id}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {isAccountHolder(p) && (
-                                <span
-                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-700"
-                                  title={t("people.creatorBadge")}
-                                  aria-label={t("people.creatorBadge")}
-                                >
-                                  <UserIcon />
-                                </span>
-                              )}
-                              <span className="font-semibold text-navy-700">{name}</span>
-                              {isAccountHolder(p) && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
-                                  {t("people.creatorBadge")}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sc.bg} ${sc.text}`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-                              {getStatusLabel(rawStatus, t)}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-sm text-navy-600">
-                            {registeredOn}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex justify-end">
-                              {remote ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadRemote(p)}
-                                  disabled={downloadingId === p.subjectId}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  <DownloadIcon />
-                                  {downloadingId === p.subjectId
-                                    ? t("people.preparing")
-                                    : t("people.download")}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setPrintPerson(p)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
-                                >
-                                  <DownloadIcon />
-                                  {t("people.download")}
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                  <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
+                    <table className="w-full min-w-[720px] border-collapse text-left text-[13px]">
+                      <thead>
+                        <tr className="border-b border-line text-[11px] font-semibold uppercase tracking-wider text-muted">
+                          <th className="px-4 py-3 font-semibold">{t("people.colApplicationId")}</th>
+                          <th className="px-4 py-3 font-semibold">{t("people.colName")}</th>
+                          <th className="px-4 py-3 font-semibold">{t("people.colStatus")}</th>
+                          <th className="px-4 py-3 font-semibold">{t("people.colRegisteredOn")}</th>
+                          <th className="px-4 py-3 font-semibold text-right">{t("people.colActions")}</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
-      </div>
+                      </thead>
+                      <tbody>
+                        {filteredPeople.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
+                              {t("people.noResults")}
+                            </td>
+                          </tr>
+                        ) : filteredPeople.map((p) => {
+                          const remote = isRemotePerson(p);
+                          const name = remote ? p.fullName : p.name;
+                          const id = remote ? p.subjectId : p.applicationId;
+                          const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
+                          const registeredOn = remote ? formatDate(p.createdAt) : p.submittedDate;
+                          const sc = statusColor(rawStatus);
 
-      {/* Hidden form for the selected person — cloned into the PDF on download. */}
-      {printPerson && (
-        <PrintableForm
-          data={printPerson.data}
-          applicationId={printPerson.applicationId}
-          submittedDate={printPerson.submittedDate}
-        />
-      )}
+                          return (
+                            <tr
+                              key={id}
+                              className="border-b border-line last:border-b-0 transition hover:bg-surface"
+                            >
+                              <td className="px-4 py-3 font-mono text-xs font-medium text-navy-500">
+                                {id}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {isAccountHolder(p) && (
+                                    <span
+                                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-700"
+                                      title={t("people.creatorBadge")}
+                                      aria-label={t("people.creatorBadge")}
+                                    >
+                                      <UserIcon />
+                                    </span>
+                                  )}
+                                  <span className="text-[13px] font-medium text-navy-700">{name}</span>
+                                  {isAccountHolder(p) && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-semibold text-gold-700">
+                                      {t("people.creatorBadge")}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${sc.bg} ${sc.text}`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
+                                  {getStatusLabel(rawStatus, t)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted">
+                                {registeredOn}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex justify-end">
+                                  {remote ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownloadRemote(p)}
+                                      disabled={downloadingId === p.subjectId}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      <DownloadIcon />
+                                      {downloadingId === p.subjectId
+                                        ? t("people.preparing")
+                                        : t("people.download")}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPrintPerson(p)}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
+                                    >
+                                      <DownloadIcon />
+                                      {t("people.download")}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </main>
+        </div>
+
+        {/* Hidden form for the selected person — cloned into the PDF on download. */}
+        {printPerson && (
+          <PrintableForm
+            data={printPerson.data}
+            applicationId={printPerson.applicationId}
+            submittedDate={printPerson.submittedDate}
+          />
+        )}
       </div>
     </AuthGuard>
   );

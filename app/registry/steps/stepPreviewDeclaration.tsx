@@ -5,7 +5,7 @@ import { useWizard } from "@/components/registry/field";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { loadProfile } from "@/lib/auth/profile";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
-import { getStage9Preview } from "@/lib/api/registration";
+import { getRegistrationReview } from "@/lib/api/registration";
 import { getErrorMessage } from "@/lib/api/client";
 import {
   documentTypeOptions,
@@ -175,7 +175,7 @@ export default function StepPreviewDeclaration() {
         return;
       }
       try {
-        await getStage9Preview(subjectId);
+        await getRegistrationReview(subjectId);
         if (active) setPreviewState("ready");
       } catch (err) {
         if (!active) return;

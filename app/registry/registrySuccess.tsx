@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import PrintableForm from "./printableForm";
 import { printRegistrationForm } from "./printRegistrationForm";
-import { getStage9Preview } from "@/lib/api/registration";
-import { previewToForm } from "@/lib/registry/previewToForm";
+import { getRegistrationReview } from "@/lib/api/registration";
+import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
 import { loadProfile } from "@/lib/auth/profile";
 
@@ -58,9 +58,9 @@ export default function RegistrySuccess({
         loadRegistration()?.subjectId ??
         "";
       if (subjectId) {
-        const preview = await getStage9Preview(subjectId);
-        if (preview) {
-          const mapped = await previewToForm(preview);
+        const review = await getRegistrationReview(subjectId);
+        if (review) {
+          const mapped = await reviewToForm(review);
           // Merge server data over local (local keeps cascade names/photo the
           // preview doesn't carry); printing is triggered by the effect above.
           printPending.current = true;

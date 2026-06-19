@@ -51,7 +51,10 @@ export default function PhoneInput({ name }: { name: string }) {
   const national = allDigits.startsWith(dialDigits)
     ? allDigits.slice(dialDigits.length)
     : allDigits;
-  const display = chunk(national);
+  // Show the raw national digits in the input (not chunked) so editing a digit
+  // mid-number doesn't reformat and jump the cursor to the end. The chunked,
+  // pretty value is still what's stored (used by the preview / printable form).
+  const display = national;
 
   function commit(dial: string, natDigits: string) {
     // Strip leading zeros — users often type local-format numbers (e.g.

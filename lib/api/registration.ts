@@ -814,16 +814,17 @@ export async function editStage8(subjectId: string, data: Data): Promise<unknown
 // Stage 9 — Preview & Declaration (final submit)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** GET /v1/registration/{subjectId}/stage9/preview — the server-compiled
- * summary of all stages, shown on the declaration screen. Returns the `data`
+/** GET /v1/registration/{subjectId}/review — the server-compiled summary of a
+ * submitted registration (display-ready names + nested locations). Used to fill
+ * the Preview & Declaration stage and the downloadable PDF. Returns the `data`
  * payload (or the raw response when there's no `data` wrapper). */
-export async function getStage9Preview(subjectId: string): Promise<unknown> {
+export async function getRegistrationReview(subjectId: string): Promise<unknown> {
   if (BYPASS) {
     await delay(300);
     return null;
   }
   const raw = await withFreshAuth((at) =>
-    apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/stage9/preview`, at),
+    apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/review`, at),
   );
   return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
 }

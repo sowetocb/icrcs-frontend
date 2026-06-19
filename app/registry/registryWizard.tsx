@@ -29,9 +29,9 @@ import {
   editStage6,
   editStage8,
   uploadPassportPhoto,
-  getStage9Preview,
+  getRegistrationReview,
 } from "@/lib/api/registration";
-import { previewToForm } from "@/lib/registry/previewToForm";
+import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { missingFieldLabels } from "@/lib/registry/fieldLabels";
 import { resolveGenderCode } from "@/lib/api/lookup";
 import { getErrorMessage } from "@/lib/api/client";
@@ -775,13 +775,13 @@ export default function RegistryWizard({
             }
           }
           await (edit ? editStage8(sid, data8) : submitStage8(sid, data8));
-          // Pull the server-compiled preview so Stage 9 (Preview & Declaration)
+          // Pull the server-compiled review so Stage 9 (Preview & Declaration)
           // shows everything the backend stored across all stages. Non-fatal —
           // a failure just falls back to the locally-entered data.
           try {
-            const preview = await getStage9Preview(sid);
-            if (preview) {
-              mergedData = { ...data, ...(await previewToForm(preview)) };
+            const review = await getRegistrationReview(sid);
+            if (review) {
+              mergedData = { ...data, ...(await reviewToForm(review)) };
               setData(mergedData);
             }
           } catch {

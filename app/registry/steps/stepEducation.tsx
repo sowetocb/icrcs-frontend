@@ -179,10 +179,10 @@ export default function StepEducation() {
           {/* Occupation & Employer only apply to the employed. */}
           {data.jobStatus === "Employed" && (
             <>
-              <Field label={t("fields.occupation")} optional>
+              <Field label={t("fields.occupation")} required>
                 <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
               </Field>
-              <Field label={t("fields.employer")} required={employmentRequired} optional={!employmentRequired}>
+              <Field label={t("fields.employer")} required>
                 <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
               </Field>
             </>

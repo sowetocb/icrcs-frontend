@@ -570,7 +570,7 @@ const en = {
     employmentStatus: "Employment Status", // REVIEW
     employmentStatusOpt: "Employment Status", // REVIEW
     employer: "Employer", // REVIEW
-    employerOpt: "Employer (optional)", // REVIEW
+    employerOpt: "Employer", // REVIEW
     fatherInfo: "Father's Information", // REVIEW
     motherInfo: "Mother's Information", // REVIEW
     haveChildren: "Do you have children?", // REVIEW
@@ -1312,7 +1312,7 @@ const sw: typeof en = {
     employmentStatus: "Hali ya Ajira", // REVIEW
     employmentStatusOpt: "Hali ya Ajira (hiari)", // REVIEW
     employer: "Mwajiri", // REVIEW
-    employerOpt: "Mwajiri (hiari)", // REVIEW
+    employerOpt: "Mwajiri", // REVIEW
     fatherInfo: "Taarifa za Baba", // REVIEW
     motherInfo: "Taarifa za Mama", // REVIEW
     haveChildren: "Je, una watoto?", // REVIEW
