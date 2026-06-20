@@ -41,7 +41,7 @@ function SchoolBlock({
         <Field label={t("fields.eduLevel")} required>
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
-        <Field label={t("fields.completionYear")} required>
+        <Field label={t("fields.completionYear")} optional>
           <TextInput name={`${p}Year`} type="number" placeholder="2014" />
         </Field>
       </div>
@@ -54,7 +54,7 @@ function SchoolBlock({
         <Field label={t("fields.schoolDistrict")} required>
           <TextInput name={`${p}District`} placeholder="Ilala" />
         </Field>
-        <Field label={t("fields.indexNo")} required>
+        <Field label={t("fields.indexNo")} optional>
           <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" />
         </Field>
       </div>

@@ -11,6 +11,9 @@ type WizardContextValue = {
   data: Record<string, Value>;
   set: (name: string, value: Value) => void;
   errors: string[];
+  /** Optional per-field error message, keyed by field name. Falls back to a
+   * generic "required" message for any field listed in `errors` without one. */
+  fieldErrors?: Record<string, string>;
   /** Field names that are read-only (e.g. the account holder's locked details). */
   locked: string[];
   /** True while registering the account holder (the first person). */
@@ -25,6 +28,7 @@ export function WizardProvider({
   data,
   set,
   errors,
+  fieldErrors,
   locked,
   isFirstPerson,
   onGoToStep,
@@ -32,7 +36,7 @@ export function WizardProvider({
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, errors, locked, isFirstPerson, onGoToStep }}
+      value={{ data, set, errors, fieldErrors, locked, isFirstPerson, onGoToStep }}
     >
       {children}
     </WizardContext.Provider>
@@ -43,6 +47,21 @@ export function useWizard(): WizardContextValue {
   const ctx = useContext(WizardContext);
   if (!ctx) throw new Error("useWizard must be used within a WizardProvider");
   return ctx;
+}
+
+/** Inline error message shown directly beneath an invalid field, so issues are
+ * visible at the field itself (not only in an aggregated notice that may scroll
+ * off-screen on small displays). Renders nothing when the field is valid. */
+export function FieldError({ name }: { name: string }) {
+  const { errors, fieldErrors } = useWizard();
+  const { t } = useI18n();
+  if (!errors.includes(name)) return null;
+  const message = fieldErrors?.[name] || t("fields.fieldRequired");
+  return (
+    <p role="alert" className="mt-1 text-xs font-medium text-danger">
+      {message}
+    </p>
+  );
 }
 
 const lockedCls = "cursor-not-allowed bg-line/30 text-muted";
@@ -107,25 +126,28 @@ export function TextInput({
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
   return (
-    <input
-      type={type}
-      value={value}
-      maxLength={maxLength}
-      inputMode={numeric ? "numeric" : undefined}
-      // Numeric fields keep digits only; others strip just leading whitespace
-      // while typing (mid-word spaces are kept)…
-      onChange={(e) =>
-        set(name, numeric ? e.target.value.replace(/\D/g, "") : e.target.value.replace(/^\s+/, ""))
-      }
-      // …and trim trailing whitespace on blur, so stray spaces don't cause errors.
-      onBlur={(e) => {
-        const trimmed = e.target.value.trim();
-        if (trimmed !== value) set(name, trimmed);
-      }}
-      placeholder={placeholder}
-      disabled={isLocked}
-      className={`${inputCls(invalid)} ${isLocked ? lockedCls : ""}`}
-    />
+    <>
+      <input
+        type={type}
+        value={value}
+        maxLength={maxLength}
+        inputMode={numeric ? "numeric" : undefined}
+        // Numeric fields keep digits only; others strip just leading whitespace
+        // while typing (mid-word spaces are kept)…
+        onChange={(e) =>
+          set(name, numeric ? e.target.value.replace(/\D/g, "") : e.target.value.replace(/^\s+/, ""))
+        }
+        // …and trim trailing whitespace on blur, so stray spaces don't cause errors.
+        onBlur={(e) => {
+          const trimmed = e.target.value.trim();
+          if (trimmed !== value) set(name, trimmed);
+        }}
+        placeholder={placeholder}
+        disabled={isLocked}
+        className={`${inputCls(invalid)} ${isLocked ? lockedCls : ""}`}
+      />
+      <FieldError name={name} />
+    </>
   );
 }
 
@@ -223,6 +245,7 @@ export function DateInput({
           onClose={() => setOpen(false)}
         />
       )}
+      <FieldError name={name} />
     </div>
   );
 }
@@ -245,33 +268,36 @@ export function Select({
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => {
-          set(name, e.target.value);
-          onValueChange?.(e.target.value);
-        }}
-        aria-label={placeholder}
-        disabled={isLocked}
-        className={`${inputCls(invalid)} appearance-none pr-9 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}
-      >
-        <option value="" disabled>
-          {placeholder}
-        </option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
+    <>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => {
+            set(name, e.target.value);
+            onValueChange?.(e.target.value);
+          }}
+          aria-label={placeholder}
+          disabled={isLocked}
+          className={`${inputCls(invalid)} appearance-none pr-9 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}
+        >
+          <option value="" disabled>
+            {placeholder}
           </option>
-        ))}
-      </select>
-      <svg
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+      <FieldError name={name} />
+    </>
   );
 }
 

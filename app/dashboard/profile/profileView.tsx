@@ -12,6 +12,7 @@ import {
   SessionExpiredError,
 } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
+import { useToast } from "@/components/ui/toast";
 import { useGenderOptions } from "@/components/registry/blocks";
 import {
   loadProfile,
@@ -50,6 +51,7 @@ function initials(p: Profile | null): string {
 export default function ProfileView() {
   const { t } = useI18n();
   const router = useRouter();
+  const { notify } = useToast();
   // Gender options come from the lookup, rendered with the exact API label.
   const genders = useGenderOptions();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,6 +86,7 @@ export default function ProfileView() {
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   // Show the cached profile immediately, then re-fetch from the backend so
   // edits made on another device/browser (name, phone, photo) are reflected.
@@ -157,6 +160,15 @@ export default function ProfileView() {
     setSaving(true);
     setError("");
     setNotice("");
+    setPhoneError("");
+
+    // Validate phone: must have at least 7 digits to be meaningful.
+    const phoneDigits = form.phoneNumber.replace(/[^\d]/g, "");
+    if (form.phoneNumber.trim() && phoneDigits.length < 7) {
+      setPhoneError(t("profile.phoneInvalid"));
+      setSaving(false);
+      return;
+    }
     try {
       const updated = await updateProfile({
         firstName: form.firstName.trim(),
@@ -173,7 +185,8 @@ export default function ProfileView() {
       };
       saveProfile(merged);
       setProfile(merged);
-      setNotice(t("profile.saved"));
+      notify(t("toast.profileSaved"));
+      router.push("/dashboard");
     } catch (err) {
       if (!redirectIfExpired(err))
         setError(getErrorMessage(err, t("profile.updateError")));
@@ -373,10 +386,18 @@ export default function ProfileView() {
               id="phoneNumber"
               type="tel"
               value={form.phoneNumber}
-              onChange={(e) => setField("phoneNumber", e.target.value)}
+              onChange={(e) => {
+                setField("phoneNumber", e.target.value);
+                if (phoneError) setPhoneError("");
+              }}
               placeholder={t("register.phonePlaceholder")}
-              className={inputClass}
+              className={`${inputClass} ${phoneError ? "border-danger focus:border-danger focus:ring-danger/15" : ""}`}
             />
+            {phoneError && (
+              <p role="alert" className="mt-1 text-xs text-danger">
+                {phoneError}
+              </p>
+            )}
           </div>
         </div>
 

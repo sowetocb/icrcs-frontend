@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, flagEmoji } from "@/lib/countries";
 import CountryMenu from "./countryMenu";
-import { useWizard } from "./field";
+import { FieldError, useWizard } from "./field";
 
 export default function CountrySelect({
   name,
@@ -63,6 +63,7 @@ export default function CountrySelect({
           onSelect={(c) => set(name, c.name)}
         />
       )}
+      <FieldError name={name} />
     </div>
   );
 }

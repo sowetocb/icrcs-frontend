@@ -30,12 +30,15 @@ import {
   editStage8,
   uploadPassportPhoto,
   getRegistrationReview,
+  getStageData,
 } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { missingFieldLabels } from "@/lib/registry/fieldLabels";
 import { resolveGenderCode } from "@/lib/api/lookup";
+import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
+import SessionExpiredDialog from "@/components/auth/sessionExpiredDialog";
 import StepPersonal from "./steps/stepPersonal";
 import StepAddress from "./steps/stepCitizenship";
 import StepGuardian from "./steps/stepGuardian";
@@ -45,11 +48,10 @@ import StepFamily from "./steps/stepFamily";
 import StepReferees from "./steps/stepReferees";
 import StepAttachments, { parseAttachments } from "./steps/stepAttachments";
 import StepPreviewDeclaration from "./steps/stepPreviewDeclaration";
-import { PASSPORT_PHOTO_TYPE, uploadAttachmentDataUrl, type UploadedAttachment } from "@/lib/api/files";
+import { PASSPORT_PHOTO_TYPE, type UploadedAttachment } from "@/lib/api/files";
 
 const TOTAL = 9;
-// Backend attachment type for the birth certificate (matches ATTACHMENT_TYPES).
-const BIRTH_CERT_TYPE = 1;
+
 const STEP_COMPONENTS = [
   StepPersonal,       // 1
   StepAddress,        // 2
@@ -227,6 +229,9 @@ export default function RegistryWizard({
     return resumable?.data ? { ...base, ...resumable.data } : base;
   });
   const [errors, setErrors] = useState<string[]>([]);
+  // Specific per-field messages (email format, DOB, NIDA, …). Fields in `errors`
+  // without an entry here fall back to a generic "required" message at the field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   // Readable labels of the fields the user skipped on the current step, shown
   // so they know specifically what to go back and fill.
@@ -235,6 +240,9 @@ export default function RegistryWizard({
     () => resumable?.applicationId ?? "",
   );
   const [showIdDialog, setShowIdDialog] = useState(false);
+  // When a backend call fails because the session expired, show a blocking
+  // dialog that signs the user out (the session is already cleared).
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [subjectId, setSubjectId] = useState(() => resumable?.subjectId ?? "");
   const [submittedStages, setSubmittedStages] = useState<Set<number>>(
@@ -258,6 +266,32 @@ export default function RegistryWizard({
   useEffect(() => {
     setMaxStep((m) => Math.max(m, step));
   }, [step]);
+
+  // Re-hydrate an already-submitted stage from the backend when the user returns
+  // to it, so entries aren't lost (e.g. resuming on a fresh browser, or going
+  // back to edit). Only blank fields are filled — local edits are preserved.
+  useEffect(() => {
+    if (!subjectId || !submittedStages.has(step)) return;
+    let cancelled = false;
+    (async () => {
+      const raw = await getStageData(subjectId, step);
+      if (!raw || cancelled) return;
+      const mapped = await reviewToForm(raw);
+      if (cancelled || Object.keys(mapped).length === 0) return;
+      setData((d) => {
+        const next = { ...d };
+        for (const [k, v] of Object.entries(mapped)) {
+          const cur = next[k];
+          if (cur === undefined || cur === "") next[k] = v;
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, subjectId]);
 
   // The account holder's gender (prefilled from the profile, then locked) must be
   // the M/F/O code the gender select uses. A profile cached before normalisation
@@ -297,6 +331,12 @@ export default function RegistryWizard({
   const set = (name: string, value: string | boolean) => {
     setData((d) => ({ ...d, [name]: value }));
     setErrors((e) => (e.includes(name) ? e.filter((n) => n !== name) : e));
+    setFieldErrors((fe) => {
+      if (!(name in fe)) return fe;
+      const next = { ...fe };
+      delete next[name];
+      return next;
+    });
     setMissingLabels((l) => (l.length ? [] : l));
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
   };
@@ -339,24 +379,7 @@ export default function RegistryWizard({
     setData((d) => mergePhotoAttachment(d, att));
   }
 
-  // Upload the Stage 1 birth certificate (held as a data URL) once the subject id
-  // exists, and carry it into the Stage 8 attachments (type 1). Best-effort: a
-  // failure never blocks Stage 1.
-  async function uploadBirthCertificate(sid: string) {
-    const dataUrl = typeof data.birthCertFileData === "string" ? data.birthCertFileData : "";
-    if (!dataUrl || !sid) return;
-    // Skip if it's already in the attachments (e.g. re-saving an edited Stage 1).
-    if (parseAttachments(data.attachments).some((a) => a.typeId === BIRTH_CERT_TYPE)) return;
-    const name =
-      (typeof data.birthCertFileName === "string" && data.birthCertFileName) ||
-      "Birth Certificate";
-    try {
-      const att = await uploadAttachmentDataUrl(sid, BIRTH_CERT_TYPE, dataUrl, name);
-      if (att) setData((d) => mergeAttachment(d, att, BIRTH_CERT_TYPE, name));
-    } catch {
-      // best effort — the user can still upload it at the Uploads stage
-    }
-  }
+
 
   function validateDob(dob: string) {
     if (!dob) {
@@ -505,6 +528,7 @@ export default function RegistryWizard({
     // editing an earlier stage doesn't lock the user out of later completed ones.
     if (n >= 1 && n <= maxStep) {
       setErrors([]);
+      setFieldErrors({});
       setFormError("");
       setMissingLabels([]);
       // If jumping backwards, record the current step so we can return after save.
@@ -517,7 +541,7 @@ export default function RegistryWizard({
     }
   }
 
-  function saveExit() {
+  function persistDraft() {
     saveRegistration({
       step,
       maxStep,
@@ -528,7 +552,28 @@ export default function RegistryWizard({
       submittedStages: [...submittedStages],
       data,
     });
+  }
+
+  // Session expired mid-flow: keep the draft (so it can be resumed after
+  // re-login) and send the user to the login screen.
+  function signOutToLogin() {
+    persistDraft();
+    router.push("/login");
+  }
+
+  function saveExit() {
+    persistDraft();
     router.push("/dashboard");
+  }
+
+  // Surface a submit failure: an expired session opens the blocking dialog
+  // (sign out & back to login); anything else shows the inline form error.
+  function reportSubmitError(err: unknown) {
+    if (err instanceof SessionExpiredError) {
+      setSessionExpired(true);
+      return;
+    }
+    setFormError(getErrorMessage(err, t("registry.submitError")));
   }
 
   async function handlePrimary(e: React.FormEvent<HTMLFormElement>) {
@@ -541,7 +586,7 @@ export default function RegistryWizard({
         await submitStage9(subjectId);
       } catch (err) {
         setSubmitting(false);
-        setFormError(getErrorMessage(err, t("registry.submitError")));
+        reportSubmitError(err);
         return;
       }
       setSubmitting(false);
@@ -551,6 +596,7 @@ export default function RegistryWizard({
     const missing = missingFields();
     if (missing.length > 0) {
       setErrors(missing);
+      setFieldErrors({});
       setMissingLabels(missingFieldLabels(missing, t));
       setFormError("");
       return;
@@ -560,24 +606,38 @@ export default function RegistryWizard({
       const email = typeof data.email === "string" ? data.email.trim() : "";
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setErrors(["email"]);
+        setFieldErrors({ email: t("form.emailInvalid") });
         setFormError(t("form.emailInvalid"));
+        return;
+      }
+
+      // Phone must have at least 7 digits to be a valid number.
+      const phoneRaw = typeof data.phone === "string" ? data.phone.trim() : "";
+      const phoneDigits = phoneRaw.replace(/[^\d]/g, "");
+      if (phoneRaw && phoneDigits.length < 7) {
+        setErrors(["phone"]);
+        setFieldErrors({ phone: t("register.phoneInvalid") });
+        setFormError(t("register.phoneInvalid"));
         return;
       }
 
       const dob = typeof data.dob === "string" ? data.dob : "";
       if (isFutureDate(dob)) {
         setErrors(["dob"]);
+        setFieldErrors({ dob: t("registry.futureDateError") });
         setFormError(t("registry.futureDateError"));
         return;
       }
       const adult = isAtLeast18(dob);
       if (isFirstPerson && !adult) {
         setErrors(["dob"]);
+        setFieldErrors({ dob: t("registry.ageError") });
         setFormError(t("registry.ageError"));
         return;
       }
       if (!isFirstPerson && adult) {
         setErrors(["dob"]);
+        setFieldErrors({ dob: t("registry.minorError") });
         setFormError(t("registry.minorError"));
         return;
       }
@@ -586,6 +646,7 @@ export default function RegistryWizard({
       const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
       if (nida && nida.length !== 20) {
         setErrors(["nidaNumber"]);
+        setFieldErrors({ nidaNumber: t("registry.nidaExactDigits") });
         setFormError(t("registry.nidaExactDigits"));
         return;
       }
@@ -607,6 +668,7 @@ export default function RegistryWizard({
           (n) => !filled(n),
         );
         setErrors(missing);
+        setFieldErrors({});
         setFormError(t("registry.schoolRequired"));
         return;
       }
@@ -626,6 +688,7 @@ export default function RegistryWizard({
       }
       if (!hasSpouse) {
         setErrors(["sp1First"]);
+        setFieldErrors({ sp1First: t("registry.spouseRequired") });
         setFormError(t("registry.spouseRequired"));
         return;
       }
@@ -651,6 +714,7 @@ export default function RegistryWizard({
         ].filter((n) => !filled(n));
         if (missingSpouse.length > 0) {
           setErrors(missingSpouse);
+          setFieldErrors({});
           setFormError(t("registry.required"));
           return;
         }
@@ -666,6 +730,7 @@ export default function RegistryWizard({
         typeof data[n] === "string" && (data[n] as string).trim() !== "";
       if (!Array.from({ length: childCount }, (_, i) => i + 1).some((i) => filled(`ch${i}First`))) {
         setErrors(["ch1First"]);
+        setFieldErrors({ ch1First: t("registry.required") });
         setFormError(t("registry.required"));
         return;
       }
@@ -688,6 +753,7 @@ export default function RegistryWizard({
         ].filter((n) => !filled(n));
         if (missingChild.length > 0) {
           setErrors(missingChild);
+          setFieldErrors({});
           setFormError(t("registry.required"));
           return;
         }
@@ -702,6 +768,7 @@ export default function RegistryWizard({
     // }
 
     setErrors([]);
+    setFieldErrors({});
     setFormError("");
     setMissingLabels([]);
 
@@ -737,8 +804,6 @@ export default function RegistryWizard({
               set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
             }
           }
-          // Carry the birth certificate (captured locally) into Stage 8 uploads.
-          await uploadBirthCertificate(sid);
         } else if (step === 2) {
           await (edit ? editStage2(sid, data) : submitStage2(sid, data));
         } else if (step === 3) {
@@ -790,7 +855,7 @@ export default function RegistryWizard({
         }
       } catch (err) {
         setSubmitting(false);
-        setFormError(getErrorMessage(err, t("registry.submitError")));
+        reportSubmitError(err);
         return;
       }
       setSubmitting(false);
@@ -839,6 +904,7 @@ export default function RegistryWizard({
 
   function handleBack() {
     setErrors([]);
+    setFieldErrors({});
     setFormError("");
     setMissingLabels([]);
     if (step === 1) {
@@ -876,6 +942,7 @@ export default function RegistryWizard({
                   data={data}
                   set={set}
                   errors={errors}
+                  fieldErrors={fieldErrors}
                   locked={locked}
                   isFirstPerson={isFirstPerson}
                   onGoToStep={goTo}
@@ -960,6 +1027,8 @@ export default function RegistryWizard({
         email={typeof data.email === "string" ? data.email : ""}
         onContinue={() => setShowIdDialog(false)}
       />
+
+      {sessionExpired && <SessionExpiredDialog onSignIn={signOutToLogin} />}
     </div>
   );
 }

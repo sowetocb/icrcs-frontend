@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, flagEmoji, TANZANIA, type Country } from "@/lib/countries";
 import CountryMenu from "./countryMenu";
-import { useWizard } from "./field";
+import { FieldError, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
 
 function chunk(digits: string): string {
@@ -110,6 +110,7 @@ export default function PhoneInput({ name }: { name: string }) {
           }}
         />
       )}
+      <FieldError name={name} />
     </div>
   );
 }

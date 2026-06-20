@@ -10,7 +10,6 @@ import {
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
-import DocumentUpload from "@/components/registry/documentUpload";
 import { useI18n } from "@/app/i18n/localeProvider";
 
 /**
@@ -95,8 +94,6 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
           </Field>
         )}
       </div>
-
-      <DocumentUpload prefix={prefix} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Field label={t("fields.placeOfBirth")} optional>

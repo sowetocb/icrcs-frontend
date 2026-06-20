@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useWizard } from "./field";
+import { FieldError, useWizard } from "./field";
 import { useLookup } from "@/components/lookup/useLookup";
 import {
   getCountries,
@@ -36,6 +36,7 @@ function CascadeSelect({
   options,
   disabled,
   invalid,
+  errorName,
   onChange,
 }: {
   value: string;
@@ -43,6 +44,8 @@ function CascadeSelect({
   options: LookupItem[];
   disabled: boolean;
   invalid: boolean;
+  /** Wizard field name used to show the inline error message at this field. */
+  errorName?: string;
   onChange: (item: LookupItem | null) => void;
 }) {
   return (
@@ -71,6 +74,7 @@ function CascadeSelect({
       </select>
       <Chevron />
       </div>
+      {errorName && <FieldError name={errorName} />}
     </div>
   );
 }
@@ -275,6 +279,7 @@ export default function WardCascade({
           options={territories}
           disabled={territoryDisabled}
           invalid={errors.includes(`${prefix}Territory`)}
+          errorName={`${prefix}Territory`}
           onChange={(item) => {
             set(`${prefix}TerritoryId`, item ? String(item.id) : "");
             set(`${prefix}Territory`, item?.name ?? "");
@@ -287,6 +292,7 @@ export default function WardCascade({
           options={regions}
           disabled={disabled || !territoryId}
           invalid={errors.includes(`${prefix}Region`)}
+          errorName={`${prefix}Region`}
           onChange={(item) => {
             set(`${prefix}RegionId`, item ? String(item.id) : "");
             set(`${prefix}Region`, item?.name ?? "");
@@ -299,6 +305,7 @@ export default function WardCascade({
         options={districts}
         disabled={disabled || !regionId}
         invalid={errors.includes(`${prefix}District`)}
+        errorName={`${prefix}District`}
         onChange={(item) => {
           set(`${prefix}DistrictId`, item ? String(item.id) : "");
           set(`${prefix}District`, item?.name ?? "");
@@ -312,6 +319,7 @@ export default function WardCascade({
           options={wards}
           disabled={disabled || !districtId}
           invalid={errors.includes(`${prefix}Ward`)}
+          errorName={`${prefix}Ward`}
           onChange={(item) => {
             set(`${prefix}WardId`, item ? String(item.id) : "");
             set(`${prefix}Ward`, item?.name ?? "");
@@ -330,6 +338,7 @@ export default function WardCascade({
           options={streets}
           disabled={disabled || !wardIdNum}
           invalid={errors.includes(`${prefix}Street`)}
+          errorName={`${prefix}Street`}
           onChange={(item) => {
             set(`${prefix}StreetId`, item ? String(item.id) : "");
             set(`${prefix}Street`, item?.name ?? "");

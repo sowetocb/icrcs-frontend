@@ -6,7 +6,6 @@ import { useGenderOptions, documentTypeOptions } from "@/components/registry/blo
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
-import DocumentUpload from "@/components/registry/documentUpload";
 import { useI18n } from "@/app/i18n/localeProvider";
 
 /**
@@ -74,8 +73,6 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           </Field>
         )}
       </div>
-
-      <DocumentUpload prefix={prefix} />
 
       {/* Place of Birth + Residence side by side */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

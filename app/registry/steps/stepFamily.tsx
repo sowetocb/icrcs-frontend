@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import {
   useGenderOptions,
+  useMarriageOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
   documentTypeOptions,
@@ -12,7 +13,6 @@ import {
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
-import DocumentUpload from "@/components/registry/documentUpload";
 import { useI18n } from "@/app/i18n/localeProvider";
 
 /**
@@ -93,8 +93,6 @@ function PersonFields({ prefix }: { prefix: string }) {
         )}
       </div>
 
-      <DocumentUpload prefix={prefix} />
-
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Field label={t("fields.placeOfBirth")} optional>
           <div className="space-y-3">
@@ -170,8 +168,23 @@ export default function StepFamily() {
   const { data, set } = useWizard();
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
-  const isMarried = data.isMarried === true;
+
+  // "Are you married?" is DERIVED from the Stage 1 marital status and locked:
+  // a "Married" status forces Yes, anything else forces No. The user can't
+  // change it here — attempting to does nothing and surfaces the locked notice.
+  const maritalOptions = useMarriageOptions();
+  const maritalCode = typeof data.marriage === "string" ? data.marriage : "";
+  const marriedAtStage1 = maritalCode.toUpperCase().includes("MARRIED");
+  const maritalLabel = maritalOptions.find((o) => o.value === maritalCode)?.label || maritalCode;
+  const isMarried = marriedAtStage1;
   const [maritalConflict, setMaritalConflict] = useState(false);
+
+  // Keep the stored flag in sync with the locked, derived answer so the payload
+  // and the spouse validation see the right value.
+  useEffect(() => {
+    if (data.isMarried !== marriedAtStage1) set("isMarried", marriedAtStage1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marriedAtStage1]);
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
@@ -265,50 +278,45 @@ export default function StepFamily() {
 
       <hr className="border-line" />
 
-      {/* Marital status */}
+      {/* Marital status — locked, derived from Stage 1. */}
       <div className="space-y-4">
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("fields.married")}</p>
-          <div className="flex gap-6">
-            <label className="flex cursor-pointer items-center gap-2">
+          {/* The radios are disabled; clicking anywhere here explains why. */}
+          <div className="flex gap-6" onClick={() => setMaritalConflict(true)}>
+            <label className="flex cursor-not-allowed items-center gap-2 opacity-70">
               <input
                 type="radio"
                 name="isMarried"
                 checked={isMarried}
-                onChange={() => {
-                  // Block "Yes" when the marital status from Step 1 is not "Married"
-                  const marital = typeof data.marriage === "string" ? data.marriage : "";
-                  if (marital && marital !== "Married") {
-                    setMaritalConflict(true);
-                    return;
-                  }
-                  setMaritalConflict(false);
-                  set("isMarried", true);
-                }}
+                disabled
+                readOnly
                 className="h-4 w-4 border-line accent-navy-700"
               />
               <span className="text-sm font-medium text-ink">{t("registry.radioYes")}</span>
             </label>
-            <label className="flex cursor-pointer items-center gap-2">
+            <label className="flex cursor-not-allowed items-center gap-2 opacity-70">
               <input
                 type="radio"
                 name="isMarried"
                 checked={!isMarried}
-                onChange={() => {
-                  setMaritalConflict(false);
-                  set("isMarried", false);
-                }}
+                disabled
+                readOnly
                 className="h-4 w-4 border-line accent-navy-700"
               />
               <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
             </label>
           </div>
 
-          {maritalConflict && (
-            <p role="alert" className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
-              {t("registry.marriageConflict").replace("{status}", t(`opt.${(typeof data.marriage === "string" ? data.marriage : "Single").toLowerCase()}`))}
-            </p>
-          )}
+          <p
+            className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium ${
+              maritalConflict
+                ? "bg-warning/10 text-warning"
+                : "bg-navy-50 text-navy-700"
+            }`}
+          >
+            {t("registry.marriageLocked").replace("{status}", maritalLabel)}
+          </p>
         </div>
 
         {isMarried && (

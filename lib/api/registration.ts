@@ -822,6 +822,23 @@ export async function editStage8(subjectId: string, data: Data): Promise<unknown
   );
 }
 
+/** GET /v1/registration/{subjectId}/stage{n} — the stored data for a single
+ * stage, used to re-hydrate the form when the user navigates back to an
+ * already-submitted stage (so their entries aren't lost). Returns the `data`
+ * payload (or the raw response when there's no `data` wrapper), or null when
+ * unavailable. Stages 7 (referees) and 9 (declaration) have no GET. */
+export async function getStageData(subjectId: string, stage: number): Promise<unknown> {
+  if (BYPASS || !subjectId || stage === 7 || stage === 9) return null;
+  try {
+    const raw = await withFreshAuth((at) =>
+      apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/stage${stage}`, at),
+    );
+    return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
+  } catch {
+    return null;
+  }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Stage 9 — Preview & Declaration (final submit)
 // ──────────────────────────────────────────────────────────────────────────────

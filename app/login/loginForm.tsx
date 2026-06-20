@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
+import { useToast } from "@/components/ui/toast";
 import { login, getMyProfile } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import { saveSession } from "@/lib/auth/session";
@@ -41,6 +42,7 @@ function Spinner() {
 
 export default function LoginForm() {
   const { t } = useI18n();
+  const { notify } = useToast();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,6 +84,7 @@ export default function LoginForm() {
       } catch {
         // ignore — profile can be re-fetched later
       }
+      notify(t("toast.loginSuccess"));
       router.push("/dashboard");
     } catch (err) {
       setSubmitting(false);

@@ -1,7 +1,6 @@
 "use client";
 import { useState, type ChangeEvent } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { ATTACHMENT_ACCEPT } from "@/lib/api/files";
 import {
   useGenderOptions,
   useMarriageOptions,
@@ -93,40 +92,7 @@ function PhotoUpload() {
   );
 }
 
-/** Birth-certificate file capture. The file is held locally as a data URL (the
- * subject id doesn't exist yet at Stage 1); it's uploaded and carried into the
- * Stage 8 attachments when Stage 1 is submitted — just like the passport photo. */
-function BirthCertUpload() {
-  const { data, set } = useWizard();
-  const { t } = useI18n();
-  const fileName =
-    (data.birthCertFileName as string) || (data.birthCertFile as string) || "";
 
-  function handle(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      set("birthCertFileData", String(reader.result));
-      set("birthCertFileName", file.name);
-      set("birthCertFile", file.name);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  return (
-    <label className="flex cursor-pointer items-center overflow-hidden rounded-lg border border-line bg-card text-sm">
-      <span className="shrink-0 border-r border-line bg-surface px-4 py-2.5 font-medium text-navy-700">
-        {t("fields.chooseFile")}
-      </span>
-      <span className="truncate px-3 text-muted">
-        {fileName || t("fields.noFile")}
-      </span>
-      <input type="file" accept={ATTACHMENT_ACCEPT} className="sr-only" onChange={handle} />
-    </label>
-  );
-}
 
 export default function StepPersonal() {
   const { data } = useWizard();
@@ -209,9 +175,6 @@ export default function StepPersonal() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t("fields.birthCertNo")} optional>
             <TextInput name="birthCertNo" placeholder="TZ1234567890" />
-          </Field>
-          <Field label={t("fields.birthCertFile")} optional>
-            <BirthCertUpload />
           </Field>
         </div>
       )}

@@ -22,7 +22,7 @@ const en = {
       "Access the Immigration Central Registration and Citizenship System. Your gateway to national immigration services.",
   },
   status: {
-    heading: "Security: Status Check",
+    heading: "Application Status Check",
     label: "Verify ID activity without login",
     placeholder: "TZN-000-000",
     verify: "Verify status",
@@ -81,6 +81,7 @@ const en = {
     signIn: "Sign in",
     optional: "optional",
     required: "This field is required.",
+    phoneInvalid: "Please enter a valid phone number (at least 7 digits).",
     error: "Registration failed. Please check your details and try again.",
   },
   otp: {
@@ -123,6 +124,17 @@ const en = {
     privacyTitle: "Privacy Policy",
     privacyBody:
       "Your data is processed by the Tanzania Immigration Services Department (TISD) in accordance with the Electronic and Postal Communications Act and the Cybercrimes Act.\n\nAll personal data is encrypted at rest and in transit (AES-256 / TLS 1.3) and is linked exclusively to Tanzania's sovereign national registry.\n\nData is cross-validated against NIDA, RITA, and biometric systems strictly for identity verification. Every access to your record is permanently logged with officer ID, timestamp, and sector.\n\nWe do not sell or share your data with third parties except as required by Tanzanian law.",
+  },
+  session: {
+    expiredTitle: "Session Expired",
+    expiredBody:
+      "Your session has expired for security reasons. Please sign in again to continue.",
+    signIn: "Sign in again",
+  },
+  toast: {
+    loginSuccess: "Logged in successfully.",
+    otpVerified: "Verification successful. Your account is ready.",
+    profileSaved: "Profile updated successfully.",
   },
   nav: {
     dashboard: "Dashboard",
@@ -251,6 +263,7 @@ const en = {
     schoolRequired: "Please add at least one school, or tick “I never attended school”.",
     spouseRequired: "Please provide details for at least one spouse.",
     marriageConflict: "You selected \"{status}\" as your marital status in Personal Information (Step 1). Please go back and update your marital status to \"Married\" before answering \"Yes\" here.",
+    marriageLocked: "This is set automatically from your marital status in Personal Information (Step 1): \"{status}\". To change it, go back and update Step 1.",
     attachAdd: "Add document",
     attachPreview: "Preview",
     attachRemove: "Remove",
@@ -465,6 +478,7 @@ const en = {
     save: "Save changes",
     saving: "Saving…",
     saved: "Profile updated.",
+    phoneInvalid: "Please enter a valid phone number (at least 7 digits).",
     updateError: "Could not update your profile. Please try again.",
   },
   infoCards: {
@@ -506,7 +520,8 @@ const en = {
     phHouseStreet: "House Number / Street (Optional)",
     phCity: "City",
     optional: "Optional",
-    phPostal: "Postal Code (Optional)",
+    fieldRequired: "This field is required.",
+    phPostal: "Postal Address (Optional)",
     phRegion: "Region",
     phDistrict: "District",
     phWard: "Ward",
@@ -824,6 +839,7 @@ const sw: typeof en = {
     signIn: "Ingia",
     optional: "si lazima",
     required: "Sehemu hii inahitajika.",
+    phoneInvalid: "Tafadhali weka namba sahihi ya simu (angalau tarakimu 7).",
     error: "Usajili umeshindwa. Tafadhali angalia taarifa zako na ujaribu tena.",
   },
   otp: {
@@ -866,6 +882,17 @@ const sw: typeof en = {
     privacyTitle: "Sera ya Faragha",
     privacyBody:
       "Taarifa zako zinashughulikiwa na Idara ya Uhamiaji Tanzania (TISD) kwa mujibu wa Sheria ya Mawasiliano ya Kielektroniki na Posta na Sheria ya Makosa ya Mtandao.\n\nTaarifa zote binafsi zimesimbwa wakati wa kuhifadhi na kusafirisha (AES-256 / TLS 1.3) na zimeunganishwa na daftari la kitaifa la Tanzania pekee.\n\nTaarifa zinahakikiwa dhidi ya NIDA, RITA na mifumo ya kibaiometriki kwa ajili ya uthibitisho wa utambulisho pekee. Kila ufikiaji wa kumbukumbu yako huhifadhiwa kwa kudumu na kitambulisho cha afisa, muda na sekta.\n\nHatuuzi wala kushiriki taarifa zako na watu wa tatu isipokuwa inapohitajika na sheria za Tanzania.",
+  },
+  session: {
+    expiredTitle: "Muda wa Kikao Umeisha",
+    expiredBody:
+      "Muda wa kikao chako umeisha kwa sababu za kiusalama. Tafadhali ingia tena ili kuendelea.",
+    signIn: "Ingia tena",
+  },
+  toast: {
+    loginSuccess: "Umeingia kwa mafanikio.",
+    otpVerified: "Uthibitisho umefanikiwa. Akaunti yako iko tayari.",
+    profileSaved: "Wasifu umesasishwa kwa mafanikio.",
   },
   nav: {
     dashboard: "Dashibodi",
@@ -994,6 +1021,7 @@ const sw: typeof en = {
     schoolRequired: "Tafadhali ongeza angalau shule moja, au weka alama “Sikuwahi kuhudhuria shule”.",
     spouseRequired: "Tafadhali toa taarifa za angalau mwenzi mmoja wa ndoa.",
     marriageConflict: "Umechagua \"{status}\" kama hali ya ndoa katika Taarifa Binafsi (Hatua ya 1). Tafadhali rudi na ubadilishe hali ya ndoa kuwa \"Ameoa/Ameolewa\" kabla ya kujibu \"Ndiyo\" hapa.",
+    marriageLocked: "Hii imewekwa moja kwa moja kutoka hali yako ya ndoa katika Taarifa Binafsi (Hatua ya 1): \"{status}\". Ili kuibadilisha, rudi Hatua ya 1.",
     attachAdd: "Ongeza nyaraka",
     attachPreview: "Angalia",
     attachRemove: "Ondoa",
@@ -1208,6 +1236,7 @@ const sw: typeof en = {
     save: "Hifadhi mabadiliko",
     saving: "Inahifadhi…",
     saved: "Wasifu umesasishwa.",
+    phoneInvalid: "Tafadhali weka namba sahihi ya simu (angalau tarakimu 7).",
     updateError: "Imeshindwa kusasisha wasifu wako. Tafadhali jaribu tena.",
   },
   infoCards: {
@@ -1248,6 +1277,7 @@ const sw: typeof en = {
     phHouseStreet: "Namba ya nyumba / Mtaa",
     phCity: "Jiji",
     optional: "Si lazima",
+    fieldRequired: "Sehemu hii inahitajika.",
     phPostal: "Sanduku la posta",
     phRegion: "Mkoa",
     phDistrict: "Wilaya",
@@ -1319,8 +1349,8 @@ const sw: typeof en = {
     childrenNote: "Ongeza kila mtoto aliyesajiliwa chini ya wasifu wako.", // REVIEW
     relativesTitle: "Ndugu", // REVIEW
     relativesNote: "Ongeza ndugu wa karibu.", // REVIEW
-    relativeN: "Ndugu", // REVIEW
-    spouseN: "Mwenzi", // REVIEW
+    relativeN: "Ndugu {n}",
+    spouseN: "Mwenzi {n}",
     childN: "Mtoto {n}",
     spouseNote: "Ongeza taarifa za mwenzi wako.", // REVIEW
     schoolN: "Shule", // REVIEW

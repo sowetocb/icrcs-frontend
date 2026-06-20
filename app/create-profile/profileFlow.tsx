@@ -6,6 +6,8 @@ import StepDetails, { RegistrationDetails } from "./stepDetails";
 import StepOtp from "./stepOtp";
 import { register, verifyOtp, resendOtp } from "@/lib/api/auth";
 import { saveProfile } from "@/lib/auth/profile";
+import { useToast } from "@/components/ui/toast";
+import { useI18n } from "@/app/i18n/localeProvider";
 
 type Step = 1 | 2;
 
@@ -21,6 +23,8 @@ const emptyDetails: RegistrationDetails = {
 
 export default function CreateProfileFlow() {
   const router = useRouter();
+  const { t } = useI18n();
+  const { notify } = useToast();
   const [step, setStep] = useState<Step>(1);
   const [details, setDetails] = useState<RegistrationDetails>(emptyDetails);
   const [preAuthToken, setPreAuthToken] = useState("");
@@ -56,6 +60,7 @@ export default function CreateProfileFlow() {
       phoneNumber: details.phoneNumber,
       email: details.email,
     });
+    notify(t("toast.otpVerified"));
     router.push("/login");
   }
 

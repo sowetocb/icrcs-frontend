@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { LocaleProvider } from "./i18n/localeProvider";
 import { ThemeProvider, themeNoFlashScript } from "./theme/themeProvider";
+import { ToastProvider } from "@/components/ui/toast";
 import SessionKeepAlive from "@/components/auth/sessionKeepAlive";
 import IdleLogout from "@/components/auth/idleLogout";
 
@@ -55,9 +56,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-surface text-ink">
         <ThemeProvider>
           <LocaleProvider>
-            <SessionKeepAlive />
-            <IdleLogout />
-            {children}
+            <ToastProvider>
+              <SessionKeepAlive />
+              <IdleLogout />
+              {children}
+            </ToastProvider>
           </LocaleProvider>
         </ThemeProvider>
       </body>

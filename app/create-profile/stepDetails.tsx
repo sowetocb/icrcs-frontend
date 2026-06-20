@@ -140,18 +140,27 @@ export default function StepDetails({
     if (errors[key]) setErrors((e) => ({ ...e, [key]: false }));
   }
 
+  // Phone is invalid when empty OR when it has fewer than 7 digits.
+  const [phoneFormatError, setPhoneFormatError] = useState(false);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setTouchedConfirm(true);
+    setPhoneFormatError(false);
+
+    const phoneDigits = form.phoneNumber.replace(/[^\d]/g, "");
+    const phoneBad = !form.phoneNumber.trim() || phoneDigits.length < 7;
+
     const next: Partial<Record<keyof RegistrationDetails, boolean>> = {
       firstName: !form.firstName.trim(),
       lastName: !form.lastName.trim(),
       gender: !form.gender,
-      phoneNumber: !form.phoneNumber.trim(),
+      phoneNumber: phoneBad,
       email: !EMAIL_RE.test(form.email.trim()),
       password: !allMet,
     };
     setErrors(next);
+    if (phoneBad && form.phoneNumber.trim()) setPhoneFormatError(true);
     if (Object.values(next).some(Boolean) || !matches) return;
 
     setSubmitting(true);
@@ -296,7 +305,7 @@ export default function StepDetails({
               describedBy={errors.phoneNumber ? "phoneNumber-error" : undefined}
             />
             {errors.phoneNumber && (
-              <FieldError id="phoneNumber-error" message={t("register.required")} />
+              <FieldError id="phoneNumber-error" message={phoneFormatError ? t("register.phoneInvalid") : t("register.required")} />
             )}
           </div>
 
