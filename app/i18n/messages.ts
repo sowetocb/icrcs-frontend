@@ -556,7 +556,7 @@ const en = {
     citizenNo: "No", // REVIEW
     nidaNumber: "NIDA Number", // REVIEW
     birthCertNo: "Birth Certificate Number", // REVIEW
-    birthCertFile: "Birth Certificate (upload)",
+    birthCertFile: "Upload Birth Certificate",
     indexNo: "Index Number", // REVIEW
     docType: "Document Type", // REVIEW
     docNumber: "Document Number", // REVIEW
@@ -577,8 +577,8 @@ const en = {
     childrenNote: "Add each child registered under your profile.", // REVIEW
     relativesTitle: "Relatives", // REVIEW
     relativesNote: "Add close relatives.", // REVIEW
-    relativeN: "Relative", // REVIEW
-    spouseN: "Spouse", // REVIEW
+    relativeN: "Relative {n}",
+    spouseN: "Spouse {n}",
     childN: "Child {n}",
     spouseNote: "Add your spouse's details.", // REVIEW
     schoolN: "School", // REVIEW

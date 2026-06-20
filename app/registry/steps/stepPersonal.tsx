@@ -176,18 +176,13 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      {/* Nationality (wider) + optional NIDA and Birth Certificate Number. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="sm:col-span-2">
-          <Field label={t("fields.nationality")} required>
-            <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
-          </Field>
-        </div>
+      {/* Nationality + optional NIDA. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={t("fields.nationality")} required>
+          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
+        </Field>
         <Field label={t("fields.nidaNumber")} optional>
           <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
-        </Field>
-        <Field label={t("fields.birthCertNo")} optional>
-          <TextInput name="birthCertNo" placeholder="TZ1234567890" />
         </Field>
       </div>
 
@@ -211,9 +206,14 @@ export default function StepPersonal() {
       </Field>
 
       {bornInTanzania && (
-        <Field label={t("fields.birthCertFile")} optional>
-          <BirthCertUpload />
-        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t("fields.birthCertNo")} optional>
+            <TextInput name="birthCertNo" placeholder="TZ1234567890" />
+          </Field>
+          <Field label={t("fields.birthCertFile")} optional>
+            <BirthCertUpload />
+          </Field>
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
