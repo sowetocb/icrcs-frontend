@@ -1,8 +1,8 @@
 export type Locale = "en" | "sw";
 
 export const LOCALES: { code: Locale; label: string }[] = [
-  { code: "en", label: "English" },
-  { code: "sw", label: "Swahili" },
+  { code: "en", label: "En" },
+  { code: "sw", label: "Sw" },
 ];
 
 export const DEFAULT_LOCALE: Locale = "en";
@@ -255,6 +255,8 @@ const en = {
     attachHint: "Tick a document, then upload it (JPG, PNG or PDF).",
     attachChoose: "Choose file",
     attachPhotoRequired: "Please upload the required Passport Size Photo before continuing.",
+    attachMandatoryRequired:
+      "Please upload the applicant's and a parent's birth certificate / affidavit before continuing.",
     photoUploadRetry: "Photo upload failed due to a network connection issue. Please click Next to retry.",
     photoMissing: "Your passport photo is missing. Please go back to Personal Information to add it.",
     attachIdRequired: "At least one identification document is required for adults.",
@@ -682,6 +684,11 @@ const en = {
     docVisa: "Visa",
     docPass: "Pass",
     docOther: "Any other",
+    travelEtd: "Emergency Travel Document (ETD)",
+    travelCoi: "Certificate of Identity",
+    travelGeneva: "Geneva Convention Travel Document",
+    travelLaissez: "Laissez-Passer",
+    travelOther: "Other Travel Doc",
   },
   gate: {
     title: "Citizenship Check", // REVIEW
@@ -754,13 +761,13 @@ const en = {
   // Attachment labels, keyed attach.a{attachmentTypeId} (see ATTACHMENT_TYPES
   // in lib/api/files.ts). English values mirror those labels.
   attach: {
-    a1: "Birth Certificate Copy",
-    a2: "ID Copy (NIDA / Passport)",
-    a4: "WEO / VEO Letter",
+    a1: "Applicant Birth Certificate / Affidavit",
+    a2: "Parent Birth Certificate / Affidavit",
     a5: "Passport Size Photo",
-    a6: "Academic Certificate",
-    a7: "Voters ID Copy",
-    a8: "Passport Bio Page",
+    a3: "NIDA",
+    a4: "Driving Licence",
+    a6: "Insurance ID",
+    a8: "Any Other Relevant Document",
   },
   footer: "© 2026 The United Republic of Tanzania | Immigration Department",
 };
@@ -1013,6 +1020,8 @@ const sw: typeof en = {
     attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF).",
     attachChoose: "Chagua faili",
     attachPhotoRequired: "Tafadhali pakia Picha ya Pasipoti inayohitajika kabla ya kuendelea.",
+    attachMandatoryRequired:
+      "Tafadhali pakia cheti cha kuzaliwa / kiapo cha mwombaji na cha mzazi kabla ya kuendelea.",
     photoUploadRetry: "Kupakia picha kumeshindikana kwa sababu ya tatizo la mtandao. Tafadhali bofya Endelea kujaribu tena.",
     photoMissing: "Picha yako ya pasipoti haipo. Tafadhali rudi kwenye Taarifa Binafsi kuiongeza.",
     attachIdRequired: "Angalau moja ya nyaraka za utambulisho inahitajika kwa watu wazima.",
@@ -1438,6 +1447,11 @@ const sw: typeof en = {
     docVisa: "Viza", // REVIEW
     docPass: "Pasi", // REVIEW
     docOther: "Nyingine yoyote", // REVIEW
+    travelEtd: "Hati ya Dharura ya Kusafiri (ETD)", // REVIEW
+    travelCoi: "Cheti cha Utambulisho", // REVIEW
+    travelGeneva: "Hati ya Kusafiri ya Mkataba wa Geneva", // REVIEW
+    travelLaissez: "Laissez-Passer", // REVIEW
+    travelOther: "Hati Nyingine ya Kusafiri", // REVIEW
   },
   gate: {
     title: "Uhakiki wa Uraia", // REVIEW
@@ -1508,13 +1522,13 @@ const sw: typeof en = {
     documents: "Hati", // REVIEW
   },
   attach: {
-    a1: "Nakala ya Cheti cha Kuzaliwa", // REVIEW
-    a2: "Nakala ya Kitambulisho (NIDA / Pasipoti)", // REVIEW
-    a4: "Barua ya WEO / VEO", // REVIEW
+    a1: "Cheti cha Kuzaliwa / Kiapo cha Mwombaji", // REVIEW
+    a2: "Cheti cha Kuzaliwa / Kiapo cha Mzazi", // REVIEW
     a5: "Picha ya Saizi ya Pasipoti", // REVIEW
-    a6: "Cheti cha Kitaaluma", // REVIEW
-    a7: "Nakala ya Kitambulisho cha Mpiga Kura", // REVIEW
-    a8: "Ukurasa wa Pasipoti wenye Taarifa", // REVIEW
+    a3: "NIDA", // REVIEW
+    a4: "Leseni ya Udereva", // REVIEW
+    a6: "Kitambulisho cha Bima", // REVIEW
+    a8: "Hati Nyingine Yoyote Muhimu", // REVIEW
   },
   footer: "© 2026 Jamhuri ya Muungano wa Tanzania | Idara ya Uhamiaji",
 };

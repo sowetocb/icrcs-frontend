@@ -46,9 +46,9 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         </Field>
       </div>
 
-      {/* Date of Birth · Place of Birth · Phone (rightmost). Place of Birth sits
-          beside the birth date — and apart from Residence — so the two cascades
-          can't be confused. */}
+      {/* Date of Birth · Place of Birth. Place of Birth sits beside the birth
+          date — and apart from Residence — so the two cascades can't be
+          confused. Phone now lives beside Document Type below. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <Field label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
@@ -63,12 +63,9 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
             )}
           </div>
         </Field>
-        <Field label={t("fields.phone")} optional>
-          <PhoneInput name={`${prefix}Phone`} />
-        </Field>
       </div>
 
-      {/* Nationality + identification document on one row */}
+      {/* Nationality · Document Type · Phone (to the right of document type) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.nationality")} required>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountryNat")} />
@@ -76,12 +73,17 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         <Field label={t("fields.docType")} optional>
           <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
         </Field>
-        {data[`${prefix}DocType`] && (
+        <Field label={t("fields.phone")} optional>
+          <PhoneInput name={`${prefix}Phone`} />
+        </Field>
+      </div>
+      {data[`${prefix}DocType`] && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label={t("fields.docNumber")} optional>
             <TextInput name={`${prefix}DocNumber`} placeholder="e.g. 19600310-12345-00001-6" />
           </Field>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Residence — its own full-width section, clearly separated from Place of Birth */}
       <Field label={t("fields.residence")} required>

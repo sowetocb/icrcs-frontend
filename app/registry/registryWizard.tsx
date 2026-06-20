@@ -29,11 +29,12 @@ import {
   editStage6,
   editStage8,
   uploadPassportPhoto,
-  getRegistrationReview,
+  getStage9Preview,
   getStageData,
 } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
+import { mapApiFieldErrors } from "@/lib/registry/errorFields";
 import { missingFieldLabels } from "@/lib/registry/fieldLabels";
 import { resolveGenderCode } from "@/lib/api/lookup";
 import { SessionExpiredError } from "@/lib/api/auth";
@@ -49,7 +50,11 @@ import StepFamily from "./steps/stepFamily";
 import StepReferees from "./steps/stepReferees";
 import StepAttachments, { parseAttachments } from "./steps/stepAttachments";
 import StepPreviewDeclaration from "./steps/stepPreviewDeclaration";
-import { PASSPORT_PHOTO_TYPE, type UploadedAttachment } from "@/lib/api/files";
+import {
+  PASSPORT_PHOTO_TYPE,
+  MANDATORY_ATTACHMENT_TYPE_IDS,
+  type UploadedAttachment,
+} from "@/lib/api/files";
 
 const TOTAL = 9;
 
@@ -271,8 +276,9 @@ export default function RegistryWizard({
   }, [step]);
 
   // Re-hydrate an already-submitted stage from the backend when the user returns
-  // to it, so entries aren't lost (e.g. resuming on a fresh browser, or going
-  // back to edit). Only blank fields are filled — local edits are preserved.
+  // to it (e.g. resuming on a fresh browser, or going back to edit). The API is
+  // the source of truth for a submitted stage, so every field it returns
+  // overwrites the local value — the form shows exactly what the server stored.
   useEffect(() => {
     if (!subjectId || !submittedStages.has(step)) return;
     let cancelled = false;
@@ -283,10 +289,10 @@ export default function RegistryWizard({
       if (cancelled || Object.keys(mapped).length === 0) return;
       setData((d) => {
         const next = { ...d };
-        for (const [k, v] of Object.entries(mapped)) {
-          const cur = next[k];
-          if (cur === undefined || cur === "") next[k] = v;
-        }
+        // `mapped` only holds keys derived from the API response, so assigning
+        // them all reflects the server data exactly without wiping unrelated
+        // local fields.
+        for (const [k, v] of Object.entries(mapped)) next[k] = v;
         return next;
       });
     })();
@@ -570,11 +576,19 @@ export default function RegistryWizard({
   }
 
   // Surface a submit failure: an expired session opens the blocking dialog
-  // (sign out & back to login); anything else shows the inline form error.
+  // (sign out & back to login); anything else shows the inline form error AND,
+  // when the backend pinpoints offending fields, the message inline at exactly
+  // those fields.
   function reportSubmitError(err: unknown) {
     if (err instanceof SessionExpiredError) {
       setSessionExpired(true);
       return;
+    }
+    const apiFieldErrors = mapApiFieldErrors(err);
+    const fieldKeys = Object.keys(apiFieldErrors);
+    if (fieldKeys.length > 0) {
+      setFieldErrors(apiFieldErrors);
+      setErrors(fieldKeys);
     }
     setFormError(getErrorMessage(err, t("registry.submitError")));
   }
@@ -763,12 +777,16 @@ export default function RegistryWizard({
       }
     }
 
-    // NOTE: Passport Size Photo upload validation is temporarily disabled —
-    // Stage 8 can be passed without uploading any document.
-    // if (step === 8 && data.passportPhotoUploaded !== "true") {
-    //   setFormError(t("registry.attachPhotoRequired"));
-    //   return;
-    // }
+    // Stage 8 — the applicant's and a parent's birth certificate / affidavit
+    // MUST be uploaded before the stage can be submitted.
+    if (step === 8) {
+      const have = new Set(parseAttachments(data.attachments).map((a) => a.typeId));
+      const missing = MANDATORY_ATTACHMENT_TYPE_IDS.filter((id) => !have.has(id));
+      if (missing.length > 0) {
+        setFormError(t("registry.attachMandatoryRequired"));
+        return;
+      }
+    }
 
     setErrors([]);
     setFieldErrors({});
@@ -843,13 +861,14 @@ export default function RegistryWizard({
             }
           }
           await (edit ? editStage8(sid, data8) : submitStage8(sid, data8));
-          // Pull the server-compiled review so Stage 9 (Preview & Declaration)
-          // shows everything the backend stored across all stages. Non-fatal —
+          // Pull the server-compiled preview so Stage 9 (Preview & Declaration)
+          // shows everything the backend stored across all stages. /stage9/preview
+          // (not /review) works before the declaration is submitted. Non-fatal —
           // a failure just falls back to the locally-entered data.
           try {
-            const review = await getRegistrationReview(sid);
-            if (review) {
-              mergedData = { ...data, ...(await reviewToForm(review)) };
+            const preview = await getStage9Preview(sid);
+            if (preview) {
+              mergedData = { ...data, ...(await reviewToForm(preview)) };
               setData(mergedData);
             }
           } catch {

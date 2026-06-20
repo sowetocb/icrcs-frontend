@@ -14,21 +14,29 @@ export type AttachmentType = {
   mandatory: boolean;
 };
 
-// attachmentTypeId values per the backend contract. The backend stores the
-// The passport photo (attachmentTypeId=5) is mandatory at Stage 1 (Personal
-// Information), so it is NOT mandatory again here in the Uploads stage.
+// attachmentTypeId values per the backend contract (GET /v1/lookup/attachment-types):
+//   1 = Applicant Birth Certificate / Affidavit  (mandatory at Stage 8)
+//   2 = Parent Birth Certificate / Affidavit     (mandatory at Stage 8)
+//   5 = Passport Size Photo (already mandatory/uploaded at Stage 1, shown here)
 export const ATTACHMENT_TYPES: AttachmentType[] = [
+  { id: 1, label: "Applicant Birth Certificate / Affidavit", mandatory: true },
+  { id: 2, label: "Parent Birth Certificate / Affidavit", mandatory: true },
   { id: 5, label: "Passport Size Photo", mandatory: false },
-  { id: 1, label: "Birth Certificate Copy", mandatory: false },
-  { id: 2, label: "ID Copy (NIDA / Passport)", mandatory: false },
-  { id: 4, label: "WEO / VEO Letter", mandatory: false },
-  { id: 6, label: "Academic Certificate", mandatory: false },
-  { id: 7, label: "Voters ID Copy", mandatory: false },
-  { id: 8, label: "Passport Bio Page", mandatory: false },
+  // Optional supporting documents. NOTE: confirm these ids against the backend
+  // lookup (GET /v1/lookup/attachment-types) — adjust if it uses other values.
+  { id: 3, label: "NIDA", mandatory: false },
+  { id: 4, label: "Driving Licence", mandatory: false },
+  { id: 6, label: "Insurance ID", mandatory: false },
+  { id: 8, label: "Any Other Relevant Document", mandatory: false },
 ];
 
 /** The backend's mandatory passport-size photo attachment type. */
 export const PASSPORT_PHOTO_TYPE = 5;
+
+/** Attachment types that MUST be uploaded before Stage 8 can be submitted. */
+export const MANDATORY_ATTACHMENT_TYPE_IDS = ATTACHMENT_TYPES.filter((a) => a.mandatory).map(
+  (a) => a.id,
+);
 
 /** Accepted upload formats (jpg/png/pdf). */
 export const ATTACHMENT_ACCEPT = "image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf";

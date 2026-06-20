@@ -34,6 +34,12 @@ const str = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String
 const obj = (v: unknown): Obj => (v && typeof v === "object" ? (v as Obj) : {});
 const arr = (v: unknown): Obj[] => (Array.isArray(v) ? (v as Obj[]) : []);
 
+/** The trailing file name of a backend file URL (…/2/uuid.pdf → uuid.pdf). */
+const fileNameFromUrl = (url: string) => (url ? url.split("/").pop() || "" : "");
+
+/** The passport photo is attachment type 5. */
+const PHOTO_TYPE_ID = 5;
+
 function splitName(full: string): { first: string; middle: string; last: string } {
   const parts = full.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: "", middle: "", last: "" };
@@ -140,6 +146,15 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     if (d.placeOfBirthStreetId != null) await applyStreet("pob", d.placeOfBirthStreetId);
     if (d.birthCertificateNo != null) out.birthCertNo = str(d.birthCertificateNo);
     if (d.nidaNo != null) out.nidaNumber = str(d.nidaNo);
+    // Passport photo — the Stage 1 preview renders any <img src>, so the stored
+    // file URL works. Look for a direct url or a type-5 entry in documents.
+    const photoUrl =
+      str(d.photoUrl || d.passportPhotoUrl || d.photoFileUrl) ||
+      str(arr(d.documents ?? d.attachments).find((a) => Number(a.attachmentTypeId) === PHOTO_TYPE_ID)?.fileUrl);
+    if (photoUrl) {
+      out.stage1PhotoData = photoUrl;
+      out.passportPhotoUploaded = "true";
+    }
     return out;
   }
 
@@ -196,13 +211,17 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
 
   // ── Stage 5: Emergency Contacts ────────────────────────────────────────────
   if (stage === 5) {
-    const contacts = arr(d.emergencyContacts ?? d)
+    // The payload is { contacts: [{ relationshipTypeId, occupationTypeId,
+    // person: {...} }] }. Accept `contacts` / `emergencyContacts` / a bare array.
+    const contacts = arr(d.contacts ?? d.emergencyContacts ?? d)
       .slice()
       .sort((a, b) => Number(a.contactOrder ?? 0) - Number(b.contactOrder ?? 0));
     let i = 0;
     for (const c of contacts) {
       i += 1;
-      await applyPerson(`ec${i}`, c, true);
+      // Merge the nested `person` (names/gender/residence) with the top-level
+      // relationship/occupation so applyPerson sees them all.
+      await applyPerson(`ec${i}`, { ...c, ...obj(c.person) });
     }
     return out;
   }
@@ -211,7 +230,11 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
   if (stage === 6) {
     const relatives = arr(d.relatives);
     if (relatives.length > 0) out.relativeCount = String(relatives.length);
-    for (let i = 0; i < relatives.length; i++) await applyPerson(`rel${i + 1}`, relatives[i]);
+    for (let i = 0; i < relatives.length; i++) {
+      // Relatives nest their person fields under `person` (relationship/occupation
+      // sit at the top) — merge so applyPerson sees them all.
+      await applyPerson(`rel${i + 1}`, { ...relatives[i], ...obj(relatives[i].person) });
+    }
 
     const spouses = arr(d.spouses);
     if (spouses.length > 0) {
@@ -233,6 +256,31 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
         const ch = { ...children[i], ...obj(children[i].person) };
         await applyPerson(`ch${i + 1}`, ch);
       }
+    }
+    return out;
+  }
+
+  // ── Stage 8: Attachments ───────────────────────────────────────────────────
+  if (stage === 8) {
+    const attachments = arr(d.attachments).filter((a) => a.attachmentTypeId != null);
+    const list = attachments.map((a) => {
+      const typeId = Number(a.attachmentTypeId);
+      const fileUrl = str(a.fileUrl);
+      return {
+        id: `att-${typeId}`,
+        typeId,
+        name: fileNameFromUrl(fileUrl) || `attachment-${typeId}`,
+        fileUrl,
+        mimeType: str(a.mimeType),
+        fileSizeBytes: Number(a.fileSizeBytes) || 0,
+      };
+    });
+    if (list.length > 0) out.attachments = JSON.stringify(list);
+    // Surface the passport photo (type 5) on the Stage 1 preview too.
+    const photo = attachments.find((a) => Number(a.attachmentTypeId) === PHOTO_TYPE_ID);
+    if (photo?.fileUrl) {
+      out.stage1PhotoData = str(photo.fileUrl);
+      out.passportPhotoUploaded = "true";
     }
     return out;
   }

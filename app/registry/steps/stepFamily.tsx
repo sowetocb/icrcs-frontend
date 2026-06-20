@@ -123,11 +123,14 @@ function PersonBlock({
   prefix,
   label,
   withRelationship,
+  withOccupation = true,
   onRemove,
 }: {
   prefix: string;
   label: string;
   withRelationship: boolean;
+  /** Children don't have an occupation, so it's hidden for them. */
+  withOccupation?: boolean;
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
@@ -148,16 +151,20 @@ function PersonBlock({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {withRelationship && (
-          <Field label={t("fields.relationship")} required>
-            <Select name={`${prefix}RelType`} placeholder={t("fields.phSelect")} options={relationships} />
-          </Field>
-        )}
-        <Field label={t("fields.occupation")} optional>
-          <Select name={`${prefix}OccType`} placeholder={t("fields.phSelect")} options={occupations} />
-        </Field>
-      </div>
+      {(withRelationship || withOccupation) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {withRelationship && (
+            <Field label={t("fields.relationship")} required>
+              <Select name={`${prefix}RelType`} placeholder={t("fields.phSelect")} options={relationships} />
+            </Field>
+          )}
+          {withOccupation && (
+            <Field label={t("fields.occupation")} optional>
+              <Select name={`${prefix}OccType`} placeholder={t("fields.phSelect")} options={occupations} />
+            </Field>
+          )}
+        </div>
+      )}
 
       <PersonFields prefix={prefix} />
     </div>
@@ -168,6 +175,24 @@ export default function StepFamily() {
   const { data, set } = useWizard();
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
+
+  // A minor (subject under 18) is pre-answered "No" to "Do you have children?".
+  // Only when the question is still unanswered, so a manual change is preserved.
+  const isMinor = (() => {
+    const dob = typeof data.dob === "string" ? data.dob : "";
+    if (!dob) return false;
+    const birth = new Date(dob);
+    if (Number.isNaN(birth.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age < 18;
+  })();
+  useEffect(() => {
+    if (isMinor && data.hasChildren === undefined) set("hasChildren", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMinor]);
 
   // "Are you married?" is DERIVED from the Stage 1 marital status and locked:
   // a "Married" status forces Yes, anything else forces No. The user can't
@@ -188,6 +213,17 @@ export default function StepFamily() {
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
+
+  // A child shares the account holder's phone number — pre-fill it (only when the
+  // child's phone is still blank, so a manual edit is never overwritten).
+  useEffect(() => {
+    const holderPhone = typeof data.phone === "string" ? data.phone : "";
+    if (!holderPhone || !hasChildren) return;
+    for (let n = 1; n <= childCount; n++) {
+      if (!data[`ch${n}Phone`]) set(`ch${n}Phone`, holderPhone);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasChildren, childCount, data.phone]);
 
   function addChild() {
     set("childCount", String(childCount + 1));
@@ -255,6 +291,7 @@ export default function StepFamily() {
                 prefix={`ch${n}`}
                 label={t("fields.childN").replace("{n}", String(n))}
                 withRelationship={false}
+                withOccupation={false}
                 onRemove={
                   n === childCount && childCount > MIN_CHILDREN ? removeLastChild : undefined
                 }

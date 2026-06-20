@@ -368,30 +368,24 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
   const currentIsTz = isTanzania(stage2CurrentCountry(data));
   const permIsTz = isTanzania(str(data, "permCountry"));
 
-  const payload: Record<string, unknown> = {
-    permanentSameAsCurrent: sameAsCurrent,
-  };
+  const payload: Record<string, unknown> = {};
 
-  // ── Current address — Tanzania pins the location via the street/ward ids;
-  // abroad sends an ISO country code + free-text city. ──
+  // ── Current address — Tanzania pins the location via the street id; abroad
+  // sends an ISO country code + free-text city. ──
   if (currentIsTz) {
     payload.currentStreetId = wardId(data, "curStreetId");
-    payload.currentWardId = wardId(data, "curWardId");
-    payload.currentHouseNumber = str(data, "curHouseNumber") || str(data, "curStreet") || null;
-    payload.currentPostalCode = str(data, "curPostalCode") || str(data, "curPostal") || null;
   } else {
     payload.currentCountryCode = await resolveCountryCode(stage2CurrentCountry(data));
     payload.currentCity = str(data, "curCity") || null;
   }
+
+  payload.permanentSameAsCurrent = sameAsCurrent;
 
   // ── Permanent address — only when it differs from the current one. Its own
   // country decides whether it's a TZ street id or a foreign country + city. ──
   if (!sameAsCurrent) {
     if (permIsTz) {
       payload.permanentStreetId = wardId(data, "permStreetId");
-      payload.permanentWardId = wardId(data, "permWardId");
-      payload.permanentHouseNumber = str(data, "permHouseNumber") || str(data, "permStreet") || null;
-      payload.permanentPostalCode = str(data, "permPostalCode") || str(data, "permPostal") || null;
     } else {
       payload.permanentCountryCode = await resolveCountryCode(str(data, "permCountry"));
       payload.permanentCity = str(data, "permCity") || null;
@@ -861,6 +855,21 @@ export async function getRegistrationReview(subjectId: string): Promise<unknown>
   }
   const raw = await withFreshAuth((at) =>
     apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/review`, at),
+  );
+  return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
+}
+
+/** GET /v1/registration/{subjectId}/stage9/preview — the server-compiled summary
+ * shown on the Preview & Declaration stage. Unlike /review (which only works
+ * AFTER the declaration is submitted), this is available beforehand. Returns the
+ * `data` payload (or the raw response when there's no `data` wrapper). */
+export async function getStage9Preview(subjectId: string): Promise<unknown> {
+  if (BYPASS || !subjectId) {
+    await delay(300);
+    return null;
+  }
+  const raw = await withFreshAuth((at) =>
+    apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/stage9/preview`, at),
   );
   return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
 }

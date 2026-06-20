@@ -95,28 +95,28 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Field label={t("fields.placeOfBirth")} optional>
-          <div className="space-y-3">
-            <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-            {pobIsForeign && (
-              <Field label={t("fields.phVillage")}>
-                <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
-              </Field>
-            )}
-          </div>
-        </Field>
-        <Field label={t("fields.residence")} required>
-          <div className="space-y-3">
-            <WardCascade prefix={`${prefix}Res`} showStreet />
-            {resIsForeign && (
-              <Field label={t("fields.phCity")}>
-                <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
-              </Field>
-            )}
-          </div>
-        </Field>
-      </div>
+      {/* Place of Birth and Residence are stacked (not side by side) so the two
+          identical cascades can't be confused. */}
+      <Field label={t("fields.placeOfBirth")} optional>
+        <div className="space-y-3">
+          <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
+          {pobIsForeign && (
+            <Field label={t("fields.phVillage")}>
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+            </Field>
+          )}
+        </div>
+      </Field>
+      <Field label={t("fields.residence")} required>
+        <div className="space-y-3">
+          <WardCascade prefix={`${prefix}Res`} showStreet />
+          {resIsForeign && (
+            <Field label={t("fields.phCity")}>
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
+            </Field>
+          )}
+        </div>
+      </Field>
     </div>
   );
 }

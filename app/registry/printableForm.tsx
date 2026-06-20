@@ -333,6 +333,7 @@ export default function PrintableForm({
                   <Row label={tr("Nationality", "Utaifa")} value={val(`sp${n}NatCountry`)} />
                   <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`sp${n}OccType`)) || "—"} />
                 </RowGroup>
+                <PobResidencePrint prefix={`sp${n}`} tr={tr} s={s} val={val} />
               </div>
             ))}
 
@@ -351,6 +352,7 @@ export default function PrintableForm({
                   <Row label={tr("Nationality", "Utaifa")} value={val(`ch${n}NatCountry`)} />
                   <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`ch${n}OccType`)) || "—"} />
                 </RowGroup>
+                <PobResidencePrint prefix={`ch${n}`} tr={tr} s={s} val={val} />
               </div>
             ))}
 
@@ -375,6 +377,7 @@ export default function PrintableForm({
                   ? `${optionLabel(DOCUMENT_TYPE_OPTIONS, s(`rel${n}DocType`))}: ${val(`rel${n}DocNumber`)}`
                   : "—"
               } />
+              <PobResidencePrint prefix={`rel${n}`} tr={tr} s={s} val={val} />
             </div>
           ))}
       </Section>
@@ -484,6 +487,50 @@ function Row({
       <span className="row-label">{label}</span>
       <span className="row-value">{value}</span>
     </div>
+  );
+}
+
+/** Place of Birth + Residence rows shared by the family-member print blocks. */
+function PobResidencePrint({
+  prefix,
+  tr,
+  s,
+  val,
+}: {
+  prefix: string;
+  tr: Tr;
+  s: (key: string) => string;
+  val: (key: string) => string;
+}) {
+  return (
+    <>
+      <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}PobRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}PobDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}PobWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}PobStreet`))} />
+        <Row label={tr("Village", "Kijiji")} value={val(`${prefix}Village`)} />
+      </RowGroup>
+      <SubTitle>{tr("Residence", "Makazi")}</SubTitle>
+      <RowGroup>
+        <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}ResCountry`))} />
+        <Row label={tr("Region", "Mkoa")} value={titleCase(s(`${prefix}ResRegion`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("District", "Wilaya")} value={titleCase(s(`${prefix}ResDistrict`))} />
+        <Row label={tr("Ward", "Kata")} value={titleCase(s(`${prefix}ResWard`))} />
+      </RowGroup>
+      <RowGroup>
+        <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
+        <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
+      </RowGroup>
+    </>
   );
 }
 

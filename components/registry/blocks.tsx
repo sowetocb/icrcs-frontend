@@ -74,11 +74,11 @@ export const documentTypeOptions = (t: Translate): Opt[] => [
 // backend travel-document type ids — align them with the immigration backend's
 // lookup once that endpoint is finalised.
 export const travelDocumentOptions = (t: Translate): Opt[] => [
-  { value: "1", label: t("opt.docPassport") },
-  { value: "2", label: t("opt.docPermit") },
-  { value: "3", label: t("opt.docVisa") },
-  { value: "4", label: t("opt.docPass") },
-  { value: "5", label: t("opt.docOther") },
+  { value: "1", label: t("opt.travelEtd") },
+  { value: "2", label: t("opt.travelCoi") },
+  { value: "3", label: t("opt.travelGeneva") },
+  { value: "4", label: t("opt.travelLaissez") },
+  { value: "5", label: t("opt.travelOther") },
 ];
 
 /**

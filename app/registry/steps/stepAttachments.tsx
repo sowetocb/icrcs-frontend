@@ -54,6 +54,10 @@ export default function StepAttachments() {
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
+  // Reactive view of what's already uploaded (this session OR re-hydrated from
+  // GET /stage8) so previously-uploaded files always show as done, even when
+  // they arrive after this component first mounted.
+  const savedByType = new Map(saved.map((a) => [a.typeId, a]));
   // Track which document types already have an upload from a prior stage (1-6)
   // or from the current session. These are "locked" — the user can replace the
   // file but cannot un-tick the checkbox (the document is already committed).
@@ -122,7 +126,7 @@ export default function StepAttachments() {
    * mandatory OR was already uploaded in a prior stage (1-6). The user can
    * still replace the file via the upload button, but cannot remove it. */
   function isCheckboxLocked(typeId: number, mandatory: boolean): boolean {
-    return mandatory || lockedTypes.has(typeId);
+    return mandatory || lockedTypes.has(typeId) || savedByType.has(typeId);
   }
 
   function toggle(typeId: number, mandatory: boolean) {
@@ -136,8 +140,11 @@ export default function StepAttachments() {
 
       <ul className="space-y-3">
         {ATTACHMENT_TYPES.map((type) => {
-          const isTicked = !!ticked[type.id];
-          const row = rows[type.id] ?? { status: "idle" as Status };
+          const savedAtt = savedByType.get(type.id);
+          const isTicked = !!ticked[type.id] || !!savedAtt;
+          const row =
+            rows[type.id] ??
+            (savedAtt ? { status: "done" as Status, name: savedAtt.name } : { status: "idle" as Status });
           return (
             <li key={type.id} className="rounded-xl border border-line bg-card p-4">
               <div className="flex flex-wrap items-center gap-3">
