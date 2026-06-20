@@ -46,14 +46,23 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         </Field>
       </div>
 
-      {/* DOB + Gender + Phone */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.dob")} optional>
+      {/* Date of Birth · Place of Birth · Phone (rightmost). Place of Birth sits
+          beside the birth date — and apart from Residence — so the two cascades
+          can't be confused. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        <Field label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
         </Field>
-        {/* <Field label={t("fields.gender")} required>
-          <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
-        </Field> */}
+        <Field label={t("fields.placeOfBirthRdw")} required>
+          <div className="space-y-3">
+            <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
+            {pobIsForeign && (
+              <Field label={t("fields.phVillage")}>
+                <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+              </Field>
+            )}
+          </div>
+        </Field>
         <Field label={t("fields.phone")} optional>
           <PhoneInput name={`${prefix}Phone`} />
         </Field>
@@ -74,29 +83,17 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         )}
       </div>
 
-      {/* Place of Birth + Residence side by side */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Field label={t("fields.placeOfBirthRdw")} required>
-          <div className="space-y-3">
-            <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-            {pobIsForeign && (
-              <Field label={t("fields.phVillage")}>
-                <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
-              </Field>
-            )}
-          </div>
-        </Field>
-        <Field label={t("fields.residence")} required>
-          <div className="space-y-3">
-            <WardCascade prefix={`${prefix}Res`} showStreet />
-            {resIsForeign && (
-              <Field label={t("fields.phCity")}>
-                <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
-              </Field>
-            )}
-          </div>
-        </Field>
-      </div>
+      {/* Residence — its own full-width section, clearly separated from Place of Birth */}
+      <Field label={t("fields.residence")} required>
+        <div className="space-y-3">
+          <WardCascade prefix={`${prefix}Res`} showStreet />
+          {resIsForeign && (
+            <Field label={t("fields.phCity")}>
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
+            </Field>
+          )}
+        </div>
+      </Field>
     </div>
   );
 }

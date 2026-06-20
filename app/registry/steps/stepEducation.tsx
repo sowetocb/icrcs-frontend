@@ -11,6 +11,17 @@ const MIN_SCHOOLS = 1;
 // Per-school field suffixes — used to clear a removed/cleared school.
 const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo"];
 
+// Occupations relevant when the employment status is "Employed" — the occupation
+// lookup is filtered to these (matched against the option label, case-insensitive).
+const EMPLOYED_OCCUPATIONS = [
+  "private",
+  "lawyer",
+  "accountant",
+  "driver",
+  "artisan",
+  "military police",
+];
+
 function SchoolBlock({
   n,
   levelOptions,
@@ -66,6 +77,11 @@ export default function StepEducation() {
   const { t } = useI18n();
   const { data, set, isFirstPerson } = useWizard();
   const occupations = useOccupationTypeOptions();
+  // When "Employed" is chosen, only these occupations are relevant — the rest of
+  // the lookup is hidden.
+  const employedOccupations = occupations.filter((o) =>
+    EMPLOYED_OCCUPATIONS.some((a) => o.label.toLowerCase().includes(a)),
+  );
   const jobStatuses = useEmploymentStatusOptions();
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
@@ -180,7 +196,7 @@ export default function StepEducation() {
           {data.jobStatus === "Employed" && (
             <>
               <Field label={t("fields.occupation")} required>
-                <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
+                <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
               </Field>
               <Field label={t("fields.employer")} required>
                 <TextInput name="employer" placeholder="Tanzania Revenue Authority" />

@@ -33,6 +33,7 @@ import {
   getStageData,
 } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
+import { stageToForm } from "@/lib/registry/stageToForm";
 import { missingFieldLabels } from "@/lib/registry/fieldLabels";
 import { resolveGenderCode } from "@/lib/api/lookup";
 import { SessionExpiredError } from "@/lib/api/auth";
@@ -87,9 +88,11 @@ const REQUIRED_FIELDS: string[][] = [
   [
     ...nameFields("father"),
     "fatherGender",
+    "fatherDob",
     "fatherNatCountry",
     ...nameFields("mother"),
     "motherGender",
+    "motherDob",
     "motherNatCountry",
   ],
   // Step 4: Education & Employment — employment status is mandatory (the backend
@@ -276,7 +279,7 @@ export default function RegistryWizard({
     (async () => {
       const raw = await getStageData(subjectId, step);
       if (!raw || cancelled) return;
-      const mapped = await reviewToForm(raw);
+      const mapped = await stageToForm(step, raw);
       if (cancelled || Object.keys(mapped).length === 0) return;
       setData((d) => {
         const next = { ...d };

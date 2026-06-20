@@ -357,48 +357,54 @@ export async function editStage1(
 // Stage 2 — Address
 // ──────────────────────────────────────────────────────────────────────────────
 
+/** The current address country (the form copies the permanent one into it when
+ * "same as permanent" is ticked). It drives the Stage 2 endpoint + which current
+ * fields are sent. */
+const stage2CurrentCountry = (data: Data) =>
+  str(data, "curCountry") || str(data, "permCountry");
+
 async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> {
   const sameAsCurrent = data.sameAsPerm === true;
+  const currentIsTz = isTanzania(stage2CurrentCountry(data));
+  const permIsTz = isTanzania(str(data, "permCountry"));
 
-  // Foreign address: the /stage2/foreign endpoint takes just ISO country codes +
-  // a free-text city (no house number / postal code). When the current address
-  // mirrors the permanent one, only the current side is sent.
-  if (!isTanzania(str(data, "permCountry"))) {
-    const payload: Record<string, unknown> = {
-      currentCountryCode: await resolveCountryCode(
-        str(data, "curCountry") || str(data, "permCountry"),
-      ),
-      currentCity: str(data, "curCity") || str(data, "permCity") || null,
-      permanentSameAsCurrent: sameAsCurrent,
-    };
-    if (!sameAsCurrent) {
+  const payload: Record<string, unknown> = {
+    permanentSameAsCurrent: sameAsCurrent,
+  };
+
+  // ── Current address — Tanzania pins the location via the street/ward ids;
+  // abroad sends an ISO country code + free-text city. ──
+  if (currentIsTz) {
+    payload.currentStreetId = wardId(data, "curStreetId");
+    payload.currentWardId = wardId(data, "curWardId");
+    payload.currentHouseNumber = str(data, "curHouseNumber") || str(data, "curStreet") || null;
+    payload.currentPostalCode = str(data, "curPostalCode") || str(data, "curPostal") || null;
+  } else {
+    payload.currentCountryCode = await resolveCountryCode(stage2CurrentCountry(data));
+    payload.currentCity = str(data, "curCity") || null;
+  }
+
+  // ── Permanent address — only when it differs from the current one. Its own
+  // country decides whether it's a TZ street id or a foreign country + city. ──
+  if (!sameAsCurrent) {
+    if (permIsTz) {
+      payload.permanentStreetId = wardId(data, "permStreetId");
+      payload.permanentWardId = wardId(data, "permWardId");
+      payload.permanentHouseNumber = str(data, "permHouseNumber") || str(data, "permStreet") || null;
+      payload.permanentPostalCode = str(data, "permPostalCode") || str(data, "permPostal") || null;
+    } else {
       payload.permanentCountryCode = await resolveCountryCode(str(data, "permCountry"));
       payload.permanentCity = str(data, "permCity") || null;
     }
-    return payload;
   }
 
-  const payload: Record<string, unknown> = {
-    currentWardId: wardId(data, "curWardId"),
-    // Street / Mtaa id from the cascade (guide: `currentStreetId`).
-    currentStreetId: wardId(data, "curStreetId"),
-    currentHouseNumber: str(data, "curHouseNumber") || str(data, "curStreet") || null,
-    currentPostalCode: str(data, "curPostalCode") || str(data, "curPostal") || null,
-    permanentSameAsCurrent: sameAsCurrent,
-  };
-  if (!sameAsCurrent) {
-    payload.permanentWardId = wardId(data, "permWardId");
-    payload.permanentStreetId = wardId(data, "permStreetId");
-    payload.permanentHouseNumber = str(data, "permHouseNumber") || str(data, "permStreet") || null;
-    payload.permanentPostalCode = str(data, "permPostalCode") || str(data, "permPostal") || null;
-  }
   return payload;
 }
 
-/** Stage 2 is split by the permanent address country: in Tanzania → /domestic,
+/** Stage 2 is split by the CURRENT address country: in Tanzania → /domestic,
  * abroad → /foreign. There is no bare /stage2 endpoint. */
 const stage2Suffix = (data: Data) =>
-  isTanzania(str(data, "permCountry")) ? "/domestic" : "/foreign";
+  isTanzania(stage2CurrentCountry(data)) ? "/domestic" : "/foreign";
 
 export async function submitStage2(subjectId: string, data: Data): Promise<unknown> {
   const payload = await buildStage2Payload(data);
@@ -434,6 +440,7 @@ async function buildParentPayload(data: Data, prefix: string): Promise<Record<st
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`),
     lastName: str(data, `${prefix}Last`),
+    dateOfBirth: str(data, `${prefix}Dob`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
     // API expects the ISO country CODE (e.g. "TZA"), not the lookup id.
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),

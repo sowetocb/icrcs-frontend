@@ -112,8 +112,15 @@ export const useGenderOptions = (): Opt[] => {
   if (!items.length) return genderOptions(t);
   return items.map((i) => ({ value: i.code ?? String(i.id), label: i.name }));
 };
-export const useMarriageOptions = () =>
-  useLocalizedOptions(getMaritalStatuses, marriageOptions, "code");
+// Marital status renders the exact label returned by the lookup API (e.g.
+// "Sijaoa / Sijaolewa (Single)"); the option value stays the enum code the
+// backend payload resolves to an id.
+export const useMarriageOptions = (): Opt[] => {
+  const { t } = useI18n();
+  const { options: items } = useLookup(getMaritalStatuses, []);
+  if (!items.length) return marriageOptions(t);
+  return items.map((i) => ({ value: i.code ?? String(i.id), label: i.name }));
+};
 export const useCitizenshipTypeOptions = () =>
   useLocalizedOptions(getCitizenshipTypes, citizenshipTypeIdOptions, "id");
 export const useRelationshipTypeOptions = () =>
