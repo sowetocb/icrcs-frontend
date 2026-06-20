@@ -262,7 +262,7 @@ export default function PrintableForm({
       </Section>
 
       {/* ─── Section 4: Education & Employment ─── */}
-      <Section title={tr("4. Education & Employment:", "4. Elimu na Ajira:")} breakBefore>
+      <Section title={tr("4. Education & Employment:", "4. Elimu na Ajira:")}>
         <SubTitle>{tr("Education", "Elimu")}</SubTitle>
         {neverAttendedSchool ? (
           <Row
@@ -386,7 +386,7 @@ export default function PrintableForm({
       </Section>
 
       {/* ─── Section 9: Witness to the Applicant (print only, blank) ─── */}
-      <Section title={tr("8. Witness to the Applicant:", "8. Shuhuda kwa Mwombaji:")} breakBefore>
+      <Section title={tr("8. Witness to the Applicant:", "8. Shuhuda kwa Mwombaji:")}>
         <Row label={tr("Full Name", "Jina Kamili")} value="" keepEmpty />
         <Row label={tr("Occupation / Title", "Kazi / Cheo")} value="" keepEmpty />
         <Row label={tr("Address", "Anwani")} value="" keepEmpty />
@@ -449,18 +449,9 @@ export default function PrintableForm({
 
 /* ─── Helper Components ─── */
 
-function Section({
-  title,
-  children,
-  breakBefore = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  /** Force this section onto a fresh printed page (avoids splitting it). */
-  breakBefore?: boolean;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className={breakBefore ? "page-break" : undefined}>
+    <section>
       <h2>{title}</h2>
       <div className="section-body">{children}</div>
     </section>

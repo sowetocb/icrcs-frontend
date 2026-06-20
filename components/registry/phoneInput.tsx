@@ -59,7 +59,9 @@ export default function PhoneInput({ name }: { name: string }) {
   function commit(dial: string, natDigits: string) {
     // Strip leading zeros — users often type local-format numbers (e.g.
     // "0624839009") but the stored value must be international (+255 624 839 009).
-    const trimmed = natDigits.replace(/^0+/, "");
+    let trimmed = natDigits.replace(/^0+/, "");
+    // Tanzanian MNO numbers are 9 national digits (merged onto +255); cap there.
+    if (country.code === "TZ") trimmed = trimmed.slice(0, 9);
     // Store empty when no national digits so the field still reads as "required".
     set(name, trimmed ? `${dial} ${chunk(trimmed)}` : "");
   }

@@ -93,7 +93,13 @@ export async function resendOtp(
     await delay(400);
     return { preAuthToken: currentPreAuthToken || "mock-pre-auth-token" };
   }
-  const raw = (await apiPost("/v1/auth/resend-otp", { email })) as Record<string, unknown>;
+  // Authorise the resend with the registration pre-auth token (same as verify);
+  // without it the backend rejects the request with 403.
+  const raw = (await apiPost(
+    "/v1/auth/resend-otp",
+    { email },
+    currentPreAuthToken || undefined,
+  )) as Record<string, unknown>;
   const data = (raw?.data ?? raw ?? {}) as Record<string, unknown>;
   return { preAuthToken: String(data.preAuthToken ?? "") || currentPreAuthToken };
 }
