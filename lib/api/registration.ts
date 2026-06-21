@@ -256,7 +256,12 @@ async function buildStage1Payload(
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
     birthCertificateNo: numOrStr(data, "birthCertNo"),
-    nidaNo: numOrStr(data, "nidaNumber"),
+    // The number maps to the backend's NIDA field only when NIDA is the chosen
+    // document type; other document types (voter / TIN / driving licence) need a
+    // dedicated backend field before they can be persisted.
+    nidaNo: str(data, "idDocType") === "nida" || !str(data, "idDocType")
+      ? numOrStr(data, "nidaNumber")
+      : null,
   };
 
   if (bornInTanzania) {
@@ -509,6 +514,9 @@ async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<s
     for (let i = 1; i <= count; i++) {
       const p = `edu${i}`;
       if (!str(data, `${p}School`)) continue;
+      // "Completed" drives the year: a completed level carries its completion
+      // year; a level still in progress sends null.
+      const completed = data[`${p}Completed`] === true;
       educationList.push({
         educationLevelId: intOrNull(data, `${p}Level`) ?? 1,
         // Schools are captured as Tanzanian; the backend expects the ISO code.
@@ -516,8 +524,8 @@ async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<s
         city: str(data, `${p}District`) || null,
         schoolName: str(data, `${p}School`),
         registrationNumber: str(data, `${p}IndexNo`) || null,
-        isCompleted: true,
-        completionYear: intOrNull(data, `${p}Year`),
+        isCompleted: completed,
+        completionYear: completed ? intOrNull(data, `${p}Year`) : null,
       });
     }
   }

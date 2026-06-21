@@ -9,7 +9,7 @@ import { getEducationLevels, toOptions, type LookupItem } from "@/lib/api/lookup
 const MIN_SCHOOLS = 1;
 
 // Per-school field suffixes — used to clear a removed/cleared school.
-const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo"];
+const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo", "Completed"];
 
 // Occupations relevant when the employment status is "Employed" — the occupation
 // lookup is filtered to these (matched against the option label, case-insensitive).
@@ -33,7 +33,9 @@ function SchoolBlock({
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
+  const { data, set } = useWizard();
   const p = `edu${n}`;
+  const completed = data[`${p}Completed`] === true;
   return (
     <div className="space-y-4 rounded-xl border border-line bg-card p-5">
       <div className="flex items-center justify-between">
@@ -53,16 +55,34 @@ function SchoolBlock({
         <Field label={t("fields.eduLevel")} required>
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
-        <Field label={t("fields.completionYear")} optional>
-          <TextInput
-            name={`${p}Year`}
-            placeholder="2014"
-            numeric
-            maxLength={4}
-            min={1900}
-            max={new Date().getFullYear()}
-          />
-        </Field>
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-center gap-2 pt-1 sm:pt-7">
+            <input
+              type="checkbox"
+              checked={completed}
+              onChange={(e) => {
+                set(`${p}Completed`, e.target.checked);
+                // Clear the year when the level is no longer marked completed
+                // (the payload sends completionYear: null in that case).
+                if (!e.target.checked) set(`${p}Year`, "");
+              }}
+              className="h-4 w-4 shrink-0 rounded border-line accent-navy-700"
+            />
+            <span className="text-sm font-medium text-ink">{t("fields.eduCompleted")}</span>
+          </label>
+          {completed && (
+            <Field label={t("fields.completionYear")} required>
+              <TextInput
+                name={`${p}Year`}
+                placeholder="2014"
+                numeric
+                maxLength={4}
+                min={1900}
+                max={new Date().getFullYear()}
+              />
+            </Field>
+          )}
+        </div>
       </div>
 
       <Field label={t("fields.schoolName")} required>

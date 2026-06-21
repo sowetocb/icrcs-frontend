@@ -677,16 +677,17 @@ export default function RegistryWizard({
     if (step === 4 && data.neverAttendedSchool !== true) {
       const filled = (n: string) =>
         typeof data[n] === "string" && (data[n] as string).trim() !== "";
-      const hasSchool =
-        filled("edu1Level") &&
-        filled("edu1School") &&
-        filled("edu1Year") &&
-        filled("edu1District") &&
-        filled("edu1IndexNo");
-      if (!hasSchool) {
-        const missing = ["edu1Level", "edu1School", "edu1Year", "edu1District", "edu1IndexNo"].filter(
-          (n) => !filled(n),
-        );
+      // Primary school (edu1) needs level, name and city; index number is
+      // optional. The completion year is required only for a level marked
+      // completed — for the primary school and any started extra school.
+      const missing = ["edu1Level", "edu1School", "edu1District"].filter((n) => !filled(n));
+      const count = Math.max(1, Number(data.eduCount) || 1);
+      for (let i = 1; i <= count; i++) {
+        const p = `edu${i}`;
+        if (i > 1 && !filled(`${p}School`)) continue;
+        if (data[`${p}Completed`] === true && !filled(`${p}Year`)) missing.push(`${p}Year`);
+      }
+      if (missing.length > 0) {
         setErrors(missing);
         setFieldErrors({});
         setFormError(t("registry.schoolRequired"));

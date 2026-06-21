@@ -593,12 +593,17 @@ const en = {
     indexNo: "Index Number", // REVIEW
     docType: "Document Type", // REVIEW
     docNumber: "Document Number", // REVIEW
+    idDocNida: "NIDA Number",
+    idDocVoter: "Voters ID",
+    idDocTin: "TIN Number",
+    idDocDriving: "Driving License",
     docNumberReq: "Document number is required", // REVIEW
     docFile: "Document File", // REVIEW
     eduLevel: "Education Level", // REVIEW
     schoolName: "School Name", // REVIEW
     schoolDistrict: "City", // REVIEW
     completionYear: "Completion Year", // REVIEW
+    eduCompleted: "I have completed this level",
     employment: "Employment", // REVIEW
     employmentStatus: "Employment Status", // REVIEW
     employmentStatusOpt: "Employment Status", // REVIEW
@@ -623,6 +628,8 @@ const en = {
     addSpouse: "Add Spouse", // REVIEW
     addChild: "Add Child",
     addSchool: "Add School", // REVIEW
+    addDocument: "Add Document",
+    documentN: "Document {n}",
     remove: "Remove", // REVIEW
     required: "Required", // REVIEW
     photo: "Photo", // REVIEW
@@ -1373,12 +1380,17 @@ const sw: typeof en = {
     indexNo: "Namba ya Mtihani", // REVIEW
     docType: "Aina ya Hati", // REVIEW
     docNumber: "Namba ya Hati", // REVIEW
+    idDocNida: "Namba ya NIDA",
+    idDocVoter: "Kitambulisho cha Mpiga Kura",
+    idDocTin: "Namba ya TIN",
+    idDocDriving: "Leseni ya Udereva",
     docNumberReq: "Namba ya hati inahitajika", // REVIEW
     docFile: "Faili la Hati", // REVIEW
     eduLevel: "Kiwango cha Elimu", // REVIEW
     schoolName: "Jina la Shule", // REVIEW
     schoolDistrict: "Wilaya ya Shule", // REVIEW
     completionYear: "Mwaka wa Kumaliza", // REVIEW
+    eduCompleted: "Nimemaliza kiwango hiki",
     employment: "Ajira", // REVIEW
     employmentStatus: "Hali ya Ajira", // REVIEW
     employmentStatusOpt: "Hali ya Ajira (hiari)", // REVIEW

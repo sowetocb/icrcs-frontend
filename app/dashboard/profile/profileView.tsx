@@ -152,7 +152,15 @@ export default function ProfileView() {
 
   function setField(name: keyof typeof form, value: string) {
     dirtyRef.current = true;
-    setForm((f) => ({ ...f, [name]: value }));
+    let next = value;
+    // Names accept letters only (plus spaces, hyphens, apostrophes); the phone
+    // accepts digits and a leading "+" only.
+    if (name === "firstName" || name === "middleName" || name === "lastName") {
+      next = value.replace(/[^\p{L} '-]/gu, "");
+    } else if (name === "phoneNumber") {
+      next = value.replace(/[^\d+\s]/g, "");
+    }
+    setForm((f) => ({ ...f, [name]: next }));
   }
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {

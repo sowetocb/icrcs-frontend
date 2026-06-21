@@ -108,6 +108,8 @@ export default function StepPersonal() {
   const pobCountry = typeof data.pobCountry === "string" ? (data.pobCountry as string).trim() : "";
   const bornInTanzania = pobCountry === "Tanzania";
   const bornAbroad = pobCountry !== "" && !bornInTanzania;
+  // Selected identification document type drives the number field's format.
+  const idDocType = typeof data.idDocType === "string" ? data.idDocType : "";
 
   return (
     <div className="space-y-5">
@@ -142,15 +144,37 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      {/* Nationality + optional NIDA. */}
+      {/* Nationality + optional identification document (type + number). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
           <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
         </Field>
-        <Field label={t("fields.nidaNumber")} optional>
-          <TextInput name="nidaNumber" placeholder="12345678901234567890" maxLength={20} numeric />
+        <Field label={t("fields.docType")} optional>
+          <Select
+            name="idDocType"
+            placeholder={t("fields.phSelect")}
+            options={[
+              { value: "nida", label: t("fields.idDocNida") },
+              { value: "voter", label: t("fields.idDocVoter") },
+              { value: "tin", label: t("fields.idDocTin") },
+              { value: "driving", label: t("fields.idDocDriving") },
+            ]}
+          />
         </Field>
       </div>
+      {idDocType && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t("fields.docNumber")} optional>
+            {/* NIDA is exactly 20 digits — restrict to a numeric keypad and cap
+                the length; other documents are free-form. */}
+            {idDocType === "nida" ? (
+              <TextInput name="nidaNumber" placeholder="12345678901234567890" numeric maxLength={20} />
+            ) : (
+              <TextInput name="nidaNumber" placeholder="e.g. AB123456" />
+            )}
+          </Field>
+        </div>
+      )}
 
       <Field label={t("fields.placeOfBirth")} required>
         {/* Single country picker (lookup-connected, with flag). The Region/

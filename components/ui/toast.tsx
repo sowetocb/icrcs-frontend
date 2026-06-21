@@ -44,14 +44,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const notify = useCallback((message: string, variant: Variant = "success") => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, message, variant }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
   }, []);
 
   return (
     <ToastContext.Provider value={{ notify }}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 top-4 z-[200] flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-[200] flex flex-col items-center gap-2 px-4"
         aria-live="polite"
         role="status"
       >
