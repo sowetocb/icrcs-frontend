@@ -8,7 +8,6 @@ import {
   useMarriageOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
-  documentTypeOptions,
 } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
@@ -83,19 +82,6 @@ function PersonFields({ prefix }: { prefix: string }) {
         <Field label={t("fields.nationality")} required>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountry")} />
         </Field>
-        <Field label={t("fields.docType")} optional>
-          <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
-        </Field>
-        {data[`${prefix}DocType`] && (
-          <Field label={t("fields.docNumber")} optional>
-            {/* NIDA (document type "1") is exactly 20 digits. */}
-            {data[`${prefix}DocType`] === "1" ? (
-              <TextInput name={`${prefix}DocNumber`} placeholder="12345678901234567890" numeric maxLength={20} />
-            ) : (
-              <TextInput name={`${prefix}DocNumber`} placeholder={t("fields.phDocNumber")} />
-            )}
-          </Field>
-        )}
       </div>
 
       {/* Place of Birth and Residence are stacked (not side by side) so the two

@@ -64,13 +64,9 @@ export default function ProfilePhoneInput({
 
   function commit(dial: string, natDigits: string) {
     // Strip leading zeros — users type local-format numbers (e.g. "0786849280")
-    // but the stored value must be international ("+255786849280").
+    // but the stored value must be international ("+255786849280"). Length is
+    // validated per country from the phone-length guide; no leading-digit rule.
     let trimmed = natDigits.replace(/^0+/, "");
-    if (country.code === "TZ") {
-      // Tanzanian mobile numbers start with 6 or 7 after +255 — block any other
-      // leading digit so the field can't hold an invalid prefix.
-      while (trimmed && trimmed[0] !== "6" && trimmed[0] !== "7") trimmed = trimmed.slice(1);
-    }
     // Cap the national number to the selected country's maximum length.
     trimmed = trimmed.slice(0, phoneLengthForDial(country.dial).max);
     onChange(trimmed ? `${dial}${trimmed}` : "");

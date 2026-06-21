@@ -55,6 +55,15 @@ const SUFFIX: Record<string, string> = {
   ResCity: "sResCity",
 };
 
+// Education repeater field suffix → its `fields.*` i18n label key.
+const EDU_FIELD_KEYS: Record<string, string> = {
+  Level: "eduLevel",
+  School: "schoolName",
+  Year: "completionYear",
+  District: "schoolDistrict",
+  IndexNo: "indexNo",
+};
+
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -80,6 +89,12 @@ export function fieldLabel(name: string, t: Translate): string {
   m = name.match(/^applicant([A-Za-z]+)$/);
   if (m && SUFFIX[m[1]]) {
     return capitalize(t(`flabel.${SUFFIX[m[1]]}`));
+  }
+
+  // Education repeater — "edu1Year", "edu2School", … → the field's own label.
+  m = name.match(/^edu\d+([A-Za-z]+)$/);
+  if (m && EDU_FIELD_KEYS[m[1]]) {
+    return t(`fields.${EDU_FIELD_KEYS[m[1]]}`);
   }
 
   return t("flabel.fallback");

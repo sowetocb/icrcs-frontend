@@ -120,3 +120,20 @@ export function phoneLengthForDial(dial: string): PhoneLength {
   const code = Number(dial.replace(/\D/g, ""));
   return PHONE_LENGTHS[code] ?? DEFAULT_LENGTH;
 }
+
+/** Whether a stored phone ("+255 736 437 1") has a national-number length valid
+ * for its country. Empty values are treated as valid (required-ness is enforced
+ * separately). When the dialing code can't be matched, it isn't flagged. */
+export function isPhoneComplete(stored: string): boolean {
+  const digits = stored.replace(/\D/g, "");
+  if (!digits) return true;
+  // Longest dialing-code prefix match → the national digits are the remainder.
+  let best = 0;
+  for (const code of Object.keys(PHONE_LENGTHS)) {
+    if (digits.startsWith(code) && code.length > best) best = code.length;
+  }
+  if (best === 0) return true;
+  const nationalLen = digits.length - best;
+  const { min, max } = PHONE_LENGTHS[Number(digits.slice(0, best))];
+  return nationalLen >= min && nationalLen <= max;
+}

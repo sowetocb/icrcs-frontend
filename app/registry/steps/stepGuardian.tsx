@@ -96,7 +96,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       <div className="space-y-3">
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`${prefix}IdDoc${n}Type`] === "string" ? (data[`${prefix}IdDoc${n}Type`] as string) : "";
-          const isNida = idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase() === "NIDA";
+          const isNida = !!idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase().includes("NIDA");
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (

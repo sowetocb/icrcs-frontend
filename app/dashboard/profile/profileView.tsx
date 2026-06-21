@@ -6,7 +6,6 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import {
   updateProfile,
   uploadProfilePicture,
-  deleteProfilePicture,
   refreshMyProfile,
   fetchProfilePicture,
   SessionExpiredError,
@@ -83,7 +82,6 @@ export default function ProfileView() {
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -240,30 +238,6 @@ export default function ProfileView() {
     }
   }
 
-  async function handleRemovePhoto() {
-    setError("");
-    setNotice("");
-    setRemoving(true);
-    try {
-      await deleteProfilePicture();
-      const next: Profile = {
-        ...(profile ?? ({} as Profile)),
-        profilePictureUrl: "",
-      };
-      saveProfile(next);
-      setProfile(next);
-      clearPhotoDataUrl(next);
-      setPreview(null);
-      setPhotoFailed(false);
-      setNotice(t("profile.photoRemoved"));
-    } catch (err) {
-      if (!redirectIfExpired(err))
-        setError(getErrorMessage(err, t("profile.photoError")));
-    } finally {
-      setRemoving(false);
-    }
-  }
-
   const hasPhoto = Boolean(photoSrc);
 
   return (
@@ -300,23 +274,12 @@ export default function ProfileView() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading || removing}
+              disabled={uploading}
               className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:opacity-70"
             >
               {uploading && <Spinner />}
               {uploading ? t("profile.uploading") : t("Change Profile Photo")}
             </button>
-            {hasPhoto && (
-              <button
-                type="button"
-                onClick={handleRemovePhoto}
-                disabled={uploading || removing}
-                className="inline-flex items-center gap-2 rounded-lg border border-line px-3.5 py-2 text-sm font-semibold text-muted transition hover:border-danger hover:text-danger disabled:opacity-70"
-              >
-                {removing && <Spinner />}
-                {removing ? t("profile.removing") : t("Delete Profile Photo")}
-              </button>
-            )}
           </div>
           <p className="mt-2 text-xs text-muted">{t("profile.photoHint")}</p>
           <input

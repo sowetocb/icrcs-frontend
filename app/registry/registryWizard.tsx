@@ -36,7 +36,8 @@ import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
 import { useToast } from "@/components/ui/toast";
-import { resolveGenderCode } from "@/lib/api/lookup";
+import { resolveGenderCode, getPersonDocumentTypes, type PersonGroup } from "@/lib/api/lookup";
+import { isPhoneComplete } from "@/lib/phoneLengths";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
@@ -596,6 +597,57 @@ export default function RegistryWizard({
     notify(message, "error");
   }
 
+  // Validate that any NIDA document in an identification-documents repeater is
+  // exactly 20 digits. The repeater stores each document's documentTypeId as its
+  // type value, so the NIDA id is resolved from the lookup per person group.
+  // Returns the offending field name, or null when all NIDA numbers are valid.
+  async function nidaLengthError(
+    groups: { group: PersonGroup; prefix: string }[],
+  ): Promise<string | null> {
+    let types;
+    try {
+      types = await getPersonDocumentTypes();
+    } catch {
+      return null;
+    }
+    for (const { group, prefix } of groups) {
+      const nidaId = types[group].find((d) => (d.code ?? "").toUpperCase().includes("NIDA"))?.id;
+      if (!nidaId) continue;
+      const fieldPrefix = prefix ? `${prefix}IdDoc` : "idDoc";
+      const countKey = prefix ? `${prefix}IdDocCount` : "idDocCount";
+      const count = Math.max(1, Number(String(data[countKey] ?? "")) || 1);
+      for (let i = 1; i <= count; i++) {
+        if (Number(String(data[`${fieldPrefix}${i}Type`] ?? "")) !== nidaId) continue;
+        const num = String(data[`${fieldPrefix}${i}Number`] ?? "").trim();
+        if (num && num.length !== 20) return `${fieldPrefix}${i}Number`;
+      }
+    }
+    return null;
+  }
+
+  // Phone fields shown on the current stage (validated for a country-valid
+  // length on submit).
+  function stagePhoneFields(): string[] {
+    if (step === 1) return ["phone"];
+    if (step === 3) return ["fatherPhone", "motherPhone"];
+    if (step === 5) return ["ec1Phone", "ec2Phone"];
+    if (step === 6) {
+      const out: string[] = [];
+      const rel = Math.max(2, Number(String(data.relativeCount ?? "")) || 2);
+      for (let i = 1; i <= rel; i++) out.push(`rel${i}Phone`);
+      if (data.isMarried === true) {
+        const sp = Math.max(1, Number(String(data.spouseCount ?? "")) || 1);
+        for (let i = 1; i <= sp; i++) out.push(`sp${i}Phone`);
+      }
+      if (data.hasChildren === true) {
+        const ch = Math.max(1, Number(String(data.childCount ?? "")) || 1);
+        for (let i = 1; i <= ch; i++) out.push(`ch${i}Phone`);
+      }
+      return out;
+    }
+    return [];
+  }
+
   async function handlePrimary(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (isLast) {
@@ -663,13 +715,40 @@ export default function RegistryWizard({
       }
 
       // NIDA (optional) must be exactly 20 digits when provided.
-      const nida = typeof data.nidaNumber === "string" ? data.nidaNumber.trim() : "";
-      if (nida && nida.length !== 20) {
-        setErrors(["nidaNumber"]);
-        setFieldErrors({ nidaNumber: t("registry.nidaExactDigits") });
+      const nidaField = await nidaLengthError([{ group: "applicant", prefix: "" }]);
+      if (nidaField) {
+        setErrors([nidaField]);
+        setFieldErrors({ [nidaField]: t("registry.nidaExactDigits") });
         setFormError("");
         return;
       }
+    }
+
+    // Stage 3 — each parent's NIDA document must be exactly 20 digits when given.
+    if (step === 3) {
+      const nidaField = await nidaLengthError([
+        { group: "father", prefix: "father" },
+        { group: "mother", prefix: "mother" },
+      ]);
+      if (nidaField) {
+        setErrors([nidaField]);
+        setFieldErrors({ [nidaField]: t("registry.nidaExactDigits") });
+        setFormError("");
+        return;
+      }
+    }
+
+    // Every phone field on this stage must be a valid number for its country —
+    // reported at the exact field, not as a generic banner.
+    const badPhone = stagePhoneFields().find((f) => {
+      const v = typeof data[f] === "string" ? (data[f] as string) : "";
+      return v !== "" && !isPhoneComplete(v);
+    });
+    if (badPhone) {
+      setErrors([badPhone]);
+      setFieldErrors({ [badPhone]: t("fields.phoneInvalid") });
+      setFormError("");
+      return;
     }
 
     // Stage 4: if the user said they attended school, at least the primary
@@ -789,7 +868,10 @@ export default function RegistryWizard({
       const have = new Set(parseAttachments(data.attachments).map((a) => a.typeId));
       const missing = MANDATORY_ATTACHMENT_TYPE_IDS.filter((id) => !have.has(id));
       if (missing.length > 0) {
-        setFormError(t("registry.attachMandatoryRequired"));
+        // Flag each missing document at its own row (no generic banner).
+        setErrors(missing.map((id) => `attach${id}`));
+        setFieldErrors({});
+        setFormError("");
         return;
       }
     }

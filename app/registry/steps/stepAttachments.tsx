@@ -50,7 +50,7 @@ function readDataUrl(file: File): Promise<string> {
 
 export default function StepAttachments() {
   const { t } = useI18n();
-  const { data, set } = useWizard();
+  const { data, set, errors } = useWizard();
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
@@ -197,6 +197,11 @@ export default function StepAttachments() {
               {row.status === "error" && (
                 <p role="alert" className="mt-2 text-sm font-medium text-danger">
                   {row.error}
+                </p>
+              )}
+              {errors.includes(`attach${type.id}`) && row.status !== "done" && (
+                <p role="alert" className="mt-2 text-sm font-medium text-danger">
+                  {t("registry.attachRequiredField")}
                 </p>
               )}
             </li>
