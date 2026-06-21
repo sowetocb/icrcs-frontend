@@ -5,7 +5,7 @@ import Link from "next/link";
 import OtpInput from "@/components/ui/otpInput";
 import { useI18n } from "../i18n/localeProvider";
 import { forgotPassword, verifyResetOtp, resetPassword } from "@/lib/api/auth";
-import { getErrorMessage } from "@/lib/api/client";
+import { getErrorMessage, ApiError } from "@/lib/api/client";
 
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
 // (mirrors the create-profile OTP).
@@ -128,6 +128,7 @@ export default function ForgotFlow() {
     e.preventDefault();
     if (code.length < 6) {
       setOtpInvalid(true);
+      setError(t("forgot.otpIncomplete"));
       return;
     }
     if (!profileId) {
@@ -140,7 +141,12 @@ export default function ForgotFlow() {
       await verifyResetOtp(profileId, code);
       setStep(3);
     } catch (err) {
-      setError(getErrorMessage(err, t("forgot.error")));
+      // The only thing verified at this step is the OTP, so a failure means the
+      // code is wrong/expired — say so explicitly (never "wrong credentials").
+      // A genuine server/gateway outage still surfaces its own message.
+      setOtpInvalid(true);
+      const serverDown = err instanceof ApiError && err.status >= 500;
+      setError(serverDown ? getErrorMessage(err, t("forgot.error")) : t("forgot.otpIncorrect"));
     } finally {
       setSubmitting(false);
     }

@@ -13,6 +13,8 @@ import { addPerson, loadPeople, isSubmitted } from "./peopleStore";
 import { generateApplicationId, formatSubmittedDate } from "./applicationId";
 import { loadProfile } from "@/lib/auth/profile";
 import { getRegisteredPeople } from "@/lib/api/registry";
+import { useToast } from "@/components/ui/toast";
+import { useI18n } from "@/app/i18n/localeProvider";
 
 type Mode = "landing" | "gate" | "wizard" | "success";
 
@@ -22,6 +24,8 @@ export default function RegistryClient() {
   // type from `performance` is unreliable here: it reflects the original
   // document load, so a sidebar click after a refresh wrongly looked like a
   // reload and auto-resumed the wizard.)
+  const { notify } = useToast();
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("landing");
   // True when a verified non-citizen (foreign) profile is registering a
   // Tanzanian-origin minor rather than themselves.
@@ -185,6 +189,7 @@ export default function RegistryClient() {
         .join(" ") || "—";
     addPerson({ applicationId: id, submittedDate: date, name, isCreator, status: "submitted", data });
     setSubmission({ id, date, data });
+    notify(t(registeringMinor ? "toast.minorRegistered" : "toast.registrationSubmitted"));
     setRegisteringMinor(false);
     setMode("success");
   }

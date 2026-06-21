@@ -36,14 +36,20 @@ const SUFFIX: Record<string, string> = {
   First: "sFirst",
   Middle: "sMiddle",
   Last: "sLast",
+  Dob: "sDob",
   Gender: "sGender",
   NatCountry: "sNatCountry",
   Phone: "sPhone",
   RelType: "sRelType",
   PobCountry: "sPobCountry",
+  PobRegion: "sPobRegion",
+  PobDistrict: "sPobDistrict",
   PobWard: "sPobWard",
+  PobStreet: "sPobStreet",
   Village: "sVillage",
   ResCountry: "sResCountry",
+  ResRegion: "sResRegion",
+  ResDistrict: "sResDistrict",
   ResWard: "sResWard",
   ResStreet: "sResStreet",
   ResCity: "sResCity",
@@ -54,7 +60,7 @@ function capitalize(s: string): string {
 }
 
 /** Resolve a single field name to a readable label. */
-function fieldLabel(name: string, t: Translate): string {
+export function fieldLabel(name: string, t: Translate): string {
   if (EXACT.has(name)) return t(`flabel.${name}`);
 
   // Spouse / child — "sp1First", "ch2ResWard".

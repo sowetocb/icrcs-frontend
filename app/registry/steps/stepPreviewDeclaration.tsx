@@ -75,13 +75,23 @@ function PreviewSection({
   );
 }
 
-function PreviewRow({ label, value }: { label: string; value: string }) {
+function PreviewRow({
+  label,
+  value,
+  preserveCase = false,
+}: {
+  label: string;
+  value: string;
+  /** Keep the original casing (e.g. email addresses); everything else renders
+   * in CAPITALS, matching the all-uppercase data returned by the preview API. */
+  preserveCase?: boolean;
+}) {
   // Empty fields are omitted from the preview entirely.
   if (!value || !value.trim()) return null;
   return (
     <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4">
       <dt className="text-xs font-medium text-muted">{label}</dt>
-      <dd className="text-sm text-ink">{value}</dd>
+      <dd className={`text-sm text-ink${preserveCase ? "" : " uppercase"}`}>{value}</dd>
     </div>
   );
 }
@@ -221,11 +231,11 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.district")} value={titleCase(s("pobDistrict"))} />
         <PreviewRow label={t("preview.ward")} value={titleCase(s("pobWard"))} />
         <PreviewRow label={t("preview.street")} value={titleCase(s("pobStreet"))} />
-        <PreviewRow label={t("preview.villageStreet")} value={s("pobVillage")} />
+        <PreviewRow label={t("preview.villageStreet")} value={s("pobCityVillage")} />
         <PreviewRow label={t("preview.birthCertNo")} value={s("birthCertNo")} />
         <PreviewRow label={t("preview.maritalStatus")} value={maritalLabel(s("marriage"))} />
         <PreviewRow label={t("preview.phone")} value={s("phone")} />
-        <PreviewRow label={t("preview.email")} value={s("email")} />
+        <PreviewRow label={t("preview.email")} value={s("email")} preserveCase />
         {s("citizenshipTypeId") === "3" && (
           <>
             <PreviewSubTitle>{t("preview.naturalization")}</PreviewSubTitle>

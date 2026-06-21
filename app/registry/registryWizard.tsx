@@ -35,7 +35,7 @@ import {
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
-import { missingFieldLabels } from "@/lib/registry/fieldLabels";
+import { useToast } from "@/components/ui/toast";
 import { resolveGenderCode } from "@/lib/api/lookup";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
@@ -198,6 +198,7 @@ export default function RegistryWizard({
   onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
 }) {
   const { t } = useI18n();
+  const { notify } = useToast();
   const router = useRouter();
 
   // The first registration under a profile is the account holder themselves —
@@ -243,7 +244,6 @@ export default function RegistryWizard({
   const [formError, setFormError] = useState("");
   // Readable labels of the fields the user skipped on the current step, shown
   // so they know specifically what to go back and fill.
-  const [missingLabels, setMissingLabels] = useState<string[]>([]);
   const [applicationId, setApplicationId] = useState(
     () => resumable?.applicationId ?? "",
   );
@@ -346,7 +346,6 @@ export default function RegistryWizard({
       delete next[name];
       return next;
     });
-    setMissingLabels((l) => (l.length ? [] : l));
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
   };
 
@@ -474,7 +473,9 @@ export default function RegistryWizard({
       for (const p of ["father", "mother"]) {
         const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
         if (pobCountry === "Tanzania") {
-          required = [...required, `${p}PobWard`];
+          // Every level of the cascade is reported, so the user sees exactly
+          // which one is missing (region, district, ward, street).
+          required = [...required, `${p}PobRegion`, `${p}PobDistrict`, `${p}PobWard`, `${p}PobStreet`];
         } else if (pobCountry) {
           required = [...required, `${p}Village`];
         } else {
@@ -483,7 +484,7 @@ export default function RegistryWizard({
 
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -498,7 +499,7 @@ export default function RegistryWizard({
       for (const p of ["ec1", "ec2"]) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -514,7 +515,7 @@ export default function RegistryWizard({
       for (const p of ["rel1", "rel2"]) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -539,7 +540,6 @@ export default function RegistryWizard({
       setErrors([]);
       setFieldErrors({});
       setFormError("");
-      setMissingLabels([]);
       // If jumping backwards, record the current step so we can return after save.
       if (n < step) {
         setReturnStep(step);
@@ -572,6 +572,7 @@ export default function RegistryWizard({
 
   function saveExit() {
     persistDraft();
+    notify(t("toast.draftSaved"));
     router.push("/dashboard");
   }
 
@@ -590,7 +591,9 @@ export default function RegistryWizard({
       setFieldErrors(apiFieldErrors);
       setErrors(fieldKeys);
     }
-    setFormError(getErrorMessage(err, t("registry.submitError")));
+    const message = getErrorMessage(err, t("registry.submitError"));
+    setFormError(message);
+    notify(message, "error");
   }
 
   async function handlePrimary(e: React.FormEvent<HTMLFormElement>) {
@@ -614,17 +617,17 @@ export default function RegistryWizard({
     if (missing.length > 0) {
       setErrors(missing);
       setFieldErrors({});
-      setMissingLabels(missingFieldLabels(missing, t));
       setFormError("");
       return;
     }
     if (step === 1) {
+      // Each check below pins the message to its own field (no banner).
       // Email must be a valid format.
       const email = typeof data.email === "string" ? data.email.trim() : "";
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setErrors(["email"]);
         setFieldErrors({ email: t("form.emailInvalid") });
-        setFormError(t("form.emailInvalid"));
+        setFormError("");
         return;
       }
 
@@ -634,7 +637,7 @@ export default function RegistryWizard({
       if (phoneRaw && phoneDigits.length < 7) {
         setErrors(["phone"]);
         setFieldErrors({ phone: t("register.phoneInvalid") });
-        setFormError(t("register.phoneInvalid"));
+        setFormError("");
         return;
       }
 
@@ -642,20 +645,20 @@ export default function RegistryWizard({
       if (isFutureDate(dob)) {
         setErrors(["dob"]);
         setFieldErrors({ dob: t("registry.futureDateError") });
-        setFormError(t("registry.futureDateError"));
+        setFormError("");
         return;
       }
       const adult = isAtLeast18(dob);
       if (isFirstPerson && !adult) {
         setErrors(["dob"]);
         setFieldErrors({ dob: t("registry.ageError") });
-        setFormError(t("registry.ageError"));
+        setFormError("");
         return;
       }
       if (!isFirstPerson && adult) {
         setErrors(["dob"]);
         setFieldErrors({ dob: t("registry.minorError") });
-        setFormError(t("registry.minorError"));
+        setFormError("");
         return;
       }
 
@@ -664,7 +667,7 @@ export default function RegistryWizard({
       if (nida && nida.length !== 20) {
         setErrors(["nidaNumber"]);
         setFieldErrors({ nidaNumber: t("registry.nidaExactDigits") });
-        setFormError(t("registry.nidaExactDigits"));
+        setFormError("");
         return;
       }
     }
@@ -717,7 +720,7 @@ export default function RegistryWizard({
         if (!filled(`${p}First`)) continue;
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         const residence = resCountry === "Tanzania"
-          ? [`${p}ResWard`, `${p}ResStreet`]
+          ? [`${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`]
           : resCountry
             ? [`${p}ResCity`]
             : [`${p}ResCountry`];
@@ -730,9 +733,10 @@ export default function RegistryWizard({
           ...residence,
         ].filter((n) => !filled(n));
         if (missingSpouse.length > 0) {
+          // Each field reports its own explicit message inline (no banner).
           setErrors(missingSpouse);
           setFieldErrors({});
-          setFormError(t("registry.required"));
+          setFormError("");
           return;
         }
       }
@@ -756,7 +760,7 @@ export default function RegistryWizard({
         if (!filled(`${p}First`)) continue;
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         const residence = resCountry === "Tanzania"
-          ? [`${p}ResWard`, `${p}ResStreet`]
+          ? [`${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`]
           : resCountry
             ? [`${p}ResCity`]
             : [`${p}ResCountry`];
@@ -769,9 +773,10 @@ export default function RegistryWizard({
           ...residence,
         ].filter((n) => !filled(n));
         if (missingChild.length > 0) {
+          // Each field reports its own explicit message inline (no banner).
           setErrors(missingChild);
           setFieldErrors({});
-          setFormError(t("registry.required"));
+          setFormError("");
           return;
         }
       }
@@ -791,7 +796,6 @@ export default function RegistryWizard({
     setErrors([]);
     setFieldErrors({});
     setFormError("");
-    setMissingLabels([]);
 
     let sid = subjectId;
     let appId = applicationId;
@@ -883,6 +887,7 @@ export default function RegistryWizard({
       setSubmitting(false);
       updatedStages.add(step);
       setSubmittedStages(updatedStages);
+      notify(t("toast.stageSaved"));
     }
 
     // If the user jumped back to edit an earlier stage, return them to where
@@ -928,7 +933,6 @@ export default function RegistryWizard({
     setErrors([]);
     setFieldErrors({});
     setFormError("");
-    setMissingLabels([]);
     if (step === 1) {
       onExit();
       return;
@@ -972,26 +976,13 @@ export default function RegistryWizard({
                   <StepComponent />
                 </WizardProvider>
 
-                {missingLabels.length > 0 && !formError ? (
-                  <div role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger/10 p-4">
-                    <p className="text-sm font-semibold text-danger">
-                      {t("registry.missingIntro")}
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      {missingLabels.map((label) => (
-                        <li key={label} className="flex items-start gap-2 text-sm text-danger">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
-                          <span>{label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  (formError || errors.length > 0) && (
-                    <p role="alert" className="mt-6 text-sm font-medium text-danger">
-                      {formError || t("registry.required")}
-                    </p>
-                  )
+                {/* Field-level errors render inline at each field. Only a
+                    genuine form-level message (e.g. a submit/API failure) is
+                    surfaced here as a banner — never a grouped list of fields. */}
+                {formError && (
+                  <p role="alert" className="mt-6 text-sm font-medium text-danger">
+                    {formError}
+                  </p>
                 )}
 
                 <div className="mt-8 flex items-center justify-between gap-4">

@@ -199,8 +199,9 @@ export default function AuthShell({
 
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
       <header className="relative z-20 border-b border-white/10 bg-[#16395c]">
-        {/* Language switcher — overlaid in the top-right of the bar. */}
-        <div className="absolute right-4 top-2 z-10 flex items-center gap-2 rounded-xl bg-[#1e3557] px-1.5 py-1 shadow-sm">
+        {/* Language switcher — overlaid in the top-right of the bar, nudged down
+            and compact so it clears the immigration emblem. */}
+        <div className="absolute right-3 top-4 z-10 flex items-center gap-2 rounded-lg bg-[#1e3557] px-1 py-0.5 shadow-sm">
           <LanguageSwitcher />
         </div>
 

@@ -137,9 +137,17 @@ export function NameRow({ prefix }: { prefix: string }) {
   const { t } = useI18n();
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <TextInput name={`${prefix}First`} placeholder={t("fields.phFirstName")} />
-      <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddleName")} />
-      <TextInput name={`${prefix}Last`} placeholder={t("fields.phLastName")} />
+      {/* Each input is wrapped so its inline error renders directly below it
+          (the TextInput fragment would otherwise spill into the next grid cell). */}
+      <div>
+        <TextInput name={`${prefix}First`} placeholder={t("fields.phFirstName")} lettersOnly />
+      </div>
+      <div>
+        <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddleName")} lettersOnly />
+      </div>
+      <div>
+        <TextInput name={`${prefix}Last`} placeholder={t("fields.phLastName")} lettersOnly />
+      </div>
     </div>
   );
 }

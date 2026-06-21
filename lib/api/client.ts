@@ -170,6 +170,17 @@ export async function apiGet<T = unknown>(path: string, token?: string): Promise
 const TECHNICAL_ERROR =
   /^(upstream_unreachable|fetch failed|network|timeout|aborted|failed to fetch|econn|enotfound|etimedout)/i;
 
+/** True when the failure is a server/connection problem (the backend is down or
+ * unreachable) rather than something the user's input caused — so callers can
+ * show "service unavailable" instead of a misleading "invalid credentials". */
+export function isConnectionError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status >= 500 || TECHNICAL_ERROR.test(err.message);
+  }
+  if (err instanceof Error) return TECHNICAL_ERROR.test(err.message);
+  return false;
+}
+
 export function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
     const gateway = err.status === 502 || err.status === 503 || err.status === 504;

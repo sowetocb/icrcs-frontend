@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { fieldLabel } from "@/lib/registry/fieldLabels";
 import DatePickerCalendar from "./datePickerCalendar";
 import { displayToIso, isoToDisplay, todayIso } from "@/lib/dateFormat";
 
@@ -56,7 +57,14 @@ export function FieldError({ name }: { name: string }) {
   const { errors, fieldErrors } = useWizard();
   const { t } = useI18n();
   if (!errors.includes(name)) return null;
-  const message = fieldErrors?.[name] || t("fields.fieldRequired");
+  // Prefer a backend/explicit message; otherwise name the field exactly
+  // ("Last name is required.") instead of the generic "This field is required."
+  const label = fieldLabel(name, t);
+  const fallback =
+    label && label !== t("flabel.fallback")
+      ? t("fields.isRequired").replace("{field}", label)
+      : t("fields.fieldRequired");
+  const message = fieldErrors?.[name] || fallback;
   return (
     <p role="alert" className="mt-1 text-xs font-medium text-danger">
       {message}
@@ -112,6 +120,9 @@ export function TextInput({
   disabled = false,
   maxLength,
   numeric = false,
+  lettersOnly = false,
+  min,
+  max,
 }: {
   name: string;
   placeholder?: string;
@@ -120,27 +131,56 @@ export function TextInput({
   maxLength?: number;
   /** Restrict input to digits only (e.g. NIDA), with a numeric keypad on mobile. */
   numeric?: boolean;
+  /** Restrict input to letters and spaces only (strict text) — names/city. */
+  lettersOnly?: boolean;
+  /** Numeric bounds (type="number"): the value is clamped to [min, max] on blur. */
+  min?: number;
+  max?: number;
 }) {
   const { data, set, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
+  // Numeric → digits only; letters-only → strict text (letters + spaces, no
+  // digits, punctuation or symbols); otherwise strip leading whitespace while
+  // typing (mid-word spaces are kept).
+  const sanitize = (raw: string) =>
+    numeric
+      ? raw.replace(/\D/g, "")
+      : lettersOnly
+        ? raw.replace(/[^\p{L} ]/gu, "")
+        : raw.replace(/^\s+/, "");
+  // For a bounded numeric field, keep the typed value inside [min, max] live:
+  // the upper bound is enforced immediately; the lower bound only once the entry
+  // is full-width (so partial input like "1" isn't snapped up to "1900").
+  const applyBounds = (s: string): string => {
+    if (!numeric || s === "" || (min === undefined && max === undefined)) return s;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return s;
+    if (max !== undefined && n > max) return String(max);
+    const fullWidth = maxLength ?? String(max ?? min ?? "").length;
+    if (min !== undefined && s.length >= fullWidth && n < min) return String(min);
+    return s;
+  };
   return (
     <>
       <input
         type={type}
         value={value}
         maxLength={maxLength}
+        min={min}
+        max={max}
         inputMode={numeric ? "numeric" : undefined}
-        // Numeric fields keep digits only; others strip just leading whitespace
-        // while typing (mid-word spaces are kept)…
-        onChange={(e) =>
-          set(name, numeric ? e.target.value.replace(/\D/g, "") : e.target.value.replace(/^\s+/, ""))
-        }
-        // …and trim trailing whitespace on blur, so stray spaces don't cause errors.
+        onChange={(e) => set(name, applyBounds(sanitize(e.target.value)))}
+        // Re-sanitize on blur (clears any stale junk), then clamp a bounded
+        // number into [min, max].
         onBlur={(e) => {
-          const trimmed = e.target.value.trim();
-          if (trimmed !== value) set(name, trimmed);
+          let v = sanitize(e.target.value).trim();
+          if (v !== "" && (min !== undefined || max !== undefined)) {
+            const n = Number(v);
+            v = Number.isFinite(n) ? String(Math.min(max ?? n, Math.max(min ?? n, n))) : "";
+          }
+          if (v !== value) set(name, v);
         }}
         placeholder={placeholder}
         disabled={isLocked}

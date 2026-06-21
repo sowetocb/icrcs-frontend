@@ -82,7 +82,7 @@ export default function StepAddress() {
             </div>
           ) : permIsForeign ? (
             <Field label={t("fields.phCity")}>
-              <TextInput name="permCity" placeholder={t("fields.phCity")} />
+              <TextInput name="permCity" placeholder={t("fields.phCity")} lettersOnly />
             </Field>
           ) : null}
         </div>
@@ -113,7 +113,7 @@ export default function StepAddress() {
               </div>
             ) : curIsForeign ? (
               <Field label={t("fields.phCity")}>
-                <TextInput name="curCity" placeholder={t("fields.phCity")} />
+                <TextInput name="curCity" placeholder={t("fields.phCity")} lettersOnly />
               </Field>
             ) : null}
           </div>

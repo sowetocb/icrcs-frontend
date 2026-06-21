@@ -165,6 +165,7 @@ export default function StepPersonal() {
               <TextInput
                 name="pobCityVillage"
                 placeholder={t("fields.phCityVillageBirth")}
+                lettersOnly
               />
             </Field>
           )}

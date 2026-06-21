@@ -59,13 +59,13 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
       {/* Person details */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly />
         </Field>
       </div>
 
@@ -90,7 +90,12 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
         </Field>
         {data[`${prefix}DocType`] && (
           <Field label={t("fields.docNumber")} optional>
-            <TextInput name={`${prefix}DocNumber`} placeholder={t("fields.phDocNumber")} />
+            {/* NIDA (document type "1") is exactly 20 digits. */}
+            {data[`${prefix}DocType`] === "1" ? (
+              <TextInput name={`${prefix}DocNumber`} placeholder="12345678901234567890" numeric maxLength={20} />
+            ) : (
+              <TextInput name={`${prefix}DocNumber`} placeholder={t("fields.phDocNumber")} />
+            )}
           </Field>
         )}
       </div>
@@ -102,7 +107,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
           <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
           {pobIsForeign && (
             <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly />
             </Field>
           )}
         </div>
@@ -112,7 +117,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly />
             </Field>
           )}
         </div>

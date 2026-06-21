@@ -268,6 +268,7 @@ export default function WardCascade({
               clear("TerritoryId", "Territory", "RegionId", "Region", "DistrictId", "District", "WardId", "Ward", "StreetId", "Street");
             }}
           />
+          <FieldError name={`${prefix}Country`} />
         </div>
       )}
 

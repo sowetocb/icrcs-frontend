@@ -5,6 +5,7 @@ import { COUNTRIES, flagEmoji, TANZANIA, type Country } from "@/lib/countries";
 import CountryMenu from "./countryMenu";
 import { FieldError, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { phoneLengthForDial } from "@/lib/phoneLengths";
 
 function chunk(digits: string): string {
   return digits.match(/.{1,3}/g)?.join(" ") ?? "";
@@ -60,8 +61,13 @@ export default function PhoneInput({ name }: { name: string }) {
     // Strip leading zeros — users often type local-format numbers (e.g.
     // "0624839009") but the stored value must be international (+255 624 839 009).
     let trimmed = natDigits.replace(/^0+/, "");
-    // Tanzanian MNO numbers are 9 national digits (merged onto +255); cap there.
-    if (country.code === "TZ") trimmed = trimmed.slice(0, 9);
+    if (country.code === "TZ") {
+      // Tanzanian mobile numbers start with 6 or 7 after +255 — block any other
+      // leading digit so the field can't hold an invalid prefix.
+      while (trimmed && trimmed[0] !== "6" && trimmed[0] !== "7") trimmed = trimmed.slice(1);
+    }
+    // Cap the national number to the selected country's maximum length.
+    trimmed = trimmed.slice(0, phoneLengthForDial(country.dial).max);
     // Store empty when no national digits so the field still reads as "required".
     set(name, trimmed ? `${dial} ${chunk(trimmed)}` : "");
   }

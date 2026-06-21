@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, flagEmoji, TANZANIA, type Country } from "@/lib/countries";
+import { phoneLengthForDial } from "@/lib/phoneLengths";
 import CountryMenu from "@/components/registry/countryMenu";
 
 // Infer the country from a stored "+255786849280" value (longest dial match).
@@ -65,8 +66,13 @@ export default function ProfilePhoneInput({
     // Strip leading zeros — users type local-format numbers (e.g. "0786849280")
     // but the stored value must be international ("+255786849280").
     let trimmed = natDigits.replace(/^0+/, "");
-    // Tanzanian MNO numbers are 9 national digits (merged onto +255); cap there.
-    if (country.code === "TZ") trimmed = trimmed.slice(0, 9);
+    if (country.code === "TZ") {
+      // Tanzanian mobile numbers start with 6 or 7 after +255 — block any other
+      // leading digit so the field can't hold an invalid prefix.
+      while (trimmed && trimmed[0] !== "6" && trimmed[0] !== "7") trimmed = trimmed.slice(1);
+    }
+    // Cap the national number to the selected country's maximum length.
+    trimmed = trimmed.slice(0, phoneLengthForDial(country.dial).max);
     onChange(trimmed ? `${dial}${trimmed}` : "");
   }
 

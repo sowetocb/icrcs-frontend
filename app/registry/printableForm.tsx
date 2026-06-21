@@ -186,12 +186,12 @@ export default function PrintableForm({
           <Row label={tr("Street", "Mtaa")} value={titleCase(s("pobStreet"))} />
         </RowGroup>
         <RowGroup>
-          <Row label={tr("Village", "Kijiji")} value={val("pobVillage")} />
+          <Row label={tr("Village", "Kijiji")} value={val("pobCityVillage")} />
           <Row label={tr("Birth Cert No.", "Namba Cheti")} value={val("birthCertNo")} />
         </RowGroup>
         <RowGroup>
           <Row label={tr("Phone", "Simu")} value={val("phone")} />
-          <Row label={tr("Email", "Barua Pepe")} value={val("email")} />
+          <Row label={tr("Email", "Barua Pepe")} value={val("email")} preserveCase />
         </RowGroup>
 
         {/* Naturalization details (if applicable) */}
@@ -474,18 +474,23 @@ function Row({
   label,
   value,
   keepEmpty = false,
+  preserveCase = false,
 }: {
   label: string;
   value: string;
   /** Keep the (blank) row even when empty — for print-only fields filled in by
    * hand (referees, witness). Data rows are omitted when empty. */
   keepEmpty?: boolean;
+  /** Render the value as-is instead of CAPITALS (e.g. email). */
+  preserveCase?: boolean;
 }) {
   if (!keepEmpty && (!value || value === "—")) return null;
   return (
     <div className="row">
       <span className="row-label">{label}</span>
-      <span className="row-value">{value}</span>
+      <span className="row-value" style={preserveCase ? undefined : { textTransform: "uppercase" }}>
+        {value}
+      </span>
     </div>
   );
 }

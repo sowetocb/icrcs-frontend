@@ -136,9 +136,18 @@ export default function StepDetails({
     key: K,
     value: RegistrationDetails[K],
   ) {
-    setForm((f) => ({ ...f, [key]: value }));
+    let next = value;
+    // Name fields accept letters only (plus spaces, hyphens and apostrophes for
+    // compound names) — no digits or other symbols.
+    if (key === "firstName" || key === "middleName" || key === "lastName") {
+      next = (value as string).replace(/[^\p{L} '-]/gu, "") as RegistrationDetails[K];
+    }
+    setForm((f) => ({ ...f, [key]: next }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: false }));
   }
+
+  // Build a field-specific "X is required." message (universal pattern).
+  const req = (label: string) => t("register.isRequired").replace("{field}", label);
 
   // Phone is invalid when empty OR when it has fewer than 7 digits.
   const [phoneFormatError, setPhoneFormatError] = useState(false);
@@ -207,7 +216,7 @@ export default function StepDetails({
               className={`${inputClass} ${errors.firstName ? errorRing : ""}`}
             />
             {errors.firstName && (
-              <FieldError id="firstName-error" message={t("register.required")} />
+              <FieldError id="firstName-error" message={req(t("register.firstName"))} />
             )}
           </div>
           <div className="space-y-1.5">
@@ -223,7 +232,7 @@ export default function StepDetails({
               className={inputClass}
             /> 
             {errors.firstName && (
-              <FieldError id="middleName-error" message={t("register.required")} />
+              <FieldError id="middleName-error" message={req(t("register.middleName"))} />
             )}
           </div>
           <div className="space-y-1.5">
@@ -241,7 +250,7 @@ export default function StepDetails({
               className={`${inputClass} ${errors.lastName ? errorRing : ""}`}
             />
             {errors.lastName && (
-              <FieldError id="lastName-error" message={t("register.required")} />
+              <FieldError id="lastName-error" message={req(t("register.lastName"))} />
             )}
           </div>
         </div>
@@ -269,7 +278,7 @@ export default function StepDetails({
               ))}
             </select>
             {errors.gender && (
-              <FieldError id="gender-error" message={t("register.required")} />
+              <FieldError id="gender-error" message={req(t("register.gender"))} />
             )}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
@@ -288,7 +297,10 @@ export default function StepDetails({
               className={`${inputClass} ${errors.email ? errorRing : ""}`}
             />
             {errors.email && (
-              <FieldError id="email-error" message={t("form.emailInvalid")} />
+              <FieldError
+                id="email-error"
+                message={form.email.trim() ? t("form.emailInvalid") : req(t("form.email"))}
+              />
             )}
           </div>
         </div>
@@ -305,7 +317,7 @@ export default function StepDetails({
               describedBy={errors.phoneNumber ? "phoneNumber-error" : undefined}
             />
             {errors.phoneNumber && (
-              <FieldError id="phoneNumber-error" message={phoneFormatError ? t("register.phoneInvalid") : t("register.required")} />
+              <FieldError id="phoneNumber-error" message={phoneFormatError ? t("register.phoneInvalid") : req(t("register.phone"))} />
             )}
           </div>
 

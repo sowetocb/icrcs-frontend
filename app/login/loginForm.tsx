@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import { login, getMyProfile } from "@/lib/api/auth";
-import { getErrorMessage } from "@/lib/api/client";
+import { isConnectionError } from "@/lib/api/client";
 import { saveSession } from "@/lib/auth/session";
 import { saveProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
@@ -88,7 +88,10 @@ export default function LoginForm() {
       router.push("/dashboard");
     } catch (err) {
       setSubmitting(false);
-      setLoginError(getErrorMessage(err, t("form.loginFailed")));
+      // A server/connection outage must not read as "invalid credentials".
+      setLoginError(
+        isConnectionError(err) ? t("form.connectionError") : t("form.loginFailed"),
+      );
     }
   }
 

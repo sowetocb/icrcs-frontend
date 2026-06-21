@@ -36,13 +36,13 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly />
         </Field>
       </div>
 
@@ -50,10 +50,10 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           date — and apart from Residence — so the two cascades can't be
           confused. Phone now lives beside Document Type below. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <Field label={t("fields.dob")} required>
+        <Field className="space-y-3" label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
         </Field>
-        <Field label={t("fields.placeOfBirthRdw")} required>
+        <Field label={t("fields.placeOfBirthRdw")} required className="lg:col-span-2">
           <div className="space-y-3">
             <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
             {pobIsForeign && (
@@ -73,17 +73,30 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         <Field label={t("fields.docType")} optional>
           <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
         </Field>
-        <Field label={t("fields.phone")} optional>
-          <PhoneInput name={`${prefix}Phone`} />
-        </Field>
-      </div>
-      {data[`${prefix}DocType`] && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {data[`${prefix}DocType`] && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-1">
           <Field label={t("fields.docNumber")} optional>
-            <TextInput name={`${prefix}DocNumber`} placeholder="e.g. 19600310-12345-00001-6" />
+            {/* NIDA (document type "1") is exactly 20 digits — restrict to a
+                numeric keypad and cap the length. */}
+            {data[`${prefix}DocType`] === "1" ? (
+              <TextInput
+                name={`${prefix}DocNumber`}
+                placeholder="12345678901234567890"
+                numeric
+                maxLength={20}
+              />
+            ) : (
+              <TextInput name={`${prefix}DocNumber`} placeholder="e.g. AB123456" />
+            )}
           </Field>
+         
         </div>
       )}
+      </div>
+      
+       <Field label={t("fields.phone")} optional>
+          <PhoneInput name={`${prefix}Phone`} />
+        </Field>
 
       {/* Residence — its own full-width section, clearly separated from Place of Birth */}
       <Field label={t("fields.residence")} required>

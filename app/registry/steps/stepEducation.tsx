@@ -20,6 +20,7 @@ const EMPLOYED_OCCUPATIONS = [
   "driver",
   "artisan",
   "military police",
+  "other"
 ];
 
 function SchoolBlock({
@@ -53,17 +54,24 @@ function SchoolBlock({
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
         <Field label={t("fields.completionYear")} optional>
-          <TextInput name={`${p}Year`} type="number" placeholder="2014" />
+          <TextInput
+            name={`${p}Year`}
+            placeholder="2014"
+            numeric
+            maxLength={4}
+            min={1900}
+            max={new Date().getFullYear()}
+          />
         </Field>
       </div>
 
       <Field label={t("fields.schoolName")} required>
-        <TextInput name={`${p}School`} placeholder="Buguruni Primary School" />
+        <TextInput name={`${p}School`} placeholder="Buguruni Primary School" lettersOnly />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.schoolDistrict")} required>
-          <TextInput name={`${p}District`} placeholder="Ilala" />
+          <TextInput name={`${p}District`} placeholder="Ilala" lettersOnly />
         </Field>
         <Field label={t("fields.indexNo")} optional>
           <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" />
