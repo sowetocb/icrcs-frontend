@@ -94,12 +94,32 @@ function PhotoUpload() {
 
 
 
+// Identification document types offered at Stage 1.
+const ID_DOC_SUFFIXES = ["Type", "Number"];
+
 export default function StepPersonal() {
-  const { data } = useWizard();
+  const { data, set } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
   const currentYear = new Date().getFullYear();
+
+  // Identification documents repeater (one or more): idDoc1Type/Number, …
+  const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
+  const idDocTypeOptions = [
+    { value: "nida", label: t("fields.idDocNida") },
+    { value: "voter", label: t("fields.idDocVoter") },
+    { value: "tin", label: t("fields.idDocTin") },
+    { value: "driving", label: t("fields.idDocDriving") },
+  ];
+  function addIdDoc() {
+    set("idDocCount", String(idDocCount + 1));
+  }
+  function removeLastIdDoc() {
+    if (idDocCount <= 1) return;
+    for (const s of ID_DOC_SUFFIXES) set(`idDoc${idDocCount}${s}`, "");
+    set("idDocCount", String(idDocCount - 1));
+  }
 
   // Place-of-birth logic: the Tanzania cascade (territory → ward → street)
   // renders only when Tanzania is explicitly picked. The free-text city field
@@ -108,8 +128,6 @@ export default function StepPersonal() {
   const pobCountry = typeof data.pobCountry === "string" ? (data.pobCountry as string).trim() : "";
   const bornInTanzania = pobCountry === "Tanzania";
   const bornAbroad = pobCountry !== "" && !bornInTanzania;
-  // Selected identification document type drives the number field's format.
-  const idDocType = typeof data.idDocType === "string" ? data.idDocType : "";
 
   return (
     <div className="space-y-5">
@@ -144,37 +162,66 @@ export default function StepPersonal() {
         </Field>
       </div>
 
-      {/* Nationality + optional identification document (type + number). */}
+      {/* Nationality. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
           <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
         </Field>
-        <Field label={t("fields.docType")} optional>
-          <Select
-            name="idDocType"
-            placeholder={t("fields.phSelect")}
-            options={[
-              { value: "nida", label: t("fields.idDocNida") },
-              { value: "voter", label: t("fields.idDocVoter") },
-              { value: "tin", label: t("fields.idDocTin") },
-              { value: "driving", label: t("fields.idDocDriving") },
-            ]}
-          />
-        </Field>
       </div>
-      {idDocType && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t("fields.docNumber")} optional>
-            {/* NIDA is exactly 20 digits — restrict to a numeric keypad and cap
-                the length; other documents are free-form. */}
-            {idDocType === "nida" ? (
-              <TextInput name="nidaNumber" placeholder="12345678901234567890" numeric maxLength={20} />
-            ) : (
-              <TextInput name="nidaNumber" placeholder="e.g. AB123456" />
-            )}
-          </Field>
-        </div>
-      )}
+
+      {/* Identification documents — pick a type and enter its number; add more
+          than one if needed. */}
+      <div className="space-y-3">
+        {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
+          const type = typeof data[`idDoc${n}Type`] === "string" ? (data[`idDoc${n}Type`] as string) : "";
+          return (
+            <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
+              {idDocCount > 1 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-navy-700">
+                    {t("fields.documentN").replace("{n}", String(n))}
+                  </span>
+                  {n === idDocCount && (
+                    <button
+                      type="button"
+                      onClick={removeLastIdDoc}
+                      className="text-xs font-semibold text-danger transition hover:underline"
+                    >
+                      {t("fields.remove")}
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t("fields.docType")} optional>
+                  <Select name={`idDoc${n}Type`} placeholder={t("fields.phSelect")} options={idDocTypeOptions} />
+                </Field>
+                {type && (
+                  <Field label={t("fields.docNumber")} optional>
+                    {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
+                    {type === "nida" ? (
+                      <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
+                    ) : (
+                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" />
+                    )}
+                  </Field>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={addIdDoc}
+          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t("fields.addDocument")}
+        </button>
+      </div>
 
       <Field label={t("fields.placeOfBirth")} required>
         {/* Single country picker (lookup-connected, with flag). The Region/

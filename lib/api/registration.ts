@@ -256,12 +256,9 @@ async function buildStage1Payload(
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
     birthCertificateNo: numOrStr(data, "birthCertNo"),
-    // The number maps to the backend's NIDA field only when NIDA is the chosen
-    // document type; other document types (voter / TIN / driving licence) need a
-    // dedicated backend field before they can be persisted.
-    nidaNo: str(data, "idDocType") === "nida" || !str(data, "idDocType")
-      ? numOrStr(data, "nidaNumber")
-      : null,
+    // The dedicated NIDA field carries the NIDA document's number (if any) from
+    // the identification-documents repeater; the full list goes via `documents`.
+    nidaNo: nidaNumberFromDocs(data),
   };
 
   if (bornInTanzania) {
@@ -495,12 +492,37 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
 // Stage 4 — Education & Employment
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Identification document type → backend documentTypeId (mirrors the
+// document-type lookup: NIDA=1, Driving=3, Voter=4). TIN has no confirmed id
+// yet, so TIN entries are collected in the form but not sent in `documents`.
+const ID_DOC_TYPE_IDS: Record<string, number> = { nida: 1, driving: 3, voter: 4 };
+
+/** Pull the NIDA document's number from the identification-documents repeater
+ * (idDoc1Type/Number … idDocNType/Number) for the dedicated `nidaNo` field. */
+function nidaNumberFromDocs(data: Data): string | null {
+  const count = Math.max(1, Number(str(data, "idDocCount")) || 1);
+  for (let i = 1; i <= count; i++) {
+    if (str(data, `idDoc${i}Type`) === "nida") return str(data, `idDoc${i}Number`) || null;
+  }
+  return null;
+}
+
+/** Build the identification `documents` array from the repeater. */
 function idDocuments(data: Data): Record<string, unknown>[] {
-  const nida = str(data, "nidaNumber");
-  if (!nida) return [];
-  return [
-    { documentTypeId: 1, documentNumber: nida, issuingAuthority: "NIDA Tanzania" },
-  ];
+  const count = Math.max(1, Number(str(data, "idDocCount")) || 1);
+  const docs: Record<string, unknown>[] = [];
+  for (let i = 1; i <= count; i++) {
+    const type = str(data, `idDoc${i}Type`);
+    const number = str(data, `idDoc${i}Number`);
+    const documentTypeId = ID_DOC_TYPE_IDS[type];
+    if (!documentTypeId || !number) continue;
+    docs.push({
+      documentTypeId,
+      documentNumber: number,
+      issuingAuthority: type === "nida" ? "NIDA Tanzania" : null,
+    });
+  }
+  return docs;
 }
 
 async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<string, unknown>> {

@@ -1415,6 +1415,8 @@ const sw: typeof en = {
     addSpouse: "Ongeza Mwenzi", // REVIEW
     addChild: "Ongeza Mtoto",
     addSchool: "Ongeza Shule", // REVIEW
+    addDocument: "Ongeza Hati",
+    documentN: "Hati {n}",
     remove: "Ondoa", // REVIEW
     required: "Inahitajika", // REVIEW
     photo: "Picha", // REVIEW
