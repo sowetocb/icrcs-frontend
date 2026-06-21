@@ -270,6 +270,8 @@ const en = {
     attachPhotoRequired: "Please upload the required Passport Size Photo before continuing.",
     attachMandatoryRequired:
       "Please upload the applicant's and a parent's birth certificate / affidavit before continuing.",
+    attachRequiredField: "This document is required before continuing.",
+    photoFromStage1: "Uploaded at Personal Information",
     photoUploadRetry: "Photo upload failed due to a network connection issue. Please click Next to retry.",
     photoMissing: "Your passport photo is missing. Please go back to Personal Information to add it.",
     attachIdRequired: "At least one identification document is required for adults.",
@@ -1058,6 +1060,8 @@ const sw: typeof en = {
     attachPhotoRequired: "Tafadhali pakia Picha ya Pasipoti inayohitajika kabla ya kuendelea.",
     attachMandatoryRequired:
       "Tafadhali pakia cheti cha kuzaliwa / kiapo cha mwombaji na cha mzazi kabla ya kuendelea.",
+    attachRequiredField: "Hati hii inahitajika kabla ya kuendelea.",
+    photoFromStage1: "Imepakiwa kwenye Taarifa Binafsi",
     photoUploadRetry: "Kupakia picha kumeshindikana kwa sababu ya tatizo la mtandao. Tafadhali bofya Endelea kujaribu tena.",
     photoMissing: "Picha yako ya pasipoti haipo. Tafadhali rudi kwenye Taarifa Binafsi kuiongeza.",
     attachIdRequired: "Angalau moja ya nyaraka za utambulisho inahitajika kwa watu wazima.",

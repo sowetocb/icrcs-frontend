@@ -8,6 +8,7 @@ import { loadProfile } from "@/lib/auth/profile";
 import {
   ATTACHMENT_TYPES,
   ATTACHMENT_ACCEPT,
+  PASSPORT_PHOTO_TYPE,
   uploadAttachment,
   type UploadedAttachment,
 } from "@/lib/api/files";
@@ -141,10 +142,22 @@ export default function StepAttachments() {
       <ul className="space-y-3">
         {ATTACHMENT_TYPES.map((type) => {
           const savedAtt = savedByType.get(type.id);
-          const isTicked = !!ticked[type.id] || !!savedAtt;
+          // The passport photo captured at Stage 1 satisfies this row — but only
+          // when its image data is still available to re-attach on submit
+          // (otherwise the backend would reject "Passport Size Photo required").
+          const photoFromStage1 =
+            type.id === PASSPORT_PHOTO_TYPE &&
+            !savedAtt &&
+            typeof data.stage1PhotoData === "string" &&
+            data.stage1PhotoData.length > 0;
+          const isTicked = !!ticked[type.id] || !!savedAtt || photoFromStage1;
           const row =
             rows[type.id] ??
-            (savedAtt ? { status: "done" as Status, name: savedAtt.name } : { status: "idle" as Status });
+            (savedAtt
+              ? { status: "done" as Status, name: savedAtt.name }
+              : photoFromStage1
+                ? { status: "done" as Status, name: t("registry.photoFromStage1") }
+                : { status: "idle" as Status });
           return (
             <li key={type.id} className="rounded-xl border border-line bg-card p-4">
               <div className="flex flex-wrap items-center gap-3">

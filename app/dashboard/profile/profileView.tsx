@@ -47,7 +47,7 @@ function initials(p: Profile | null): string {
   return (f + l).toUpperCase() || "?";
 }
 
-export default function ProfileView() {
+export default function ProfileView({ onClose }: { onClose?: () => void } = {}) {
   const { t } = useI18n();
   const router = useRouter();
   const { notify } = useToast();
@@ -192,7 +192,9 @@ export default function ProfileView() {
       saveProfile(merged);
       setProfile(merged);
       notify(t("toast.profileSaved"));
-      router.push("/dashboard");
+      // In the dashboard dialog, stay open with the updated profile; on the
+      // standalone page, return to the dashboard.
+      if (!onClose) router.push("/dashboard");
     } catch (err) {
       if (!redirectIfExpired(err))
         setError(getErrorMessage(err, t("profile.updateError")));
@@ -242,6 +244,22 @@ export default function ProfileView() {
 
   return (
     <div className="mx-auto w-full max-w-2xl">
+      {onClose && (
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-navy-700">{t("profile.title")}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("about.close")}
+            className="rounded-lg p-1.5 text-muted transition hover:bg-surface hover:text-navy-700"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
           {error}

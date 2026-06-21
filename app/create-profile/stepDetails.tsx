@@ -140,7 +140,7 @@ export default function StepDetails({
     // Name fields accept letters only (plus spaces, hyphens and apostrophes for
     // compound names) — no digits or other symbols.
     if (key === "firstName" || key === "middleName" || key === "lastName") {
-      next = (value as string).replace(/[^\p{L} '-]/gu, "") as RegistrationDetails[K];
+      next = (value as string).replace(/[^\p{L} '’-]/gu, "") as RegistrationDetails[K];
     }
     setForm((f) => ({ ...f, [key]: next }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: false }));
@@ -346,14 +346,16 @@ export default function StepDetails({
               <EyeIcon open={showPassword} />
             </button>
           </div>
-          {/* Only requirements that are not yet met are shown, individually. */}
-          {form.password.length > 0 && !allMet && (
+          {/* Empty → "required"; non-empty but weak → list the unmet rules. */}
+          {errors.password && form.password.length === 0 ? (
+            <FieldError id="password-error" message={req(t("password.password"))} />
+          ) : form.password.length > 0 && !allMet ? (
             <ul className="space-y-1 pl-0.5">
               {!hasMin && <UnmetRequirement label={t("password.reqMin")} />}
               {!hasCapital && <UnmetRequirement label={t("password.reqCapital")} />}
               {!hasSpecial && <UnmetRequirement label={t("password.reqSpecial")} />}
             </ul>
-          )}
+          ) : null}
         </div>
 
         {/* Confirm password */}
@@ -370,7 +372,7 @@ export default function StepDetails({
               onChange={(e) => setConfirm(e.target.value)}
               onBlur={() => setTouchedConfirm(true)}
               placeholder="••••••••"
-              className={`${inputClass} pr-11 ${confirmInvalid ? errorRing : ""}`}
+              className={`${inputClass} pr-11 ${confirmInvalid || (touchedConfirm && confirm.length === 0) ? errorRing : ""}`}
             />
             <button
               type="button"
@@ -381,9 +383,11 @@ export default function StepDetails({
               <EyeIcon open={showConfirm} />
             </button>
           </div>
-          {confirmInvalid && (
+          {touchedConfirm && confirm.length === 0 ? (
+            <FieldError id="confirm-error" message={req(t("password.confirm"))} />
+          ) : confirmInvalid ? (
             <FieldError id="confirm-error" message={t("password.mismatch")} />
-          )}
+          ) : null}
         </div>
 
         {submitError && (

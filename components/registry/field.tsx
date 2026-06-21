@@ -141,14 +141,14 @@ export function TextInput({
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
-  // Numeric → digits only; letters-only → strict text (letters + spaces, no
-  // digits, punctuation or symbols); otherwise strip leading whitespace while
-  // typing (mid-word spaces are kept).
+  // Numeric → digits only; letters-only → letters plus spaces, apostrophes and
+  // hyphens (real names like "Mwakang'ata" or "Marry-Stella"), nothing else;
+  // otherwise strip leading whitespace while typing (mid-word spaces are kept).
   const sanitize = (raw: string) =>
     numeric
       ? raw.replace(/\D/g, "")
       : lettersOnly
-        ? raw.replace(/[^\p{L} ]/gu, "")
+        ? raw.replace(/[^\p{L} '’-]/gu, "")
         : raw.replace(/^\s+/, "");
   // For a bounded numeric field, keep the typed value inside [min, max] live:
   // the upper bound is enforced immediately; the lower bound only once the entry

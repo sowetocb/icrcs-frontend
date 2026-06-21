@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
+import ProfileView from "@/app/dashboard/profile/profileView";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { refreshMyProfile, fetchProfilePicture } from "@/lib/api/auth";
 import { LOGO_EMBLEM } from "@/lib/assets";
@@ -31,12 +31,63 @@ function formatTime(d: Date): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/** The profile shown as a fading modal hovering over the dashboard — all editing
+ * happens here. Fades in on mount and out before unmounting. */
+function ProfileDialog({ onClose }: { onClose: () => void }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  function close() {
+    setVisible(false);
+    // Wait for the fade-out to finish before unmounting.
+    setTimeout(onClose, 250);
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 transition-opacity duration-200 sm:p-8 ${
+        visible ? "opacity-100" : "opacity-0"
+      }`}
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={close}
+        className="fixed inset-0 cursor-default bg-black/50 backdrop-blur-sm"
+      />
+      <div
+        className={`relative z-10 w-full max-w-2xl rounded-2xl border border-line bg-surface p-6 shadow-2xl transition-all duration-200 ${
+          visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+        }`}
+      >
+        <ProfileView onClose={close} />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardTopbar() {
   const { t } = useI18n();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [time, setTime] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const photoUrl = photoFailed ? null : (photo ?? profilePhotoSrc(profile));
 
   useEffect(() => {
@@ -109,9 +160,10 @@ export default function DashboardTopbar() {
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
 
-          {/* User — links to the profile page, with a live clock */}
-          <Link
-            href="/dashboard/profile"
+          {/* User — opens the profile dialog over the dashboard, with a clock */}
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
             title={name || "Profile"}
             className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pl-1 pr-3 transition hover:bg-white/15"
           >
@@ -136,9 +188,11 @@ export default function DashboardTopbar() {
                 {time}
               </span>
             </span>
-          </Link>
+          </button>
         </div>
       </div>
+
+      {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
     </header>
   );
 }
