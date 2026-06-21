@@ -14,20 +14,17 @@ export type AttachmentType = {
   mandatory: boolean;
 };
 
-// attachmentTypeId values per the backend contract (GET /v1/lookup/attachment-types):
-//   1 = Applicant Birth Certificate / Affidavit  (mandatory at Stage 8)
-//   2 = Parent Birth Certificate / Affidavit     (mandatory at Stage 8)
-//   5 = Passport Size Photo (already mandatory/uploaded at Stage 1, shown here)
+// attachmentTypeId values per GET /v1/lookup/attachment-types:
+//   1 = Applicant Birth Certificate   4 = Letter from Local Government / Employer
+//   2 = Father Birth Certificate      5 = Passport Size Photo
+//   3 = Mother Birth Certificate      6 = Naturalisation Certificate
 export const ATTACHMENT_TYPES: AttachmentType[] = [
-  { id: 1, label: "Applicant Birth Certificate / Affidavit", mandatory: true },
-  { id: 2, label: "Parent Birth Certificate / Affidavit", mandatory: true },
+  { id: 1, label: "Applicant Birth Certificate", mandatory: true },
+  { id: 2, label: "Father Birth Certificate", mandatory: false },
+  { id: 3, label: "Mother Birth Certificate", mandatory: false },
+  { id: 4, label: "Letter from Local Government / Employer", mandatory: false },
   { id: 5, label: "Passport Size Photo", mandatory: false },
-  // Optional supporting documents. NOTE: confirm these ids against the backend
-  // lookup (GET /v1/lookup/attachment-types) — adjust if it uses other values.
-  { id: 3, label: "NIDA", mandatory: false },
-  { id: 4, label: "Driving Licence", mandatory: false },
-  { id: 6, label: "Insurance ID", mandatory: false },
-  { id: 8, label: "Any Other Relevant Document", mandatory: false },
+  { id: 6, label: "Naturalisation Certificate", mandatory: false },
 ];
 
 /** The backend's mandatory passport-size photo attachment type. */

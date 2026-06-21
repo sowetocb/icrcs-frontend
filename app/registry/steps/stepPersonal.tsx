@@ -4,6 +4,7 @@ import { DateInput, Field, Select, TextInput, useWizard } from "@/components/reg
 import {
   useGenderOptions,
   useMarriageOptions,
+  usePersonDocumentTypeOptions,
   NameRow,
 } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
@@ -105,13 +106,9 @@ export default function StepPersonal() {
   const currentYear = new Date().getFullYear();
 
   // Identification documents repeater (one or more): idDoc1Type/Number, …
+  // Options come from the lookup; the option value is the backend documentTypeId.
   const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
-  const idDocTypeOptions = [
-    { value: "nida", label: t("fields.idDocNida") },
-    { value: "voter", label: t("fields.idDocVoter") },
-    { value: "tin", label: t("fields.idDocTin") },
-    { value: "driving", label: t("fields.idDocDriving") },
-  ];
+  const idDocTypeOptions = usePersonDocumentTypeOptions("applicant");
   function addIdDoc() {
     set("idDocCount", String(idDocCount + 1));
   }
@@ -174,6 +171,7 @@ export default function StepPersonal() {
       <div className="space-y-3">
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`idDoc${n}Type`] === "string" ? (data[`idDoc${n}Type`] as string) : "";
+          const isNida = idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase() === "NIDA";
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (
@@ -199,7 +197,7 @@ export default function StepPersonal() {
                 {type && (
                   <Field label={t("fields.docNumber")} optional>
                     {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
-                    {type === "nida" ? (
+                    {isNida ? (
                       <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
                     ) : (
                       <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" />

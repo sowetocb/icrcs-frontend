@@ -6,6 +6,7 @@ import {
   getMaritalStatuses,
   resolveGenderId,
   resolveEmploymentStatusId,
+  getPersonDocumentTypes,
 } from "./lookup";
 import {
   uploadAttachment,
@@ -256,9 +257,10 @@ async function buildStage1Payload(
     citizenshipTypeId: intOrNull(data, "citizenshipTypeId"),
     countryOfBirthCode: await resolveCountryCode(country || "Tanzania"),
     birthCertificateNo: numOrStr(data, "birthCertNo"),
-    // The dedicated NIDA field carries the NIDA document's number (if any) from
-    // the identification-documents repeater; the full list goes via `documents`.
-    nidaNo: nidaNumberFromDocs(data),
+    // The dedicated NIDA field carries the NIDA document's number (if any); the
+    // full identification list (all picked types) is sent via `documents`.
+    nidaNo: await nidaNumberFromDocs(data),
+    documents: idDocuments(data),
   };
 
   if (bornInTanzania) {
@@ -502,43 +504,45 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
 // Stage 4 — Education & Employment
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Identification document type → backend documentTypeId, per the applicant list
-// in /lookup/person-document-types: NIDA=1, Driving Licence=4, TIN=5, Voters ID=7.
-const ID_DOC_TYPE_IDS: Record<string, number> = { nida: 1, driving: 4, tin: 5, voter: 7 };
-
-/** Pull the NIDA document's number from the identification-documents repeater
- * (idDoc1Type/Number … idDocNType/Number) for the dedicated `nidaNo` field. */
-function nidaNumberFromDocs(data: Data): string | null {
+/** Pull the NIDA document's number from the applicant's identification-documents
+ * repeater for the dedicated `nidaNo` field. The repeater stores each document's
+ * documentTypeId as its type value, so the NIDA id is resolved from the lookup. */
+async function nidaNumberFromDocs(data: Data): Promise<string | null> {
+  let nidaId: number | undefined;
+  try {
+    const types = await getPersonDocumentTypes();
+    nidaId = types.applicant.find((d) => (d.code ?? "").toUpperCase() === "NIDA")?.id;
+  } catch {
+    nidaId = undefined;
+  }
+  if (!nidaId) return null;
   const count = Math.max(1, Number(str(data, "idDocCount")) || 1);
   for (let i = 1; i <= count; i++) {
-    if (str(data, `idDoc${i}Type`) === "nida") return str(data, `idDoc${i}Number`) || null;
+    if (Number(str(data, `idDoc${i}Type`)) === nidaId) return str(data, `idDoc${i}Number`) || null;
   }
   return null;
 }
 
-/** Build the identification `documents` array from the repeater.
- * @param prefix — empty string for the applicant (idDoc1Type), or a parent/
- *   person prefix like "father" or "mother" (fatherIdDoc1Type). */
+/** Build the identification `documents` array from the repeater. The form stores
+ * each document's documentTypeId (picked from the lookup) as its type value, so
+ * it is sent straight through — no hardcoded type→id mapping.
+ * @param prefix — empty string for the applicant (idDoc1Type), or a parent
+ *   prefix like "father" / "mother" (fatherIdDoc1Type). */
 function idDocuments(data: Data, prefix = ""): Record<string, unknown>[] {
   const countKey = prefix ? `${prefix}IdDocCount` : "idDocCount";
   const fieldPrefix = prefix ? `${prefix}IdDoc` : "idDoc";
   const count = Math.max(1, Number(str(data, countKey)) || 1);
   const docs: Record<string, unknown>[] = [];
   for (let i = 1; i <= count; i++) {
-    const type = str(data, `${fieldPrefix}${i}Type`);
+    const documentTypeId = Number(str(data, `${fieldPrefix}${i}Type`));
     const number = str(data, `${fieldPrefix}${i}Number`);
-    const documentTypeId = ID_DOC_TYPE_IDS[type];
     if (!documentTypeId || !number) continue;
-    docs.push({
-      documentTypeId,
-      documentNumber: number,
-      issuingAuthority: type === "nida" ? "NIDA Tanzania" : null,
-    });
+    docs.push({ documentTypeId, documentNumber: number, issuingAuthority: null });
   }
   return docs;
 }
 
-async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<string, unknown>> {
+async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<string, unknown>> {
   const never = data.neverAttendedSchool === true;
   const job = str(data, "jobStatus");
 
@@ -572,8 +576,6 @@ async function buildStage4Payload(data: Data, isSelf: boolean): Promise<Record<s
     // every other status), so null them out otherwise.
     organizationName: job === "Employed" ? str(data, "employer") || null : null,
     occupationTypeId: job === "Employed" ? intOrNull(data, "occupation") ?? null : null,
-    // Child (under 18) is the "no documents" variant — omit the key entirely.
-    ...(isSelf ? { documents: idDocuments(data) } : {}),
   };
 }
 

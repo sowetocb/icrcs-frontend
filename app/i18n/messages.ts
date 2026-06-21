@@ -784,13 +784,12 @@ const en = {
   // Attachment labels, keyed attach.a{attachmentTypeId} (see ATTACHMENT_TYPES
   // in lib/api/files.ts). English values mirror those labels.
   attach: {
-    a1: "Applicant Birth Certificate / Affidavit",
-    a2: "Parent Birth Certificate / Affidavit",
+    a1: "Applicant Birth Certificate",
+    a2: "Father Birth Certificate",
+    a3: "Mother Birth Certificate",
+    a4: "Letter from Local Government / Employer",
     a5: "Passport Size Photo",
-    a3: "NIDA",
-    a4: "Driving Licence",
-    a6: "Insurance ID",
-    a8: "Any Other Relevant Document",
+    a6: "Naturalisation Certificate",
   },
   footer: "© 2026 The United Republic of Tanzania | Immigration Department",
 };
@@ -1568,13 +1567,12 @@ const sw: typeof en = {
     documents: "Hati", // REVIEW
   },
   attach: {
-    a1: "Cheti cha Kuzaliwa / Kiapo cha Mwombaji", // REVIEW
-    a2: "Cheti cha Kuzaliwa / Kiapo cha Mzazi", // REVIEW
+    a1: "Cheti cha Kuzaliwa cha Mwombaji", // REVIEW
+    a2: "Cheti cha Kuzaliwa cha Baba", // REVIEW
+    a3: "Cheti cha Kuzaliwa cha Mama", // REVIEW
+    a4: "Barua kutoka Serikali ya Mtaa / Mwajiri", // REVIEW
     a5: "Picha ya Saizi ya Pasipoti", // REVIEW
-    a3: "NIDA", // REVIEW
-    a4: "Leseni ya Udereva", // REVIEW
-    a6: "Kitambulisho cha Bima", // REVIEW
-    a8: "Hati Nyingine Yoyote Muhimu", // REVIEW
+    a6: "Cheti cha Uraia", // REVIEW
   },
   footer: "© 2026 Jamhuri ya Muungano wa Tanzania | Idara ya Uhamiaji",
 };

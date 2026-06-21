@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { TextInput, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { useLookup } from "@/components/lookup/useLookup";
@@ -10,7 +11,9 @@ import {
   getRelationships,
   getOccupations,
   getEmploymentStatuses,
+  getPersonDocumentTypes,
   type LookupItem,
+  type PersonGroup,
 } from "@/lib/api/lookup";
 import WardCascade from "./wardCascade";
 
@@ -131,6 +134,26 @@ export const useOccupationTypeOptions = () =>
 // and resolved to the lookup id in the Stage 4 payload).
 export const useEmploymentStatusOptions = () =>
   useLocalizedOptions(getEmploymentStatuses, jobOptions, "code");
+
+/** Identification document type options for a person group (applicant / father
+ * / mother), fetched from /lookup/person-document-types. The option VALUE is the
+ * backend documentTypeId — so picking e.g. NIDA stores its exact id, which is
+ * sent straight through in documents[].documentTypeId. */
+export function usePersonDocumentTypeOptions(group: PersonGroup): Opt[] {
+  const [options, setOptions] = useState<Opt[]>([]);
+  useEffect(() => {
+    let active = true;
+    getPersonDocumentTypes()
+      .then((d) => {
+        if (active) setOptions(d[group].map((i) => ({ value: String(i.id), label: i.name })));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [group]);
+  return options;
+}
 
 /** Three-column First / Middle / Last name row, bound by prefix. */
 export function NameRow({ prefix }: { prefix: string }) {

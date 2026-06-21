@@ -443,6 +443,63 @@ export function getAttachmentTypes(): Promise<LookupItem[]> {
   })).catch(() => MOCK_ATTACHMENT_TYPES);
 }
 
+// Identification document types grouped by person (applicant / father / mother).
+// Each entry's `id` is the documentTypeId sent in `documents[].documentTypeId`.
+export type PersonGroup = "applicant" | "father" | "mother";
+export type PersonDocumentTypes = Record<PersonGroup, LookupItem[]>;
+
+const MOCK_PERSON_DOCUMENT_TYPES: PersonDocumentTypes = {
+  applicant: [
+    { id: 1, name: "NIDA", code: "NIDA" },
+    { id: 3, name: "Birth Certificate", code: "BIRTH_CERT" },
+    { id: 4, name: "Driving Licence", code: "DRIVING_LIC" },
+    { id: 5, name: "TIN", code: "TIN" },
+    { id: 7, name: "Voters ID", code: "VOTERS_ID" },
+  ],
+  father: [
+    { id: 9, name: "NIDA", code: "FATHER_NIDA" },
+    { id: 10, name: "Birth Certificate", code: "FATHER_BIRTH_CERT" },
+    { id: 11, name: "Driving Licence", code: "FATHER_DRIVING_LIC" },
+    { id: 12, name: "TIN", code: "FATHER_TIN" },
+    { id: 13, name: "Voters ID", code: "FATHER_VOTERS_ID" },
+  ],
+  mother: [
+    { id: 14, name: "NIDA", code: "MOTHER_NIDA" },
+    { id: 15, name: "Birth Certificate", code: "MOTHER_BIRTH_CERT" },
+    { id: 16, name: "Driving Licence", code: "MOTHER_DRIVING_LIC" },
+    { id: 17, name: "TIN", code: "MOTHER_TIN" },
+    { id: 18, name: "Voters ID", code: "MOTHER_VOTERS_ID" },
+  ],
+};
+
+let personDocTypesCache: Promise<PersonDocumentTypes> | null = null;
+
+/** GET /v1/lookup/person-document-types — document types grouped by person. */
+export function getPersonDocumentTypes(): Promise<PersonDocumentTypes> {
+  if (BYPASS) return Promise.resolve(MOCK_PERSON_DOCUMENT_TYPES);
+  if (personDocTypesCache) return personDocTypesCache;
+  const mapGroup = (rows: unknown): LookupItem[] =>
+    (Array.isArray(rows) ? (rows as Row[]) : []).map((o) => ({
+      id: num(o.documentTypeId),
+      name: str(o.documentName),
+      code: str(o.code),
+    }));
+  personDocTypesCache = apiGet("/v1/lookup/person-document-types")
+    .then((raw) => {
+      const d = ((raw as { data?: unknown })?.data ?? raw) as Record<string, unknown>;
+      return {
+        applicant: mapGroup(d.applicant),
+        father: mapGroup(d.father),
+        mother: mapGroup(d.mother),
+      };
+    })
+    .catch((err) => {
+      personDocTypesCache = null;
+      throw err;
+    });
+  return personDocTypesCache.catch(() => MOCK_PERSON_DOCUMENT_TYPES);
+}
+
 /** Maps lookup items to the registry Select's option shape. */
 export function toOptions(
   items: LookupItem[],

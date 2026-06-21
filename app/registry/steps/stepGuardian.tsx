@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { useGenderOptions } from "@/components/registry/blocks";
+import { useGenderOptions, usePersonDocumentTypeOptions } from "@/components/registry/blocks";
+import type { PersonGroup } from "@/lib/api/lookup";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
@@ -40,12 +41,8 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const idDocCountKey = `${prefix}IdDocCount`;
   const idDocCount = Math.max(1, Number(data[idDocCountKey]) || 1);
 
-  const idDocTypeOptions = [
-    { value: "nida", label: t("fields.idDocNida") },
-    { value: "voter", label: t("fields.idDocVoter") },
-    { value: "tin", label: t("fields.idDocTin") },
-    { value: "driving", label: t("fields.idDocDriving") },
-  ];
+  // Options come from the lookup for this parent; the value is the documentTypeId.
+  const idDocTypeOptions = usePersonDocumentTypeOptions(prefix as PersonGroup);
 
   function addIdDoc() {
     set(idDocCountKey, String(idDocCount + 1));
@@ -99,6 +96,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       <div className="space-y-3">
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`${prefix}IdDoc${n}Type`] === "string" ? (data[`${prefix}IdDoc${n}Type`] as string) : "";
+          const isNida = idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase() === "NIDA";
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (
@@ -124,7 +122,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                 {type && (
                   <Field label={t("fields.docNumber")} optional>
                     {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
-                    {type === "nida" ? (
+                    {isNida ? (
                       <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
                     ) : (
                       <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" />
