@@ -6,59 +6,6 @@ export function registrationFormFileName(name: string): string {
   return `${clean || "Citizen"} Registration Form`;
 }
 
-/** Directly download the filled form as a PDF (no print dialog). The on-page
- * form is `display:none` and only styled by the print stylesheet, so we clone it
- * into a visible, off-screen container with that stylesheet applied, then let
- * html2pdf rasterize + save it. `fileName` is without the ".pdf" extension. */
-export async function downloadRegistrationForm(
-  root: HTMLElement | null,
-  fileName = "Registration Form",
-): Promise<void> {
-  if (!root || typeof window === "undefined") return;
-  const html2pdf = (await import("html2pdf.js")).default;
-
-  const holder = document.createElement("div");
-  // 794px ≈ A4 width at 96dpi. Off-screen but rendered so html2canvas can read it.
-  holder.style.cssText =
-    "position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1;";
-
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = "/registry-print.css";
-  holder.appendChild(link);
-
-  const clone = root.cloneNode(true) as HTMLElement;
-  clone.removeAttribute("id"); // avoid the global `#printable-form{display:none}`
-  clone.style.display = "block";
-  // Absolutise any root-relative image src so html2canvas can load them.
-  clone.querySelectorAll("img").forEach((img) => {
-    const src = img.getAttribute("src");
-    if (src?.startsWith("/")) img.setAttribute("src", `${window.location.origin}${src}`);
-  });
-  holder.appendChild(clone);
-  document.body.appendChild(holder);
-
-  // Give the stylesheet, fonts and images a moment to load before capturing.
-  await new Promise((r) => setTimeout(r, 500));
-
-  // Stored in a variable so the extra `pagebreak` option (valid at runtime, but
-  // absent from the package's types) isn't rejected by excess-property checks.
-  const opts = {
-    margin: 0,
-    filename: `${fileName}.pdf`,
-    image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-    pagebreak: { mode: ["css", "legacy"] },
-  };
-
-  try {
-    await html2pdf().set(opts).from(clone).save();
-  } finally {
-    holder.remove();
-  }
-}
-
 /** Print the filled registration form. `documentName` becomes the print
  * document title, which browsers use as the default "Save as PDF" filename
  * (e.g. "John Mahwaya Registration Form.pdf"). */

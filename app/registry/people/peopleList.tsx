@@ -13,7 +13,7 @@ import { getRegistrationReview } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { loadProfile } from "@/lib/auth/profile";
 import PrintableForm from "../printableForm";
-import { downloadRegistrationForm, registrationFormFileName } from "../printRegistrationForm";
+import { printRegistrationForm, registrationFormFileName } from "../printRegistrationForm";
 
 function DownloadIcon() {
   return (
@@ -260,7 +260,7 @@ export default function PeopleList() {
   // Once the chosen person's form is in the DOM, generate the PDF and reset.
   useEffect(() => {
     if (!printPerson) return;
-    void downloadRegistrationForm(
+    printRegistrationForm(
       document.getElementById("printable-form"),
       registrationFormFileName(printPerson.name),
     );
