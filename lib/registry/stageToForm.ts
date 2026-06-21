@@ -116,6 +116,27 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     if (p.occupationTypeId != null) out[`${prefix}OccType`] = str(p.occupationTypeId);
     if (p.documentTypeId != null) out[`${prefix}DocType`] = str(p.documentTypeId);
     if (p.documentNumber != null) out[`${prefix}DocNumber`] = str(p.documentNumber);
+    // Identification documents repeater: the backend returns a `documents`
+    // array with `{ documentTypeId, documentNumber }` objects. Map these back
+    // to {prefix}IdDoc{n}Type / Number (NIDA=1→nida, Driving=3→driving,
+    // Voter=4→voter). Falls back to the legacy single DocType/DocNumber.
+    const DOC_TYPE_REVERSE: Record<number, string> = { 1: "nida", 3: "driving", 4: "voter" };
+    const docs = arr(p.documents);
+    if (docs.length > 0) {
+      out[`${prefix}IdDocCount`] = String(docs.length);
+      docs.forEach((doc, i) => {
+        const n = i + 1;
+        const typeId = Number(doc.documentTypeId);
+        out[`${prefix}IdDoc${n}Type`] = DOC_TYPE_REVERSE[typeId] ?? str(doc.documentTypeId);
+        if (doc.documentNumber != null) out[`${prefix}IdDoc${n}Number`] = str(doc.documentNumber);
+      });
+    } else if (p.documentTypeId != null && p.documentNumber != null) {
+      // Legacy single document → slot it into idDoc1
+      const typeId = Number(p.documentTypeId);
+      out[`${prefix}IdDocCount`] = "1";
+      out[`${prefix}IdDoc1Type`] = DOC_TYPE_REVERSE[typeId] ?? str(p.documentTypeId);
+      out[`${prefix}IdDoc1Number`] = str(p.documentNumber);
+    }
     // Place of birth — separate from residence so the two cascades don't cross.
     const pobStreet = p.placeOfBirthStreetId ?? p.birthStreetId ?? p.pobStreetId;
     if (pobStreet != null) await applyStreet(`${prefix}Pob`, pobStreet);
@@ -167,14 +188,18 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     await applyStreet("perm", d[`${permSrc}StreetId`]);
     if (d[`${permSrc}CountryCode`] != null) out.permCountry = isoToName(d[`${permSrc}CountryCode`]);
     if (d[`${permSrc}City`] != null) out.permCity = str(d[`${permSrc}City`]);
-    if (d[`${permSrc}HouseNumber`] != null) out.permHouseNumber = str(d[`${permSrc}HouseNumber`]);
-    if (d[`${permSrc}PostalCode`] != null) out.permPostalCode = str(d[`${permSrc}PostalCode`]);
+    const permHouse = d[`${permSrc}HouseNo`] ?? d[`${permSrc}HouseNumber`];
+    if (permHouse != null) out.permHouseNumber = str(permHouse);
+    const permPostal = d[`${permSrc}PostalAddress`] ?? d[`${permSrc}PostalCode`];
+    if (permPostal != null) out.permPostalCode = str(permPostal);
     if (!same) {
       await applyStreet("cur", d.currentStreetId);
       if (d.currentCountryCode != null) out.curCountry = isoToName(d.currentCountryCode);
       if (d.currentCity != null) out.curCity = str(d.currentCity);
-      if (d.currentHouseNumber != null) out.curHouseNumber = str(d.currentHouseNumber);
-      if (d.currentPostalCode != null) out.curPostalCode = str(d.currentPostalCode);
+      const curHouse = d.currentHouseNo ?? d.currentHouseNumber;
+      if (curHouse != null) out.curHouseNumber = str(curHouse);
+      const curPostal = d.currentPostalAddress ?? d.currentPostalCode;
+      if (curPostal != null) out.curPostalCode = str(curPostal);
     }
     return out;
   }

@@ -15,6 +15,15 @@ import {
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
 
+/** The same document-type labels used in the identification documents repeater
+ * on Personal Information and Parents, keyed by the form value. */
+const ID_DOC_TYPE_LABELS: Record<string, string> = {
+  nida: "NIDA Number",
+  voter: "Voters ID",
+  tin: "TIN Number",
+  driving: "Driving License",
+};
+
 /** First letter of each word capitalised, the rest lower-cased. Used for the
  * lookup-sourced values the backend returns in UPPERCASE (regions, wards, …). */
 function titleCase(value: string): string {
@@ -288,12 +297,18 @@ export default function StepPreviewDeclaration() {
         {cascadeRows("fatherPob", <PreviewRow label={t("preview.village")} value={s("fatherVillage")} />)}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("fatherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("fatherResCity"))} />)}
-        {s("fatherDocType") && (
-          <PreviewRow
-            label={t("preview.document")}
-            value={`${optionLabel(documentTypeOptions(t), s("fatherDocType"))}: ${s("fatherDocNumber")}`}
-          />
-        )}
+        {(() => {
+          const count = Math.max(1, Number(data.fatherIdDocCount) || 1);
+          return Array.from({ length: count }, (_, i) => i + 1)
+            .filter((n) => s(`fatherIdDoc${n}Type`))
+            .map((n) => (
+              <PreviewRow
+                key={`fdoc${n}`}
+                label={`${t("preview.document")} ${count > 1 ? n : ""}`}
+                value={`${ID_DOC_TYPE_LABELS[s(`fatherIdDoc${n}Type`)] ?? s(`fatherIdDoc${n}Type`)}: ${s(`fatherIdDoc${n}Number`)}`}
+              />
+            ));
+        })()}
 
         <PreviewSubTitle>{t("preview.mother")}</PreviewSubTitle>
         <PreviewRow label={t("preview.fullName")} value={fullName("mother")} />
@@ -305,12 +320,18 @@ export default function StepPreviewDeclaration() {
         {cascadeRows("motherPob", <PreviewRow label={t("preview.village")} value={s("motherVillage")} />)}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("motherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("motherResCity"))} />)}
-        {s("motherDocType") && (
-          <PreviewRow
-            label={t("preview.document")}
-            value={`${optionLabel(documentTypeOptions(t), s("motherDocType"))}: ${s("motherDocNumber")}`}
-          />
-        )}
+        {(() => {
+          const count = Math.max(1, Number(data.motherIdDocCount) || 1);
+          return Array.from({ length: count }, (_, i) => i + 1)
+            .filter((n) => s(`motherIdDoc${n}Type`))
+            .map((n) => (
+              <PreviewRow
+                key={`mdoc${n}`}
+                label={`${t("preview.document")} ${count > 1 ? n : ""}`}
+                value={`${ID_DOC_TYPE_LABELS[s(`motherIdDoc${n}Type`)] ?? s(`motherIdDoc${n}Type`)}: ${s(`motherIdDoc${n}Number`)}`}
+              />
+            ));
+        })()}
       </PreviewSection>
 
       {/* ─── Step 4: Education & Employment ─── */}

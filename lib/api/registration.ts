@@ -372,10 +372,15 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
 
   const payload: Record<string, unknown> = {};
 
-  // ── Current address — Tanzania pins the location via the street id; abroad
-  // sends an ISO country code + free-text city. ──
+  // Optional house number (≤20) / postal address (≤50) — domestic flow only.
+  const cap = (v: string, max: number) => (v ? v.slice(0, max) : null);
+
+  // ── Current address — Tanzania pins the location via the street id (+ optional
+  // house number / postal address); abroad sends an ISO country code + city. ──
   if (currentIsTz) {
     payload.currentStreetId = wardId(data, "curStreetId");
+    payload.currentHouseNo = cap(str(data, "curHouseNumber"), 20);
+    payload.currentPostalAddress = cap(str(data, "curPostalCode"), 50);
   } else {
     payload.currentCountryCode = await resolveCountryCode(stage2CurrentCountry(data));
     payload.currentCity = str(data, "curCity") || null;
@@ -384,10 +389,12 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
   payload.permanentSameAsCurrent = sameAsCurrent;
 
   // ── Permanent address — only when it differs from the current one. Its own
-  // country decides whether it's a TZ street id or a foreign country + city. ──
+  // country decides whether it's a TZ street id (+ house/postal) or country+city. ──
   if (!sameAsCurrent) {
     if (permIsTz) {
       payload.permanentStreetId = wardId(data, "permStreetId");
+      payload.permanentHouseNo = cap(str(data, "permHouseNumber"), 20);
+      payload.permanentPostalAddress = cap(str(data, "permPostalCode"), 50);
     } else {
       payload.permanentCountryCode = await resolveCountryCode(str(data, "permCountry"));
       payload.permanentCity = str(data, "permCity") || null;
@@ -428,8 +435,9 @@ export async function editStage2(subjectId: string, data: Data): Promise<unknown
 // Stage 3 — Parents (father + mother with expanded person details)
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Parent object — exact Stage 3 shape (residence only; no gender/DOB/place of
-// birth — the backend derives parent gender and doesn't store those here).
+// Parent object — exact Stage 3 shape. The identification documents repeater
+// ({prefix}IdDoc1Type/Number, …) is converted to the backend's `documents`
+// array using the same mapping as the applicant's Stage 4 documents.
 async function buildParentPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
   const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
   return {
@@ -446,6 +454,8 @@ async function buildParentPayload(data: Data, prefix: string): Promise<Record<st
     ...(resTanzania
       ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
       : { residenceCity: str(data, `${prefix}ResCity`) || null }),
+    // Identification documents from the per-parent repeater.
+    documents: idDocuments(data, prefix),
     documentFileUrl: str(data, `${prefix}DocFileUrl`) || null,
     birthDetailId: null,
   };
@@ -492,10 +502,9 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
 // Stage 4 — Education & Employment
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Identification document type → backend documentTypeId (mirrors the
-// document-type lookup: NIDA=1, Driving=3, Voter=4). TIN has no confirmed id
-// yet, so TIN entries are collected in the form but not sent in `documents`.
-const ID_DOC_TYPE_IDS: Record<string, number> = { nida: 1, driving: 3, voter: 4 };
+// Identification document type → backend documentTypeId, per the applicant list
+// in /lookup/person-document-types: NIDA=1, Driving Licence=4, TIN=5, Voters ID=7.
+const ID_DOC_TYPE_IDS: Record<string, number> = { nida: 1, driving: 4, tin: 5, voter: 7 };
 
 /** Pull the NIDA document's number from the identification-documents repeater
  * (idDoc1Type/Number … idDocNType/Number) for the dedicated `nidaNo` field. */
@@ -507,13 +516,17 @@ function nidaNumberFromDocs(data: Data): string | null {
   return null;
 }
 
-/** Build the identification `documents` array from the repeater. */
-function idDocuments(data: Data): Record<string, unknown>[] {
-  const count = Math.max(1, Number(str(data, "idDocCount")) || 1);
+/** Build the identification `documents` array from the repeater.
+ * @param prefix — empty string for the applicant (idDoc1Type), or a parent/
+ *   person prefix like "father" or "mother" (fatherIdDoc1Type). */
+function idDocuments(data: Data, prefix = ""): Record<string, unknown>[] {
+  const countKey = prefix ? `${prefix}IdDocCount` : "idDocCount";
+  const fieldPrefix = prefix ? `${prefix}IdDoc` : "idDoc";
+  const count = Math.max(1, Number(str(data, countKey)) || 1);
   const docs: Record<string, unknown>[] = [];
   for (let i = 1; i <= count; i++) {
-    const type = str(data, `idDoc${i}Type`);
-    const number = str(data, `idDoc${i}Number`);
+    const type = str(data, `${fieldPrefix}${i}Type`);
+    const number = str(data, `${fieldPrefix}${i}Number`);
     const documentTypeId = ID_DOC_TYPE_IDS[type];
     if (!documentTypeId || !number) continue;
     docs.push({
@@ -665,6 +678,27 @@ export async function editStage5(subjectId: string, data: Data): Promise<unknown
 // Stage 6 — Family
 // ──────────────────────────────────────────────────────────────────────────────
 
+/** Stage 6 child — a dedicated flat shape (NOT a RelatedPersonRequest): name +
+ * sexId + DOB + nationality + residence. Domestic children send residenceStreetId
+ * only; foreign children send residenceCountryCode + residenceCity. */
+async function buildChildPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
+  const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
+  return {
+    firstName: str(data, `${prefix}First`),
+    middleName: str(data, `${prefix}Middle`) || null,
+    lastName: str(data, `${prefix}Last`),
+    sexId: await resolveGenderId(str(data, `${prefix}Gender`)),
+    dateOfBirth: str(data, `${prefix}Dob`) || null,
+    nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
+    ...(resTanzania
+      ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
+      : {
+          residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
+          residenceCity: str(data, `${prefix}ResCity`) || null,
+        }),
+  };
+}
+
 async function buildStage6Payload(data: Data): Promise<Record<string, unknown>> {
   // The applicant can add any number of relatives (min 2 enforced in the UI).
   const count = Math.max(2, Number(str(data, "relativeCount")) || 2);
@@ -691,8 +725,9 @@ async function buildStage6Payload(data: Data): Promise<Record<string, unknown>> 
     }
   }
 
-  // Children — only when "I have children" is ticked. Same person shape as
-  // spouses (the UI reuses the spouse block).
+  // Children — only when "I have children" is ticked. Children use their own
+  // dedicated shape (see buildChildPayload); the full list is always sent (the
+  // backend replaces all children on each submit).
   const hasChildren = data.hasChildren === true;
   const children: unknown[] = [];
   if (hasChildren) {
@@ -700,11 +735,7 @@ async function buildStage6Payload(data: Data): Promise<Record<string, unknown>> 
     for (let i = 1; i <= childCount; i++) {
       const p = `ch${i}`;
       if (!str(data, `${p}First`)) continue;
-      children.push({
-        childSubjectId: null,
-        occupationTypeId: intOrNull(data, `${p}OccType`),
-        person: await buildPersonPayload(data, p),
-      });
+      children.push(await buildChildPayload(data, p));
     }
   }
 

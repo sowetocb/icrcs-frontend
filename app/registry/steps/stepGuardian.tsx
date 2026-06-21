@@ -2,19 +2,26 @@
 
 import { useEffect } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { useGenderOptions, documentTypeOptions } from "@/components/registry/blocks";
+import { useGenderOptions } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
 
+// Identification document type suffixes cleared when removing the last entry.
+const ID_DOC_SUFFIXES = ["Type", "Number"];
+
 /**
  * Expanded parent block matching the Stage 3 API:
- *   name, DOB, gender, phone, nationality, place of birth, residence, document.
+ *   name, DOB, gender, phone, nationality, place of birth, residence, documents.
+ *
+ * Documents use a repeatable identification documents list (same UX as
+ * Personal Information): pick a type (NIDA, Voters ID, TIN, Driving Licence),
+ * enter its number, and add more as needed.
  */
 function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const { t } = useI18n();
-  const { data } = useWizard();
+  const { data, set } = useWizard();
   const genders = useGenderOptions();
 
   // Place of birth / residence: the Region→District→Ward→Street cascade only
@@ -28,6 +35,26 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
   const resIsTz = resCountry === "Tanzania";
   const resIsForeign = resCountry !== "" && !resIsTz;
+
+  // Identification documents repeater: {prefix}IdDoc1Type/Number, …
+  const idDocCountKey = `${prefix}IdDocCount`;
+  const idDocCount = Math.max(1, Number(data[idDocCountKey]) || 1);
+
+  const idDocTypeOptions = [
+    { value: "nida", label: t("fields.idDocNida") },
+    { value: "voter", label: t("fields.idDocVoter") },
+    { value: "tin", label: t("fields.idDocTin") },
+    { value: "driving", label: t("fields.idDocDriving") },
+  ];
+
+  function addIdDoc() {
+    set(idDocCountKey, String(idDocCount + 1));
+  }
+  function removeLastIdDoc() {
+    if (idDocCount <= 1) return;
+    for (const s of ID_DOC_SUFFIXES) set(`${prefix}IdDoc${idDocCount}${s}`, "");
+    set(idDocCountKey, String(idDocCount - 1));
+  }
 
   return (
     <div className="space-y-5">
@@ -46,57 +73,85 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         </Field>
       </div>
 
-      {/* Date of Birth · Place of Birth. Place of Birth sits beside the birth
-          date — and apart from Residence — so the two cascades can't be
-          confused. Phone now lives beside Document Type below. */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <Field className="space-y-3" label={t("fields.dob")} required>
+      {/* Date of Birth · Nationality — same row, both fill their column */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
         </Field>
-        <Field label={t("fields.placeOfBirthRdw")} required className="lg:col-span-2">
-          <div className="space-y-3">
-            <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-            {pobIsForeign && (
-              <Field label={t("fields.phVillage")}>
-                <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
-              </Field>
-            )}
-          </div>
-        </Field>
-      </div>
-
-      {/* Nationality · Document Type · Phone (to the right of document type) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.nationality")} required>
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountryNat")} />
         </Field>
-        <Field label={t("fields.docType")} optional>
-          <Select name={`${prefix}DocType`} placeholder={t("fields.phSelect")} options={documentTypeOptions(t)} />
-        </Field>
-        {data[`${prefix}DocType`] && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-1">
-          <Field label={t("fields.docNumber")} optional>
-            {/* NIDA (document type "1") is exactly 20 digits — restrict to a
-                numeric keypad and cap the length. */}
-            {data[`${prefix}DocType`] === "1" ? (
-              <TextInput
-                name={`${prefix}DocNumber`}
-                placeholder="12345678901234567890"
-                numeric
-                maxLength={20}
-              />
-            ) : (
-              <TextInput name={`${prefix}DocNumber`} placeholder="e.g. AB123456" />
-            )}
-          </Field>
-         
-        </div>
-      )}
       </div>
-      
-       <Field label={t("fields.phone")} optional>
-          <PhoneInput name={`${prefix}Phone`} />
-        </Field>
+
+      {/* Place of Birth — label on top, Country dropdown + cascade underneath */}
+      <Field label={t("fields.placeOfBirthRdw")} required>
+        <div className="space-y-3">
+          <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
+          {pobIsForeign && (
+            <Field label={t("fields.phVillage")}>
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+            </Field>
+          )}
+        </div>
+      </Field>
+
+      {/* Identification documents — repeatable, just like Personal Information */}
+      <div className="space-y-3">
+        {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
+          const type = typeof data[`${prefix}IdDoc${n}Type`] === "string" ? (data[`${prefix}IdDoc${n}Type`] as string) : "";
+          return (
+            <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
+              {idDocCount > 1 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-navy-700">
+                    {t("fields.documentN").replace("{n}", String(n))}
+                  </span>
+                  {n === idDocCount && (
+                    <button
+                      type="button"
+                      onClick={removeLastIdDoc}
+                      className="text-xs font-semibold text-danger transition hover:underline"
+                    >
+                      {t("fields.remove")}
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t("fields.docType")} optional>
+                  <Select name={`${prefix}IdDoc${n}Type`} placeholder={t("fields.phSelect")} options={idDocTypeOptions} />
+                </Field>
+                {type && (
+                  <Field label={t("fields.docNumber")} optional>
+                    {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
+                    {type === "nida" ? (
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
+                    ) : (
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" />
+                    )}
+                  </Field>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={addIdDoc}
+          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t("fields.addDocument")}
+        </button>
+      </div>
+
+      {/* Phone */}
+      <Field label={t("fields.phone")} optional>
+        <PhoneInput name={`${prefix}Phone`} />
+      </Field>
 
       {/* Residence — its own full-width section, clearly separated from Place of Birth */}
       <Field label={t("fields.residence")} required>
@@ -132,3 +187,4 @@ export default function StepGuardian() {
     </div>
   );
 }
+

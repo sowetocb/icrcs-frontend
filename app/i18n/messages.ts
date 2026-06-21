@@ -767,7 +767,7 @@ const en = {
     city: "City",
     village: "Village", // REVIEW
     villageStreet: "Village / Street", // REVIEW
-    postalCode: "Postal Code", // REVIEW
+    postalCode: "Postal Address", // REVIEW
     father: "Father", // REVIEW
     mother: "Mother", // REVIEW
     hasChildren: "Has Children", // REVIEW

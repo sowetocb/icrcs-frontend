@@ -14,7 +14,7 @@ Registered users can:
 * **Create a Verified Profile** with OTP-based email verification and a country-code phone picker
 * **Confirm Citizenship at a Gate** before registering — Tanzanian citizens proceed; verified non-citizens see their **immigration status** and may register a Tanzanian-origin **minor**
 * **Register Themselves and Dependents** (under 18) via a comprehensive 9-stage wizard
-* **Upload Supporting Documents** (birth certificates, national IDs, and passport photos), with the Stage 1 photo and birth certificate carried into the Uploads stage
+* **Upload Supporting Documents** (birth certificates, national IDs, and passport photos) — all document uploads (except the passport photo captured at Stage 1) are handled exclusively at Stage 8
 * **Track Application Status** through a staged pipeline (Submitted → Under Review → Biometric Appointment → Final Approval → Completed → Certificate Issued)
 * **Download and Print Registration Forms** as formatted A4 PDFs, compiled from the server `/review` record
 * **Manage Personal Profile Details** including profile picture uploads
@@ -68,23 +68,28 @@ A comprehensive **9-stage** registration flow synced with the backend (`/v1/regi
 
 | Stage | Section | Details |
 | :--- | :--- | :--- |
-| **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, optional **NIDA number** (account holder only), and contact. Mandatory **passport photo** and an optional **birth certificate** are captured here and carried into Stage 8 uploads. Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
+| **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, and contact. Mandatory **passport photo** captured here (carried into Stage 8 uploads). Dynamic **identification documents repeater** (NIDA, Voter ID, TIN, Driving Licence — pick type + number, add more as needed). Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
 | **2** | **Address** | Permanent + Current address (Country → Region → District → Ward cascade), house number, postal code, with a "same as" checkbox that copies and disables the second address. |
 | **3** | **Parents** | Father & Mother sub-forms: full name, DOB, phone, nationality, place of birth, residence, and optional ID document (Type/Number + file upload → `attachmentTypeId=12`, bound to `documentFileUrl`). |
 | **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.) — a "Primary education is mandatory" notice shows when the applicant attended school. Employment status (lookup-driven); occupation & employer apply only when **Employed**. |
 | **5** | **Emergency Contacts** | Two contacts, each a full person sub-form with optional ID document upload. |
 | **6** | **Family** | "Have children?" / "Married?" toggles; **Spouses repeater** (≥1 if married) and **Relatives repeater** (≥2), each with optional document uploads. |
 | **7** | **Referees** (print-only) | No data submitted — "Download and Print Referees Form" fetches the compiled form from `GET /stage7`; the signed scan is uploaded in Stage 8. |
-| **8** | **Uploads** | Structured attachment grid; each file uploaded to `/v1/files/upload?attachmentTypeId=N`, then the collection finalised. Stage 8 is gated on the passport photo — a network failure at Stage 1 is **retried here** without data loss. |
+| **8** | **Uploads** | Structured attachment grid; each file uploaded to `/v1/files/upload?attachmentTypeId=N`, then the collection finalised. **All document uploads are restricted to this stage** — the applicant's and parent's birth certificates are mandatory (gated). Stage 8 is also gated on the passport photo — a network failure at Stage 1 is **retried here** without data loss. |
 | **9** | **Preview & Declaration** | Server-compiled summary via `GET /v1/registration/{subjectId}/review`; confirmation checkbox enables final `POST /stage9?confirmed=true`. |
 
 * **Save & Exit / Resume** — Drafts persist in the browser **keyed by Application ID** and **survive logout / idle auto-logout** (owner-scoped, cleared cross-user on login), so an unsubmitted registration can be resumed.
 * **Cascading Address Selectors** — Country-driven Region → District → Ward cascade backed by the lookup API; flags on every country dropdown, with **Tanzania pinned to the top** of every country list.
 * **Locked Fields Logic** — The primary creator's details are locked from their profile; dependents inherit contact details (email/phone) but must fill unique personal details. When a verified **non-citizen registers a minor**, the creator's names are **not** prefilled or locked and the subject is validated as a minor.
 * **Lookup values sent by ID** — Gender, marital status, and employment status are submitted to the backend by their **lookup ID** (resolved at payload time), while the dropdown shows the exact label returned by the lookup API (e.g. `Ke (Female)`, `Me (Male)`).
-* **Specific validation feedback** — Skipping required fields lists exactly which fields are missing (by readable label), not just a red border.
+* **Inline field validation errors** — Each invalid field shows a specific error message directly beneath it (not just a red border). Backend validation errors (Spring-style `violations`, field-error maps, and arrays) are automatically mapped to the exact form field via `lib/registry/errorFields.ts`. Missing fields name the field explicitly ("Last name is required.") instead of a generic notice.
+* **Per-stage re-hydration** — Returning to an already-submitted stage fetches the server record (`GET /stage{n}`) and maps it back to the wizard's form shape via `lib/registry/stageToForm.ts`, resolving lookup IDs → codes, ISO country codes → display names, and street IDs → the full Territory→Street cascade via the reverse-hierarchy API. The form shows exactly what the server stored.
+* **Session-expired dialog** — When a backend call fails due to an expired session, a blocking modal prompts the user to sign back in. The draft is persisted so the registration can be resumed after re-login.
+* **Toast notifications** — A global `ToastProvider` (root layout) renders transient success/error/info notifications (auto-dismiss after 5 s) across page transitions. Stage saves, draft saves, and errors trigger toasts.
+* **Phone number length validation** — `lib/phoneLengths.ts` stores the national-number digit range for 100+ countries (keyed by dial code). The phone input caps entry to the country's max length and rejects numbers shorter than the min (≥ 7 digits enforced globally).
+* **Identification documents repeater** — Stage 1 offers a dynamic list of ID documents (NIDA, Voter ID, TIN, Driving Licence): pick a type, enter its number, and add more as needed. NIDA entries enforce exactly 20 digits.
 * **Sticky steps sidebar** — The stage stepper stays fixed in view while the form scrolls.
-* **Resilient uploads** — Stage 1 text data is saved first; a failed passport-photo upload is non-fatal and retried at the Stage 8 gate. The Stage 1 birth certificate is uploaded once the `subjectId` exists and merged into the Stage 8 attachments.
+* **Resilient uploads** — Stage 1 text data is saved first; a failed passport-photo upload is non-fatal and retried at the Stage 8 gate.
 
 ---
 
@@ -176,16 +181,20 @@ app/
 ├── globals.css             # Tailwind imports & semantic tokens
 └── page.tsx                # Root redirect
 components/
-├── auth/                   # Auth shell, guard, idle timeout, keep-alive
+├── auth/                   # Auth shell, guard, idle timeout, keep-alive,
+│                           #   session-expired dialog
 ├── layout/                 # Sidebar, top bar, profile card
 ├── lookup/                 # Status lookup hook
 ├── registry/               # Wizard inputs, stepper, country select
 ├── theme/                  # Theme switcher button
-└── ui/                     # Shared modal, OTP input
+└── ui/                     # Shared modal, OTP input, toast notifications
 lib/
 ├── api/                    # API client modules
 ├── auth/                   # Session persistence (session, profile)
-└── countries.ts            # Country codes database
+├── registry/               # Wizard helpers (errorFields, fieldLabels,
+│                           #   reviewToForm, stageToForm)
+├── countries.ts            # Country codes database
+└── phoneLengths.ts         # National number length by dial code (100+ countries)
 ```
 
 ---
@@ -286,10 +295,19 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 
 ## Recent Changes
 
+* **Inline field validation errors** — Every invalid field now renders a specific error message directly beneath it (not just a red border). Backend field errors (Spring violations, `{ field, message }` arrays, flat maps) are auto-mapped to their exact form field via `lib/registry/errorFields.ts`. Missing fields read "Last name is required." rather than a generic notice.
+* **Per-stage re-hydration from backend** — Navigating to an already-submitted stage fetches the server record (`GET /stage{n}`) and maps it back to the wizard via `lib/registry/stageToForm.ts`. Resolves lookup IDs → codes, ISO alpha-3 → country names, and street IDs → the full Territory→Street cascade using the reverse-hierarchy lookup API.
+* **Identification documents repeater** — Stage 1 now offers a dynamic list of ID document types (NIDA, Voter ID, TIN, Driving Licence): pick a type, enter its number, and add more as needed. NIDA entries enforce exactly 20 digits (numeric-only input).
+* **Session-expired dialog** — A blocking modal (`SessionExpiredDialog`) appears when a backend call fails due to an expired session. The in-progress draft is persisted first, and the user is redirected to login for re-authentication.
+* **Toast notification system** — A global `ToastProvider` in the root layout renders transient success/error/info notifications that auto-dismiss after 5 seconds and survive client-side navigations. Stage saves, draft saves, and API errors trigger toasts.
+* **Phone number length validation** — `lib/phoneLengths.ts` stores national-number digit ranges for 100+ countries (keyed by dial code). The phone input component caps entry to the country's max length and rejects numbers below the global minimum of 7 digits.
+* **Document uploads restricted to Stage 8** — All document handling (birth certificates, affidavits, supporting IDs) is now enforced exclusively at Stage 8 of the wizard. Applicant and parent birth certificates are mandatory-gated before Stage 8 submission.
+* **Primary education enforcement** — Applicants who indicate school attendance must fill in at least the primary education entry (education level, school name, city). The backend is aligned on this requirement.
+* **Registered People list modernised** — Compact table layout with Application ID, Applicant Name, Status, Date, and Download action. Account holder is explicitly badged with a person icon.
 * **9-stage registration flow** wired to the real backend (POST to create, PUT to edit each stage); see the wizard table above.
 * **Resilient Stage 1 photo upload** — text data is submitted first to obtain the `subjectId`, then the passport photo is uploaded; a network failure is non-fatal and **retried at the Stage 8 gate** (matching the backend's "passport photo mandatory" validation) with no data loss.
 * **Draft persistence by Application ID** — unsubmitted registrations are cached and **survive logout / idle auto-logout**, owner-scoped and cleared cross-user on login, so users resume exactly where they left off.
-* **Dynamic repeaters** — schools (Stage 4), spouses & relatives (Stage 6) with min-count validation; **document uploads** for parents/contacts/spouses/relatives (`attachmentTypeId=12`).
+* **Dynamic repeaters** — schools (Stage 4), spouses & relatives (Stage 6) with min-count validation.
 * **Country-driven address cascades** — single lookup-connected country picker with flags; Region/District/Ward show for Tanzania and hide (free-text City/Village) for other countries.
 * **Profile sync across devices** — profile/photo re-fetched on load; same-origin proxy made binary-safe so profile photos load through it.
 * **Light-mode-only institutional theme** with the official banner (coat of arms · ministry titles + flag strip · emblem), enlarged for legibility on both the auth and dashboard bars.
@@ -327,6 +345,14 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 | Ward Cascade Selectors (Region → District → Ward) | ✅ Done |
 | Country Selector & Phone Input | ✅ Done |
 | Auto-Scrolling Info Cards (Auth Pages) | ✅ Done |
+| Inline Field Validation Errors (Frontend + Backend) | ✅ Done |
+| Per-Stage Re-Hydration from Backend | ✅ Done |
+| Session-Expired Dialog (Blocking, Draft-Safe) | ✅ Done |
+| Toast Notification System | ✅ Done |
+| Phone Number Length Validation (100+ Countries) | ✅ Done |
+| Identification Documents Repeater (Stage 1) | ✅ Done |
+| Document Uploads Restricted to Stage 8 | ✅ Done |
+| Primary Education Enforcement | ✅ Done |
 
 ---
 
@@ -435,12 +461,14 @@ Three React Contexts provide cross-component state sharing. None use global stor
 | `data` | `Record<string, string \| boolean>` | All form field values (flat key-value map) |
 | `set` | `(name, value) => void` | Update a field and clear its error |
 | `errors` | `string[]` | Field names currently in error |
+| `fieldErrors` | `Record<string, string>` | Optional per-field error message (backend or explicit). Fields in `errors` without an entry here fall back to a generic "required" message, e.g. "Last name is required." |
 | `locked` | `string[]` | Field names that are read-only (prefilled from profile) |
 | `isFirstPerson` | `boolean` | True when registering the account holder (not a dependent) |
 | `onGoToStep` | `(step: number) => void` | Navigate to a completed step (used by Preview) |
 
 **Provider:** `WizardProvider` in `components/registry/field.tsx` — instantiated in `RegistryWizard` (wraps each step) and `CitizenshipGate` (wraps the foreigner verification fields).
 **Consumer hook:** `useWizard()` — throws if used outside provider.
+**Inline error display:** A `FieldError` component renders directly beneath each invalid field. It prefers a backend/explicit message from `fieldErrors`; otherwise names the field exactly ("Last name is required.") instead of a generic "This field is required."
 **Data shape:** A flat `Record<string, string | boolean>` rather than nested objects. Field names like `applicantFirst`, `fatherPobCountry`, `ec1ResWard`, `sp2Gender`, `ch3NatCountry` encode both the entity and the attribute. This keeps the context API simple — every form input calls `set(fieldName, value)`.
 
 #### `ThemeProvider` — Theme (Light-Only)
@@ -475,13 +503,15 @@ The most state-heavy component, managing the 9-step form:
 | `maxStep` | `number` | Furthest step ever reached (drives sidebar navigation) |
 | `data` | `Record<string, string \| boolean>` | All field values across all 9 steps (single flat map) |
 | `errors` | `string[]` | Field names failing validation on the current step |
-| `formError` | `string` | Human-readable error message |
-| `missingLabels` | `string[]` | Translated labels of missing required fields |
+| `fieldErrors` | `Record<string, string>` | Per-field error messages from backend or explicit validation |
+| `formError` | `string` | Human-readable error message (API failure, business rules) |
 | `applicationId` | `string` | Issued after Stage 1 (backend) |
 | `subjectId` | `string` | Backend registration ID (used for Stages 2–9) |
 | `submittedStages` | `Set<number>` | Stages already POSTed (revisits use PUT) |
 | `returnStep` | `number \| null` | Step to return to after editing an earlier stage |
 | `submitting` | `boolean` | Async submission in progress |
+| `sessionExpired` | `boolean` | True when the session has expired mid-flow (shows blocking dialog) |
+| `showIdDialog` | `boolean` | Controls the Application ID dialog after Stage 1 |
 | `locked` | `string[]` | Derived: fields locked from the profile |
 
 **Initialization from draft:** On mount, the wizard reads the saved draft via `loadRegistrationFor(ownerId)` and restores `step`, `maxStep`, `data`, `subjectId`, and `submittedStages`. Profile fields are prefilled as a base layer, then draft data is merged on top.
