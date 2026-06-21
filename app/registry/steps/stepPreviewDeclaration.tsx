@@ -6,6 +6,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { loadProfile } from "@/lib/auth/profile";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
 import { getStage9Preview } from "@/lib/api/registration";
+import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import {
   documentTypeOptions,
@@ -117,7 +118,7 @@ function PreviewSubTitle({ children }: { children: React.ReactNode }) {
 
 export default function StepPreviewDeclaration() {
   const { t } = useI18n();
-  const { data, set, onGoToStep } = useWizard();
+  const { data, set, onGoToStep, onSessionExpired } = useWizard();
 
   const s = (key: string) => {
     const v = data[key];
@@ -198,6 +199,12 @@ export default function StepPreviewDeclaration() {
         if (active) setPreviewState("ready");
       } catch (err) {
         if (!active) return;
+        // An expired session must trigger the blocking sign-in flow, not sit as
+        // an inline message on a page full of stale data.
+        if (err instanceof SessionExpiredError) {
+          onSessionExpired?.();
+          return;
+        }
         setPreviewError(getErrorMessage(err, t("registry.previewLoadError")));
         setPreviewState("error");
       }

@@ -1055,6 +1055,7 @@ export default function RegistryWizard({
                   locked={locked}
                   isFirstPerson={isFirstPerson}
                   onGoToStep={goTo}
+                  onSessionExpired={() => setSessionExpired(true)}
                 >
                   <StepComponent />
                 </WizardProvider>

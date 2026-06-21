@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import {
   useGenderOptions,
@@ -109,6 +109,12 @@ export default function StepPersonal() {
   // Options come from the lookup; the option value is the backend documentTypeId.
   const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
   const idDocTypeOptions = usePersonDocumentTypeOptions("applicant");
+
+  // Only Tanzanians are registered, so nationality is fixed to Tanzania.
+  useEffect(() => {
+    if (data.nationalityCountry !== "Tanzania") set("nationalityCountry", "Tanzania");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   function addIdDoc() {
     set("idDocCount", String(idDocCount + 1));
   }
@@ -162,7 +168,7 @@ export default function StepPersonal() {
       {/* Nationality. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
-          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} />
+          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled />
         </Field>
       </div>
 

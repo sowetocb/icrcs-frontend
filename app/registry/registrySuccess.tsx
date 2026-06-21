@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import PrintableForm from "./printableForm";
-import { printRegistrationForm } from "./printRegistrationForm";
+import { printRegistrationForm, registrationFormFileName } from "./printRegistrationForm";
 import { getRegistrationReview } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
@@ -35,8 +35,10 @@ export default function RegistrySuccess({
       .map((k) => formData[k])
       .filter((v): v is string => typeof v === "string" && v.trim() !== "")
       .join(" ");
-    const documentName = `${fullName || "Citizen"} Registration Form`;
-    printRegistrationForm(document.getElementById("printable-form"), documentName);
+    printRegistrationForm(
+      document.getElementById("printable-form"),
+      registrationFormFileName(fullName),
+    );
   }
 
   // Print after the preview-merged data has rendered into the hidden form.

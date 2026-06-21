@@ -24,7 +24,7 @@ import {
   type Profile,
 } from "@/lib/auth/profile";
 
-const MAX_PHOTO = 500 * 1024; // 500KB
+const MAX_PHOTO = 300 * 1024; // 300KB
 const PHOTO_TYPES = ["image/jpeg", "image/png"];
 
 const inputClass =

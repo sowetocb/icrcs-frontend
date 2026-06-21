@@ -230,10 +230,8 @@ export default function StepDetails({
               onChange={(e) => update("middleName", e.target.value)}
               placeholder="Test"
               className={inputClass}
-            /> 
-            {errors.firstName && (
-              <FieldError id="middleName-error" message={req(t("register.middleName"))} />
-            )}
+            />
+            {/* Middle name is optional — no required error. */}
           </div>
           <div className="space-y-1.5">
             <label htmlFor="lastName" className={labelClass}>

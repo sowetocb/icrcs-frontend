@@ -21,6 +21,8 @@ type WizardContextValue = {
   isFirstPerson: boolean;
   /** Jump to a completed wizard step (used on the preview screen). */
   onGoToStep?: (step: number) => void;
+  /** Raise the wizard's session-expired flow (blocking dialog → sign in). */
+  onSessionExpired?: () => void;
 };
 
 const WizardContext = createContext<WizardContextValue | null>(null);
@@ -33,11 +35,12 @@ export function WizardProvider({
   locked,
   isFirstPerson,
   onGoToStep,
+  onSessionExpired,
   children,
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, errors, fieldErrors, locked, isFirstPerson, onGoToStep }}
+      value={{ data, set, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
     >
       {children}
     </WizardContext.Provider>

@@ -13,7 +13,7 @@ import { getRegistrationReview } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { loadProfile } from "@/lib/auth/profile";
 import PrintableForm from "../printableForm";
-import { printRegistrationForm } from "../printRegistrationForm";
+import { printRegistrationForm, registrationFormFileName } from "../printRegistrationForm";
 
 function DownloadIcon() {
   return (
@@ -262,7 +262,7 @@ export default function PeopleList() {
     if (!printPerson) return;
     printRegistrationForm(
       document.getElementById("printable-form"),
-      `${printPerson.name} Registration Form`,
+      registrationFormFileName(printPerson.name),
     );
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrintPerson(null);

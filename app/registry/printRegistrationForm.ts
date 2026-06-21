@@ -1,3 +1,11 @@
+/** Consistent download/print filename for a person's form across every entry
+ * point (success screen, registered-people list). Collapses whitespace so the
+ * name format is identical everywhere. */
+export function registrationFormFileName(name: string): string {
+  const clean = (name || "").replace(/\s+/g, " ").trim();
+  return `${clean || "Citizen"} Registration Form`;
+}
+
 /** Print the filled registration form. `documentName` becomes the print
  * document title, which browsers use as the default "Save as PDF" filename
  * (e.g. "John Mahwaya Registration Form.pdf"). */
