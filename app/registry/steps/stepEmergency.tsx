@@ -58,13 +58,13 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
       {/* Person details */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
         </Field>
       </div>
 
@@ -93,7 +93,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
           <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
           {pobIsForeign && (
             <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly />
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>
@@ -103,7 +103,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>

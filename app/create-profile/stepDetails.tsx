@@ -126,6 +126,7 @@ export default function StepDetails({
   const confirmInvalid = touchedConfirm && confirm.length > 0 && !matches;
 
   const firstNameInvalid = Boolean(errors.firstName);
+  const middleNameInvalid = Boolean(errors.middleName);
   const lastNameInvalid = Boolean(errors.lastName);
   const genderInvalid = Boolean(errors.gender);
   const phoneInvalid = Boolean(errors.phoneNumber);
@@ -162,6 +163,7 @@ export default function StepDetails({
 
     const next: Partial<Record<keyof RegistrationDetails, boolean>> = {
       firstName: !form.firstName.trim(),
+      middleName: !form.middleName.trim(),
       lastName: !form.lastName.trim(),
       gender: !form.gender,
       phoneNumber: phoneBad,
@@ -208,6 +210,7 @@ export default function StepDetails({
             <input
               id="firstName"
               autoComplete="given-name"
+              maxLength={15}
               value={form.firstName}
               onChange={(e) => update("firstName", e.target.value)}
               placeholder="Ally"
@@ -226,12 +229,17 @@ export default function StepDetails({
             <input
               id="middleName"
               autoComplete="additional-name"
+              maxLength={15}
               value={form.middleName}
               onChange={(e) => update("middleName", e.target.value)}
               placeholder="Test"
-              className={inputClass}
+              aria-invalid={middleNameInvalid}
+              aria-describedby={errors.middleName ? "middleName-error" : undefined}
+              className={`${inputClass} ${errors.middleName ? errorRing : ""}`}
             />
-            {/* Middle name is optional — no required error. */}
+            {errors.middleName && (
+              <FieldError id="middleName-error" message={req(t("register.middleName"))} />
+            )}
           </div>
           <div className="space-y-1.5">
             <label htmlFor="lastName" className={labelClass}>
@@ -240,6 +248,7 @@ export default function StepDetails({
             <input
               id="lastName"
               autoComplete="family-name"
+              maxLength={15}
               value={form.lastName}
               onChange={(e) => update("lastName", e.target.value)}
               placeholder="User"

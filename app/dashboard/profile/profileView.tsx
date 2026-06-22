@@ -192,9 +192,10 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
       saveProfile(merged);
       setProfile(merged);
       notify(t("toast.profileSaved"));
-      // In the dashboard dialog, stay open with the updated profile; on the
-      // standalone page, return to the dashboard.
-      if (!onClose) router.push("/dashboard");
+      // Dismiss on success: close the dashboard dialog, or on the standalone
+      // page return to the dashboard.
+      if (onClose) onClose();
+      else router.push("/dashboard");
     } catch (err) {
       if (!redirectIfExpired(err))
         setError(getErrorMessage(err, t("profile.updateError")));
@@ -319,6 +320,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="firstName"
+              maxLength={15}
               value={form.firstName}
               onChange={(e) => setField("firstName", e.target.value)}
               className={inputClass}
@@ -330,6 +332,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="middleName"
+              maxLength={15}
               value={form.middleName}
               onChange={(e) => setField("middleName", e.target.value)}
               className={inputClass}
@@ -341,6 +344,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="lastName"
+              maxLength={15}
               value={form.lastName}
               onChange={(e) => setField("lastName", e.target.value)}
               className={inputClass}

@@ -6,8 +6,10 @@ import { useI18n } from "./localeProvider";
 export default function LanguageSwitcher() {
   const { locale, setLocale } = useI18n();
 
+  // One segmented control: flush segments inside a single rounded, bordered
+  // container so it doesn't read as two separate buttons.
   return (
-    <div className="flex items-center gap-0.5 rounded-md border border-white/20 bg-white/10 p-px text-[11px] leading-none backdrop-blur-sm">
+    <div className="inline-flex items-center overflow-hidden rounded-lg border border-white/25 text-base leading-none shadow-lg shadow-black/60 backdrop-blur-sm">
       {LOCALES.map(({ code, label }) => {
         const active = locale === code;
         return (
@@ -18,8 +20,8 @@ export default function LanguageSwitcher() {
             aria-pressed={active}
             className={
               active
-                ? "rounded-md bg-white px-2 py-1.5 font-medium text-navy-700 shadow-sm"
-                : "rounded-md px-3 py-1.8 font-medium text-white/70 transition hover:text-white"
+                ? "bg-[#16395c] px-5 py-2.5 font-semibold text-white"
+                : "bg-white/10 px-5 py-2.5 font-semibold text-white/90 transition hover:bg-white/20 hover:text-white"
             }
           >
             {label}

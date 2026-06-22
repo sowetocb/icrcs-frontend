@@ -1,8 +1,8 @@
 export type Locale = "en" | "sw";
 
 export const LOCALES: { code: Locale; label: string }[] = [
-  { code: "en", label: "En" },
-  { code: "sw", label: "Sw" },
+  { code: "en", label: "English" },
+  { code: "sw", label: "Swahili" },
 ];
 
 export const DEFAULT_LOCALE: Locale = "en";
@@ -150,6 +150,8 @@ const en = {
     visa: "Visa Processing",
     security: "Security Audit",
     logout: "Logout",
+    openMenu: "Show menu",
+    closeMenu: "Hide menu",
   },
   people: {
     title: "Registered People",
@@ -256,6 +258,8 @@ const en = {
   },
   registry: {
     stepsLabel: "Registration Steps",
+    openSteps: "Show registration steps",
+    closeSteps: "Hide registration steps",
     saveExit: "Save & Exit",
     next: "Save",
     complete: "Complete Registration",
@@ -263,9 +267,12 @@ const en = {
     missingIntro: "Please fill in the following before continuing:",
     ageError: "The account holder must be at least 18 years old.",
     minorError: "Dependents registered under your profile must be under 18 years old.",
+    fatherTooYoung: "Father must be at least 16 years older than the applicant.",
+    motherTooYoung: "Mother must be at least 16 years older than the applicant.",
     futureDateError: "The date of birth cannot be in the future.",
     submitError: "Could not submit this step. Please try again.",
-    attachHint: "Tick a document, then upload it (JPG, PNG or PDF).",
+    attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
+    attachTooLarge: "File must be 300KB or smaller.",
     attachChoose: "Choose file",
     attachPhotoRequired: "Please upload the required Passport Size Photo before continuing.",
     attachMandatoryRequired:
@@ -278,9 +285,11 @@ const en = {
     nidaRequired: "Please enter the National ID (NIDA) number for adults.",
     nidaExactDigits: "NIDA number must be exactly 20 digits.",
     schoolRequired: "Please add at least one school, or tick “I never attended school”.",
+    completionYearRange: "Completion year must be between 1900 and {year}.",
     spouseRequired: "Please provide details for at least one spouse.",
     marriageConflict: "You selected \"{status}\" as your marital status in Personal Information (Step 1). Please go back and update your marital status to \"Married\" before answering \"Yes\" here.",
     marriageLocked: "This is set automatically from your marital status in Personal Information (Step 1): \"{status}\". To change it, go back and update Step 1.",
+    childrenMinorLocked: "An applicant under 18 cannot register children. This is set automatically from your date of birth in Personal Information (Step 1).",
     attachAdd: "Add document",
     attachPreview: "Preview",
     attachRemove: "Remove",
@@ -522,10 +531,10 @@ const en = {
       "Follow every application from submission to approval, anytime, with your authorization ID.",
   },
   idle: {
-    title: "Session Timeout Warning",
-    subtitle: "You have been inactive",
+    title: "Still there?",
+    subtitle: "We noticed you've been away",
     message:
-      "You have been inactive for 30 minutes. For your security, you will be automatically logged out when the countdown expires.",
+      "It looks like you've been inactive for a little while. To keep your information safe, we'll gently sign you out when the countdown ends — apologies for the interruption. Choose \"Stay Logged In\" to continue.",
     autoLogout: "Auto-logout when timer reaches 0:00",
     logoutNow: "Logout Now",
     stayLoggedIn: "Stay Logged In",
@@ -607,6 +616,8 @@ const en = {
     schoolDistrict: "City", // REVIEW
     completionYear: "Completion Year", // REVIEW
     eduCompleted: "I have completed this level",
+    eduCompletedOpt: "Completed",
+    eduStudyingOpt: "Still studying",
     employment: "Employment", // REVIEW
     employmentStatus: "Employment Status", // REVIEW
     employmentStatusOpt: "Employment Status", // REVIEW
@@ -940,6 +951,8 @@ const sw: typeof en = {
     visa: "Uchakataji wa Viza",
     security: "Ukaguzi wa Usalama",
     logout: "Toka",
+    openMenu: "Onyesha menyu",
+    closeMenu: "Ficha menyu",
   },
   people: {
     title: "Watu Waliosajiliwa",
@@ -1046,6 +1059,8 @@ const sw: typeof en = {
   },
   registry: {
     stepsLabel: "Hatua za Usajili",
+    openSteps: "Onyesha hatua za usajili",
+    closeSteps: "Ficha hatua za usajili",
     saveExit: "Hifadhi & Toka",
     next: "Hatua Inayofuata",
     complete: "Kamilisha Usajili",
@@ -1053,9 +1068,12 @@ const sw: typeof en = {
     missingIntro: "Tafadhali jaza yafuatayo kabla ya kuendelea:",
     ageError: "Mmiliki wa akaunti lazima awe na umri wa angalau miaka 18.",
     minorError: "Wategemezi waliosajiliwa chini ya wasifu wako lazima wawe na umri chini ya miaka 18.",
+    fatherTooYoung: "Baba lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji.",
+    motherTooYoung: "Mama lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji.",
     futureDateError: "Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
-    attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF).",
+    attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
+    attachTooLarge: "Faili lazima liwe 300KB au chini.",
     attachChoose: "Chagua faili",
     attachPhotoRequired: "Tafadhali pakia Picha ya Pasipoti inayohitajika kabla ya kuendelea.",
     attachMandatoryRequired:
@@ -1068,9 +1086,11 @@ const sw: typeof en = {
     nidaRequired: "Tafadhali ingiza namba ya Kitambulisho cha Taifa (NIDA) kwa watu wazima.",
     nidaExactDigits: "Namba ya NIDA lazima iwe na tarakimu 20 haswa.",
     schoolRequired: "Tafadhali ongeza angalau shule moja, au weka alama “Sikuwahi kuhudhuria shule”.",
+    completionYearRange: "Mwaka wa kumaliza lazima uwe kati ya 1900 na {year}.",
     spouseRequired: "Tafadhali toa taarifa za angalau mwenzi mmoja wa ndoa.",
     marriageConflict: "Umechagua \"{status}\" kama hali ya ndoa katika Taarifa Binafsi (Hatua ya 1). Tafadhali rudi na ubadilishe hali ya ndoa kuwa \"Ameoa/Ameolewa\" kabla ya kujibu \"Ndiyo\" hapa.",
     marriageLocked: "Hii imewekwa moja kwa moja kutoka hali yako ya ndoa katika Taarifa Binafsi (Hatua ya 1): \"{status}\". Ili kuibadilisha, rudi Hatua ya 1.",
+    childrenMinorLocked: "Mwombaji aliye chini ya miaka 18 hawezi kusajili watoto. Hii imewekwa moja kwa moja kutoka tarehe yako ya kuzaliwa katika Taarifa Binafsi (Hatua ya 1).",
     attachAdd: "Ongeza nyaraka",
     attachPreview: "Angalia",
     attachRemove: "Ondoa",
@@ -1312,10 +1332,10 @@ const sw: typeof en = {
       "Fuatilia kila ombi tangu kuwasilisha hadi kuidhinishwa, wakati wowote, kwa kitambulisho chako.",
   },
   idle: {
-    title: "Onyo la Muda wa Kikao",
-    subtitle: "Umekuwa bila shughuli",
+    title: "Bado upo?",
+    subtitle: "Tumegundua umekuwa mbali",
     message:
-      "Umekuwa bila shughuli kwa dakika 30. Kwa usalama wako, utatoka moja kwa moja muda wa kuhesabu ukiisha.",
+      "Inaonekana umekuwa bila shughuli kwa muda kidogo. Ili kulinda taarifa zako, tutakutoa kwa upole muda wa kuhesabu ukiisha — tunaomba radhi kwa usumbufu. Chagua \"Endelea Kukaa\" ili kuendelea.",
     autoLogout: "Toka moja kwa moja saa ikifika 0:00",
     logoutNow: "Toka Sasa",
     stayLoggedIn: "Endelea Kukaa",
@@ -1396,6 +1416,8 @@ const sw: typeof en = {
     schoolDistrict: "Wilaya ya Shule", // REVIEW
     completionYear: "Mwaka wa Kumaliza", // REVIEW
     eduCompleted: "Nimemaliza kiwango hiki",
+    eduCompletedOpt: "Nimemaliza",
+    eduStudyingOpt: "Bado nasoma",
     employment: "Ajira", // REVIEW
     employmentStatus: "Hali ya Ajira", // REVIEW
     employmentStatusOpt: "Hali ya Ajira (hiari)", // REVIEW

@@ -39,6 +39,9 @@ export function parseAttachments(raw: unknown): Attachment[] {
 type Status = "idle" | "uploading" | "done" | "error";
 type RowState = { status: Status; name?: string; error?: string };
 
+// Maximum accepted size for an uploaded supporting document.
+const MAX_ATTACHMENT_BYTES = 300 * 1024; // 300KB
+
 /** Read a file as a base64 data URL (used to keep the passport photo locally). */
 function readDataUrl(file: File): Promise<string> {
   return new Promise((resolve) => {
@@ -51,7 +54,7 @@ function readDataUrl(file: File): Promise<string> {
 
 export default function StepAttachments() {
   const { t } = useI18n();
-  const { data, set, errors } = useWizard();
+  const { data, set, errors, fieldErrors } = useWizard();
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
@@ -100,6 +103,15 @@ export default function StepAttachments() {
   async function handleFile(typeId: number, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Cap uploads at 300KB — reject larger files before any upload attempt.
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setRows((r) => ({
+        ...r,
+        [typeId]: { status: "error", name: file.name, error: t("registry.attachTooLarge") },
+      }));
+      e.target.value = "";
+      return;
+    }
     // Keep a local copy of the passport photo (type 5) as a data URL so it can
     // be shown on the printable form — the backend doesn't serve uploaded images.
     if (typeId === 5) {
@@ -213,8 +225,8 @@ export default function StepAttachments() {
                 </p>
               )}
               {errors.includes(`attach${type.id}`) && row.status !== "done" && (
-                <p role="alert" className="mt-2 text-sm font-medium text-danger">
-                  {t("registry.attachRequiredField")}
+                <p role="alert" data-field-error={`attach${type.id}`} className="mt-2 text-sm font-medium text-danger">
+                  {fieldErrors?.[`attach${type.id}`] || t("registry.attachRequiredField")}
                 </p>
               )}
             </li>

@@ -199,12 +199,6 @@ export default function AuthShell({
 
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
       <header className="relative z-20 border-b border-white/10 bg-[#16395c]">
-        {/* Language switcher — overlaid in the top-right of the bar, nudged down
-            and compact so it clears the immigration emblem. */}
-        <div className="absolute right-3 top-25 z-10 flex items-center gap-2 rounded-lg bg-[#1e3557] px-1 py-0.5 shadow-sm">
-          <LanguageSwitcher />
-        </div>
-
         <div className="mx-auto flex w-full max-w-7xl items-center gap-5 px-6 py-5 sm:gap-8">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -247,6 +241,12 @@ export default function AuthShell({
           />
         </div>
       </header>
+
+      {/* Language switcher — floats below the header, right-aligned, with no
+          visible background bar. */}
+      <div className="relative z-20 flex items-center justify-end px-6 py-2">
+        <LanguageSwitcher />
+      </div>
 
       {/* Main — centered split card */}
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6">

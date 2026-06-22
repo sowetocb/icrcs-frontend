@@ -3,7 +3,7 @@ version: '3.8'
 services:
   web:
     container_name: icrcs-fe-portal
-    image: 10.248.0.7:30000/icrcs-fe-portal:v0.4.0
+    image: 10.248.0.7:30000/icrcs-fe-portal:v0.5.0
     # If you want Compose to handle the build process automatically when needed:
     build:
       context: .

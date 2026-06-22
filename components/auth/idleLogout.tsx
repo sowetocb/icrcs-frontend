@@ -8,9 +8,11 @@ import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { useI18n } from "@/app/i18n/localeProvider";
 
-// Sign the user out after this much inactivity (no mouse/keyboard/scroll/touch).
-const IDLE_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
-const WARNING_COUNTDOWN_S = 60; // 1 minute warning before forced logout
+// Sign the user out after 15 minutes of inactivity (no mouse/keyboard/scroll/
+// touch). The warning appears one minute earlier so the humble notice and its
+// countdown together land the logout at exactly the 15-minute mark.
+const WARNING_COUNTDOWN_S = 60; // 1 minute humble warning before forced logout
+const IDLE_LIMIT_MS = 15 * 60 * 1000 - WARNING_COUNTDOWN_S * 1000; // 14 min → warn
 const ACTIVITY_KEY = "icrcs-last-activity";
 const ACTIVITY_EVENTS = [
   "mousedown",

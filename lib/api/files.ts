@@ -22,9 +22,9 @@ export const ATTACHMENT_TYPES: AttachmentType[] = [
   { id: 1, label: "Applicant Birth Certificate", mandatory: true },
   { id: 2, label: "Father Birth Certificate", mandatory: false },
   { id: 3, label: "Mother Birth Certificate", mandatory: false },
-  { id: 4, label: "Letter from Local Government / Employer", mandatory: false },
-  { id: 5, label: "Passport Size Photo", mandatory: false },
+  { id: 4, label: "Letter from Local Government / Employer", mandatory: true },
   { id: 6, label: "Naturalisation Certificate", mandatory: false },
+  { id: 7, label: "Renounciation Certificate ", mandatory: true },
 ];
 
 /** The backend's mandatory passport-size photo attachment type. */

@@ -6,6 +6,7 @@ import {
   documentTypeOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
+  usePersonDocumentTypeOptions,
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
@@ -30,6 +31,32 @@ function optionLabel(options: Opt[], value: string): string {
   return titleCase(options.find((o) => o.value === value)?.label ?? value);
 }
 
+/** Resolve an identification document type value to a human-readable label.
+ * The stored value may be a numeric id ("1") from the dropdown, or a string
+ * code ("nida", "driving", "voter") from the backend re-hydration. We check
+ * the dynamic person-group options first, then the static list, then fall back
+ * to the raw value. */
+function idDocLabel(
+  value: string,
+  personOptions: Opt[],
+  staticOptions: Opt[],
+): string {
+  if (!value) return "";
+  // Direct match in the dynamic lookup options (numeric id).
+  const dynMatch = personOptions.find((o) => o.value === value);
+  if (dynMatch) return titleCase(dynMatch.label);
+  // Direct match in the static documentTypeOptions (numeric id).
+  const staticMatch = staticOptions.find((o) => o.value === value);
+  if (staticMatch) return titleCase(staticMatch.label);
+  // The stageToForm reverse map produces string codes — match by label keyword.
+  const lower = value.toLowerCase();
+  const byKeyword = [...personOptions, ...staticOptions].find((o) =>
+    o.label.toLowerCase().includes(lower),
+  );
+  if (byKeyword) return titleCase(byKeyword.label);
+  return titleCase(value);
+}
+
 export default function PrintableForm({
   data,
   applicationId,
@@ -50,6 +77,7 @@ export default function PrintableForm({
   const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
   const OCCUPATION_TYPE_OPTIONS = useOccupationTypeOptions();
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
+  const APPLICANT_DOC_OPTIONS = usePersonDocumentTypeOptions("applicant");
 
   const s = (key: string) => {
     const v = data[key];
@@ -104,6 +132,9 @@ export default function PrintableForm({
 
   // Citizenship type
   const citizenshipType = optionLabel(CITIZENSHIP_TYPE_ID_OPTIONS, s("citizenshipTypeId"));
+
+  // Applicant identification documents
+  const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
 
   // Attachments
 
@@ -194,6 +225,19 @@ export default function PrintableForm({
           <Row label={tr("Email", "Barua Pepe")} value={val("email")} preserveCase />
         </RowGroup>
 
+        {/* Identification documents */}
+        {Array.from({ length: idDocCount }, (_, i) => i + 1)
+          .filter((n) => s(`idDoc${n}Type`))
+          .map((n) => (
+            <Row
+              key={`idDoc${n}`}
+              label={idDocCount > 1
+                ? `${tr("Document", "Hati")} ${n}`
+                : tr("Document", "Hati")}
+              value={`${idDocLabel(s(`idDoc${n}Type`), APPLICANT_DOC_OPTIONS, DOCUMENT_TYPE_OPTIONS)}: ${val(`idDoc${n}Number`)}`}
+            />
+          ))}
+
         {/* Naturalization details (if applicable) */}
         {s("citizenshipTypeId") === "3" && (
           <>
@@ -257,8 +301,8 @@ export default function PrintableForm({
 
       {/* ─── Section 3: Parents Information ─── */}
       <Section title={tr("3. Parents Information:", "3. Taarifa za Wazazi:")}>
-        <ParentPrintBlock prefix="father" label={tr("Father", "Baba")} tr={tr} t={t} s={s} val={val} />
-        <ParentPrintBlock prefix="mother" label={tr("Mother", "Mama")} tr={tr} t={t} s={s} val={val} />
+        <ParentPrintBlock prefix="father" label={tr("Father", "Baba")} tr={tr} t={t} s={s} val={val} data={data} />
+        <ParentPrintBlock prefix="mother" label={tr("Mother", "Mama")} tr={tr} t={t} s={s} val={val} data={data} />
       </Section>
 
       {/* ─── Section 4: Education & Employment ─── */}
@@ -547,6 +591,7 @@ function ParentPrintBlock({
   t,
   s,
   val,
+  data,
 }: {
   prefix: string;
   label: string;
@@ -554,8 +599,10 @@ function ParentPrintBlock({
   t: (path: string) => string;
   s: (key: string) => string;
   val: (key: string) => string;
+  data: Data;
 }) {
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
+  const PERSON_DOC_OPTIONS = usePersonDocumentTypeOptions(prefix as "applicant" | "father" | "mother");
   const name = [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)]
     .filter(Boolean)
     .join(" ") || "—";
@@ -563,6 +610,11 @@ function ParentPrintBlock({
     M: tr("Male", "Mwanaume"),
     F: tr("Female", "Mwanamke"),
   };
+  // New repeatable identification documents: {prefix}IdDoc1Type/Number, …
+  const idDocCount = Math.max(1, Number(data[`${prefix}IdDocCount`]) || 1);
+  const hasRepeatable = Array.from({ length: idDocCount }, (_, i) => i + 1).some(
+    (n) => s(`${prefix}IdDoc${n}Type`),
+  );
   return (
     <>
       <SubTitle>{label}</SubTitle>
@@ -598,12 +650,26 @@ function ParentPrintBlock({
         <Row label={tr("Street", "Mtaa")} value={titleCase(s(`${prefix}ResStreet`))} />
         <Row label={tr("City", "Jiji")} value={titleCase(s(`${prefix}ResCity`))} />
       </RowGroup>
-      {s(`${prefix}DocType`) && (
-        <Row
-          label={tr("Document", "Hati")}
-          value={`${optionLabel(DOCUMENT_TYPE_OPTIONS, s(`${prefix}DocType`))}: ${val(`${prefix}DocNumber`)}`}
-        />
-      )}
+      {/* Repeatable identification documents (new format) */}
+      {hasRepeatable
+        ? Array.from({ length: idDocCount }, (_, i) => i + 1)
+            .filter((n) => s(`${prefix}IdDoc${n}Type`))
+            .map((n) => (
+              <Row
+                key={`${prefix}IdDoc${n}`}
+                label={idDocCount > 1
+                  ? `${tr("Document", "Hati")} ${n}`
+                  : tr("Document", "Hati")}
+                value={`${idDocLabel(s(`${prefix}IdDoc${n}Type`), PERSON_DOC_OPTIONS, DOCUMENT_TYPE_OPTIONS)}: ${val(`${prefix}IdDoc${n}Number`)}`}
+              />
+            ))
+        : /* Legacy single document fallback */
+          s(`${prefix}DocType`) && (
+            <Row
+              label={tr("Document", "Hati")}
+              value={`${optionLabel(DOCUMENT_TYPE_OPTIONS, s(`${prefix}DocType`))}: ${val(`${prefix}DocNumber`)}`}
+            />
+          )}
     </>
   );
 }

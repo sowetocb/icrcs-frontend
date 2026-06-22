@@ -69,7 +69,7 @@ export function FieldError({ name }: { name: string }) {
       : t("fields.fieldRequired");
   const message = fieldErrors?.[name] || fallback;
   return (
-    <p role="alert" className="mt-1 text-xs font-medium text-danger">
+    <p role="alert" data-field-error={name} className="mt-1 text-xs font-medium text-danger">
       {message}
     </p>
   );
@@ -169,6 +169,7 @@ export function TextInput({
     <>
       <input
         type={type}
+        data-field={name}
         value={value}
         maxLength={maxLength}
         min={min}
@@ -253,6 +254,7 @@ export function DateInput({
       <div className="relative">
         <input
           type="text"
+          data-field={name}
           inputMode="numeric"
           placeholder="dd/mm/yyyy"
           value={text}
@@ -314,6 +316,7 @@ export function Select({
     <>
       <div className="relative">
         <select
+          data-field={name}
           value={value}
           onChange={(e) => {
             set(name, e.target.value);

@@ -56,13 +56,13 @@ function PersonFields({ prefix }: { prefix: string }) {
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
         </Field>
       </div>
 
@@ -91,7 +91,7 @@ function PersonFields({ prefix }: { prefix: string }) {
           <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
           {pobIsForeign && (
             <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly />
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>
@@ -101,7 +101,7 @@ function PersonFields({ prefix }: { prefix: string }) {
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>
@@ -167,8 +167,8 @@ export default function StepFamily() {
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
 
-  // A minor (subject under 18) is pre-answered "No" to "Do you have children?".
-  // Only when the question is still unanswered, so a manual change is preserved.
+  // A minor (subject under 18) cannot have children: "Do you have children?" is
+  // forced to "No" and the "Yes" option is locked (mirrors the married lock).
   const isMinor = (() => {
     const dob = typeof data.dob === "string" ? data.dob : "";
     if (!dob) return false;
@@ -180,8 +180,9 @@ export default function StepFamily() {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age < 18;
   })();
+  const [minorChildrenConflict, setMinorChildrenConflict] = useState(false);
   useEffect(() => {
-    if (isMinor && data.hasChildren === undefined) set("hasChildren", false);
+    if (isMinor && data.hasChildren !== false) set("hasChildren", false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMinor]);
 
@@ -249,12 +250,14 @@ export default function StepFamily() {
       <div className="space-y-4">
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("fields.haveChildren")}</p>
-          <div className="flex gap-6">
-            <label className="flex cursor-pointer items-center gap-2">
+          {/* For a minor the "Yes" option is locked; clicking it explains why. */}
+          <div className="flex gap-6" onClick={() => isMinor && setMinorChildrenConflict(true)}>
+            <label className={`flex items-center gap-2 ${isMinor ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
               <input
                 type="radio"
                 name="hasChildren"
                 checked={hasChildren}
+                disabled={isMinor}
                 onChange={() => set("hasChildren", true)}
                 className="h-4 w-4 border-line accent-navy-700"
               />
@@ -271,6 +274,15 @@ export default function StepFamily() {
               <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
             </label>
           </div>
+          {isMinor && (
+            <p
+              className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                minorChildrenConflict ? "bg-warning/10 text-warning" : "bg-navy-50 text-navy-700"
+              }`}
+            >
+              {t("registry.childrenMinorLocked")}
+            </p>
+          )}
         </div>
         {hasChildren && (
           <div className="space-y-5">

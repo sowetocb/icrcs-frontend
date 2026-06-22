@@ -617,11 +617,15 @@ export async function editStage4(
  * exact Stage 5/6 shape (like the parent object, but with gender). */
 async function buildPersonPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
   const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
+  // Place of birth mirrors the applicant's convention: a Tanzanian birthplace
+  // pins the street id; a foreign one carries the ISO country code + city.
+  const pobTanzania = isTanzania(str(data, `${prefix}PobCountry`));
   return {
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`),
     lastName: str(data, `${prefix}Last`),
     gender: await resolveGenderId(str(data, `${prefix}Gender`)),
+    dateOfBirth: str(data, `${prefix}Dob`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
     // The backend expects the ISO country CODE (e.g. "KEN"), not the lookup id.
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
@@ -631,6 +635,13 @@ async function buildPersonPayload(data: Data, prefix: string): Promise<Record<st
     ...(resTanzania
       ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
       : { residenceCity: str(data, `${prefix}ResCity`) || null }),
+    // Place of birth — only the side matching the picked country is sent.
+    ...(pobTanzania
+      ? { placeOfBirthStreetId: wardId(data, `${prefix}PobStreetId`) }
+      : {
+          countryOfBirthCode: await resolveCountryCode(str(data, `${prefix}PobCountry`)),
+          cityOfBirth: str(data, `${prefix}Village`) || null,
+        }),
     documentFileUrl: str(data, `${prefix}DocFileUrl`) || null,
     birthDetailId: null,
   };

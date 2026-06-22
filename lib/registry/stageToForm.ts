@@ -15,6 +15,8 @@ import {
   getMaritalStatuses,
   getEmploymentStatuses,
   getStreetInfo,
+  getPersonDocumentTypes,
+  type PersonGroup,
 } from "@/lib/api/lookup";
 import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
@@ -51,12 +53,46 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
   const d = obj(raw);
   const out: Data = {};
 
-  const [genders, maritals, employments, countries] = await Promise.all([
+  const [genders, maritals, employments, countries, personDocTypes] = await Promise.all([
     getGenders().catch(() => []),
     getMaritalStatuses().catch(() => []),
     getEmploymentStatuses().catch(() => []),
     getCountries().catch(() => []),
+    getPersonDocumentTypes().catch(() => ({ applicant: [], father: [], mother: [] })),
   ]);
+
+  // documentTypeId → person group + the form-field prefix for that group's
+  // identification-documents repeater. Lets the flat `documents[]` array (which
+  // mixes applicant/father/mother docs) be split back to the right person.
+  const DOC_GROUP_PREFIX: Record<PersonGroup, string> = {
+    applicant: "idDoc",
+    father: "fatherIdDoc",
+    mother: "motherIdDoc",
+  };
+  const docIdToGroup = new Map<string, PersonGroup>();
+  (["applicant", "father", "mother"] as const).forEach((g) => {
+    personDocTypes[g].forEach((item) => docIdToGroup.set(String(item.id), g));
+  });
+  /** Split a flat documents[] array (with documentTypeId) into the per-person
+   * repeater fields ({prefix}IdDoc{n}Type / Number + {prefix}IdDocCount). */
+  function applyGroupedDocuments(documents: Obj[]) {
+    const counts: Record<PersonGroup, number> = { applicant: 0, father: 0, mother: 0 };
+    for (const doc of documents) {
+      const id = str(doc.documentTypeId);
+      const group = id ? docIdToGroup.get(id) : undefined;
+      if (!id || !group) continue;
+      const n = ++counts[group];
+      const prefix = DOC_GROUP_PREFIX[group];
+      out[`${prefix}${n}Type`] = id;
+      if (doc.documentNumber != null) out[`${prefix}${n}Number`] = str(doc.documentNumber);
+    }
+    (["applicant", "father", "mother"] as const).forEach((g) => {
+      if (counts[g] > 0) {
+        const countKey = g === "applicant" ? "idDocCount" : `${g}IdDocCount`;
+        out[countKey] = String(counts[g]);
+      }
+    });
+  }
 
   const genderById = new Map(genders.map((g) => [String(g.id), (g.code ?? "").toUpperCase()]));
   const maritalById = new Map(maritals.map((s) => [String(s.id), (s.code ?? "").toUpperCase()]));
@@ -117,24 +153,21 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     if (p.documentTypeId != null) out[`${prefix}DocType`] = str(p.documentTypeId);
     if (p.documentNumber != null) out[`${prefix}DocNumber`] = str(p.documentNumber);
     // Identification documents repeater: the backend returns a `documents`
-    // array with `{ documentTypeId, documentNumber }` objects. Map these back
-    // to {prefix}IdDoc{n}Type / Number (NIDA=1→nida, Driving=3→driving,
-    // Voter=4→voter). Falls back to the legacy single DocType/DocNumber.
-    const DOC_TYPE_REVERSE: Record<number, string> = { 1: "nida", 3: "driving", 4: "voter" };
+    // array with `{ documentTypeId, documentNumber }`. The dropdown's option
+    // VALUE is the documentTypeId, so map the id straight through (no code
+    // conversion) into {prefix}IdDoc{n}Type / Number.
     const docs = arr(p.documents);
     if (docs.length > 0) {
       out[`${prefix}IdDocCount`] = String(docs.length);
       docs.forEach((doc, i) => {
         const n = i + 1;
-        const typeId = Number(doc.documentTypeId);
-        out[`${prefix}IdDoc${n}Type`] = DOC_TYPE_REVERSE[typeId] ?? str(doc.documentTypeId);
+        out[`${prefix}IdDoc${n}Type`] = str(doc.documentTypeId);
         if (doc.documentNumber != null) out[`${prefix}IdDoc${n}Number`] = str(doc.documentNumber);
       });
     } else if (p.documentTypeId != null && p.documentNumber != null) {
       // Legacy single document → slot it into idDoc1
-      const typeId = Number(p.documentTypeId);
       out[`${prefix}IdDocCount`] = "1";
-      out[`${prefix}IdDoc1Type`] = DOC_TYPE_REVERSE[typeId] ?? str(p.documentTypeId);
+      out[`${prefix}IdDoc1Type`] = str(p.documentTypeId);
       out[`${prefix}IdDoc1Number`] = str(p.documentNumber);
     }
     // Place of birth — separate from residence so the two cascades don't cross.
@@ -167,6 +200,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     if (d.placeOfBirthStreetId != null) await applyStreet("pob", d.placeOfBirthStreetId);
     if (d.birthCertificateNo != null) out.birthCertNo = str(d.birthCertificateNo);
     if (d.nidaNo != null) out.nidaNumber = str(d.nidaNo);
+    // Identification documents: the GET returns ALL documents in one flat array
+    // (applicant + father + mother), so split them by person group into each
+    // repeater (applicant → idDoc, father → fatherIdDoc, mother → motherIdDoc).
+    applyGroupedDocuments(arr(d.documents));
     // Passport photo — the Stage 1 preview renders any <img src>, so the stored
     // file URL works. Look for a direct url or a type-5 entry in documents.
     const photoUrl =
@@ -210,6 +247,9 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
       const prefix = str(parent.parentType).toUpperCase() === "MOTHER" ? "mother" : "father";
       await applyPerson(prefix, parent);
     }
+    // Documents may instead come back in one flat array (mixing father/mother) —
+    // split by person group into each parent's repeater.
+    applyGroupedDocuments(arr(d.documents));
     return out;
   }
 

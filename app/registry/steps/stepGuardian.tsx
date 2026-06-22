@@ -47,8 +47,15 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   function addIdDoc() {
     set(idDocCountKey, String(idDocCount + 1));
   }
-  function removeLastIdDoc() {
+  /** Remove a specific document, shifting later ones up into its slot. */
+  function removeIdDoc(target: number) {
     if (idDocCount <= 1) return;
+    for (let n = target; n < idDocCount; n++) {
+      for (const s of ID_DOC_SUFFIXES) {
+        const nextVal = data[`${prefix}IdDoc${n + 1}${s}`];
+        set(`${prefix}IdDoc${n}${s}`, typeof nextVal === "string" ? nextVal : "");
+      }
+    }
     for (const s of ID_DOC_SUFFIXES) set(`${prefix}IdDoc${idDocCount}${s}`, "");
     set(idDocCountKey, String(idDocCount - 1));
   }
@@ -60,13 +67,13 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
         </Field>
       </div>
 
@@ -86,7 +93,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
           {pobIsForeign && (
             <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} />
+              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>
@@ -97,6 +104,14 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`${prefix}IdDoc${n}Type`] === "string" ? (data[`${prefix}IdDoc${n}Type`] as string) : "";
           const isNida = !!idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase().includes("NIDA");
+          // Hide a document type already chosen in another row (keep this row's own).
+          const pickedElsewhere = new Set(
+            Array.from({ length: idDocCount }, (_, m) => m + 1)
+              .filter((m) => m !== n)
+              .map((m) => (typeof data[`${prefix}IdDoc${m}Type`] === "string" ? (data[`${prefix}IdDoc${m}Type`] as string) : ""))
+              .filter(Boolean),
+          );
+          const availableOptions = idDocTypeOptions.filter((o) => o.value === type || !pickedElsewhere.has(o.value));
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (
@@ -104,20 +119,18 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                   <span className="text-sm font-semibold text-navy-700">
                     {t("fields.documentN").replace("{n}", String(n))}
                   </span>
-                  {n === idDocCount && (
-                    <button
-                      type="button"
-                      onClick={removeLastIdDoc}
-                      className="text-xs font-semibold text-danger transition hover:underline"
-                    >
-                      {t("fields.remove")}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeIdDoc(n)}
+                    className="text-xs font-semibold text-danger transition hover:underline"
+                  >
+                    {t("fields.remove")}
+                  </button>
                 </div>
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.docType")} optional>
-                  <Select name={`${prefix}IdDoc${n}Type`} placeholder={t("fields.phSelect")} options={idDocTypeOptions} />
+                  <Select name={`${prefix}IdDoc${n}Type`} placeholder={t("fields.phSelect")} options={availableOptions} />
                 </Field>
                 {type && (
                   <Field label={t("fields.docNumber")} optional>
@@ -125,7 +138,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                     {isNida ? (
                       <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
                     ) : (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" />
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" maxLength={10} />
                     )}
                   </Field>
                 )}
@@ -133,17 +146,20 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={addIdDoc}
-          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {t("fields.addDocument")}
-        </button>
+        {/* Hide "Add" once every available document type has been used. */}
+        {idDocTypeOptions.length > 0 && idDocCount < idDocTypeOptions.length && (
+          <button
+            type="button"
+            onClick={addIdDoc}
+            className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {t("fields.addDocument")}
+          </button>
+        )}
       </div>
 
       {/* Phone */}
@@ -157,7 +173,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
             </Field>
           )}
         </div>

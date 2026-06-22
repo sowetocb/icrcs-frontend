@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import { useEmploymentStatusOptions, useOccupationTypeOptions } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
@@ -51,38 +52,46 @@ function SchoolBlock({
         )}
       </div>
 
+      {/* Completion status — drives whether a completion year is required. */}
+      <div className="flex gap-6">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="radio"
+            name={`${p}Completed`}
+            checked={completed}
+            onChange={() => set(`${p}Completed`, true)}
+            className="h-4 w-4 shrink-0 border-line accent-navy-700"
+          />
+          <span className="text-sm font-medium text-ink">{t("fields.eduCompletedOpt")}</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="radio"
+            name={`${p}Completed`}
+            checked={!completed}
+            onChange={() => {
+              set(`${p}Completed`, false);
+              // Clear the year — the payload sends completionYear: null.
+              set(`${p}Year`, "");
+            }}
+            className="h-4 w-4 shrink-0 border-line accent-navy-700"
+          />
+          <span className="text-sm font-medium text-ink">{t("fields.eduStudyingOpt")}</span>
+        </label>
+      </div>
+
+      {/* Education Level and Completion Year share a row (horizontally level). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.eduLevel")} required>
           <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
         </Field>
-        <div className="space-y-2">
-          <label className="flex cursor-pointer items-center gap-2 pt-1 sm:pt-7">
-            <input
-              type="checkbox"
-              checked={completed}
-              onChange={(e) => {
-                set(`${p}Completed`, e.target.checked);
-                // Clear the year when the level is no longer marked completed
-                // (the payload sends completionYear: null in that case).
-                if (!e.target.checked) set(`${p}Year`, "");
-              }}
-              className="h-4 w-4 shrink-0 rounded border-line accent-navy-700"
-            />
-            <span className="text-sm font-medium text-ink">{t("fields.eduCompleted")}</span>
-          </label>
-          {completed && (
-            <Field label={t("fields.completionYear")} required>
-              <TextInput
-                name={`${p}Year`}
-                placeholder="2014"
-                numeric
-                maxLength={4}
-                min={1900}
-                max={new Date().getFullYear()}
-              />
-            </Field>
-          )}
-        </div>
+        {completed && (
+          <Field label={t("fields.completionYear")} required>
+            {/* No min/max clamp — an out-of-range year is flagged as an error on
+                submit (see the Stage 4 validation) rather than snapped to 1900. */}
+            <TextInput name={`${p}Year`} placeholder="2014" numeric maxLength={4} />
+          </Field>
+        )}
       </div>
 
       <Field label={t("fields.schoolName")} required>
@@ -118,6 +127,12 @@ export default function StepEducation() {
   const employmentRequired = isFirstPerson && !!bornAbroad;
   const neverAttendedSchool = data.neverAttendedSchool === true;
   const schoolCount = Math.max(MIN_SCHOOLS, Number(data.eduCount) || MIN_SCHOOLS);
+
+  // "Have you attended school?" defaults to No (never attended) until answered.
+  useEffect(() => {
+    if (data.neverAttendedSchool === undefined) set("neverAttendedSchool", true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function clearSchool(n: number) {
     for (const s of SCHOOL_SUFFIXES) set(`edu${n}${s}`, "");

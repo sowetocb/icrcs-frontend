@@ -82,11 +82,17 @@ function PhotoUpload() {
             />
           </label>
           <p className="mt-2 text-xs text-muted">{t("fields.photoHint")}</p>
-          {error && (
+          {/* Upload error (type/size) takes precedence; otherwise show the
+              required message when validation flagged a missing photo. */}
+          {error ? (
             <p role="alert" className="mt-1 text-xs text-danger">
               {error}
             </p>
-          )}
+          ) : invalid ? (
+            <p role="alert" className="mt-1 text-xs font-medium text-danger">
+              {t("fields.isRequired").replace("{field}", t("flabel.stage1PhotoData"))}
+            </p>
+          ) : null}
         </div>
       </div>
     </Field>
@@ -115,11 +121,37 @@ export default function StepPersonal() {
     if (data.nationalityCountry !== "Tanzania") set("nationalityCountry", "Tanzania");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A minor (under 18) is always "Single": the marital status is forced to the
+  // lookup's Single option and the select is locked.
+  const isMinor = (() => {
+    const dob = typeof data.dob === "string" ? data.dob : "";
+    if (!dob) return false;
+    const birth = new Date(dob);
+    if (Number.isNaN(birth.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age < 18;
+  })();
+  const singleValue = maritalStatuses.find((o) => /single/i.test(o.label))?.value ?? "";
+  useEffect(() => {
+    if (isMinor && singleValue && data.marriage !== singleValue) set("marriage", singleValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMinor, singleValue]);
   function addIdDoc() {
     set("idDocCount", String(idDocCount + 1));
   }
-  function removeLastIdDoc() {
+  /** Remove a specific document, shifting later ones up into its slot. */
+  function removeIdDoc(target: number) {
     if (idDocCount <= 1) return;
+    for (let n = target; n < idDocCount; n++) {
+      for (const s of ID_DOC_SUFFIXES) {
+        const nextVal = data[`idDoc${n + 1}${s}`];
+        set(`idDoc${n}${s}`, typeof nextVal === "string" ? nextVal : "");
+      }
+    }
     for (const s of ID_DOC_SUFFIXES) set(`idDoc${idDocCount}${s}`, "");
     set("idDocCount", String(idDocCount - 1));
   }
@@ -161,6 +193,7 @@ export default function StepPersonal() {
             name="marriage"
             placeholder={t("fields.phSelectStatus")}
             options={maritalStatuses}
+            disabled={isMinor}
           />
         </Field>
       </div>
@@ -178,6 +211,15 @@ export default function StepPersonal() {
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`idDoc${n}Type`] === "string" ? (data[`idDoc${n}Type`] as string) : "";
           const isNida = !!idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase().includes("NIDA");
+          // A document type already chosen in another row is hidden here so it
+          // can't be picked twice (the current row keeps its own selection).
+          const pickedElsewhere = new Set(
+            Array.from({ length: idDocCount }, (_, m) => m + 1)
+              .filter((m) => m !== n)
+              .map((m) => (typeof data[`idDoc${m}Type`] === "string" ? (data[`idDoc${m}Type`] as string) : ""))
+              .filter(Boolean),
+          );
+          const availableOptions = idDocTypeOptions.filter((o) => o.value === type || !pickedElsewhere.has(o.value));
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (
@@ -185,20 +227,18 @@ export default function StepPersonal() {
                   <span className="text-sm font-semibold text-navy-700">
                     {t("fields.documentN").replace("{n}", String(n))}
                   </span>
-                  {n === idDocCount && (
-                    <button
-                      type="button"
-                      onClick={removeLastIdDoc}
-                      className="text-xs font-semibold text-danger transition hover:underline"
-                    >
-                      {t("fields.remove")}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeIdDoc(n)}
+                    className="text-xs font-semibold text-danger transition hover:underline"
+                  >
+                    {t("fields.remove")}
+                  </button>
                 </div>
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.docType")} optional>
-                  <Select name={`idDoc${n}Type`} placeholder={t("fields.phSelect")} options={idDocTypeOptions} />
+                  <Select name={`idDoc${n}Type`} placeholder={t("fields.phSelect")} options={availableOptions} />
                 </Field>
                 {type && (
                   <Field label={t("fields.docNumber")} optional>
@@ -206,7 +246,7 @@ export default function StepPersonal() {
                     {isNida ? (
                       <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
                     ) : (
-                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" />
+                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" maxLength={10} />
                     )}
                   </Field>
                 )}
@@ -214,17 +254,20 @@ export default function StepPersonal() {
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={addIdDoc}
-          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {t("fields.addDocument")}
-        </button>
+        {/* Hide "Add" once every available document type has been used. */}
+        {idDocTypeOptions.length > 0 && idDocCount < idDocTypeOptions.length && (
+          <button
+            type="button"
+            onClick={addIdDoc}
+            className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {t("fields.addDocument")}
+          </button>
+        )}
       </div>
 
       <Field label={t("fields.placeOfBirth")} required>
@@ -241,20 +284,12 @@ export default function StepPersonal() {
                 name="pobCityVillage"
                 placeholder={t("fields.phCityVillageBirth")}
                 lettersOnly
+                maxLength={30}
               />
             </Field>
           )}
         </div>
       </Field>
-
-      {bornInTanzania && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t("fields.birthCertNo")} optional>
-            <TextInput name="birthCertNo" placeholder="TZ1234567890" />
-          </Field>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.phone")} required>
           <PhoneInput name="phone" />

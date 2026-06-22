@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WizardProvider } from "@/components/registry/field";
 import Stepper from "@/components/registry/stepper";
@@ -51,7 +51,9 @@ import StepFamily from "./steps/stepFamily";
 import StepReferees from "./steps/stepReferees";
 import StepAttachments, { parseAttachments } from "./steps/stepAttachments";
 import StepPreviewDeclaration from "./steps/stepPreviewDeclaration";
+import StageSkeleton from "@/components/registry/stageSkeleton";
 import {
+  ATTACHMENT_TYPES,
   PASSPORT_PHOTO_TYPE,
   MANDATORY_ATTACHMENT_TYPE_IDS,
   type UploadedAttachment,
@@ -173,6 +175,17 @@ function isAtLeast18(dob: string): boolean {
   return age >= 18;
 }
 
+/** True when `olderDob` is at least `years` years before `youngerDob`. Unknown/
+ * unparseable dates pass (the check is skipped). */
+function atLeastYearsOlder(olderDob: string, youngerDob: string, years: number): boolean {
+  const older = new Date(olderDob);
+  const younger = new Date(youngerDob);
+  if (Number.isNaN(older.getTime()) || Number.isNaN(younger.getTime())) return true;
+  const threshold = new Date(older);
+  threshold.setFullYear(threshold.getFullYear() + years);
+  return threshold.getTime() <= younger.getTime();
+}
+
 function profileToPersonal(p: Profile): Record<string, string | boolean> {
   return {
     applicantFirst: p.firstName,
@@ -243,6 +256,13 @@ export default function RegistryWizard({
   // without an entry here fall back to a generic "required" message at the field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
+  // True while a submitted stage's data is being re-fetched from the backend, so
+  // the step renders a skeleton instead of empty/stale fields until it arrives.
+  const [stageLoading, setStageLoading] = useState(false);
+  // Stages already hydrated from the backend this session — the skeleton only
+  // blocks the FIRST load; later visits already have the data, so it never
+  // reappears (the refresh then happens silently behind the populated form).
+  const hydratedStages = useRef<Set<number>>(new Set());
   // Readable labels of the fields the user skipped on the current step, shown
   // so they know specifically what to go back and fill.
   const [applicationId, setApplicationId] = useState(
@@ -281,27 +301,69 @@ export default function RegistryWizard({
   // the source of truth for a submitted stage, so every field it returns
   // overwrites the local value — the form shows exactly what the server stored.
   useEffect(() => {
-    if (!subjectId || !submittedStages.has(step)) return;
+    if (!subjectId || !submittedStages.has(step)) {
+      setStageLoading(false);
+      return;
+    }
     let cancelled = false;
+    // Show the skeleton only the first time this stage is hydrated; on later
+    // visits the data is already present, so refresh without blocking the form.
+    const firstLoad = !hydratedStages.current.has(step);
+    if (firstLoad) setStageLoading(true);
     (async () => {
-      const raw = await getStageData(subjectId, step);
-      if (!raw || cancelled) return;
-      const mapped = await stageToForm(step, raw);
-      if (cancelled || Object.keys(mapped).length === 0) return;
-      setData((d) => {
-        const next = { ...d };
-        // `mapped` only holds keys derived from the API response, so assigning
-        // them all reflects the server data exactly without wiping unrelated
-        // local fields.
-        for (const [k, v] of Object.entries(mapped)) next[k] = v;
-        return next;
-      });
+      try {
+        const raw = await getStageData(subjectId, step);
+        if (!raw || cancelled) return;
+        const mapped = await stageToForm(step, raw);
+        if (cancelled || Object.keys(mapped).length === 0) return;
+        setData((d) => {
+          const next = { ...d };
+          // `mapped` only holds keys derived from the API response, so assigning
+          // them all reflects the server data exactly without wiping unrelated
+          // local fields.
+          for (const [k, v] of Object.entries(mapped)) next[k] = v;
+          return next;
+        });
+        // Mark hydrated so the skeleton never blocks this stage again — it
+        // perishes for good once the data has been successfully fetched.
+        hydratedStages.current.add(step);
+      } finally {
+        if (!cancelled) setStageLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, subjectId]);
+
+  // When errors are raised, shift focus to where the problem is: scroll the
+  // topmost invalid field into view and focus it (so the user lands exactly on
+  // it). Falls back to the form-level banner when no field marker matches.
+  useEffect(() => {
+    if (errors.length === 0 && !formError) return;
+    const id = window.setTimeout(() => {
+      // Collect the in-DOM markers for the errored fields (an input to focus,
+      // or its error message), then pick whichever sits highest on the page.
+      const found: HTMLElement[] = [];
+      for (const name of errors) {
+        const sel = `[data-field="${CSS.escape(name)}"], [data-field-error="${CSS.escape(name)}"]`;
+        const el = document.querySelector<HTMLElement>(sel);
+        if (el && !found.includes(el)) found.push(el);
+      }
+      const target =
+        found.sort((a, b) =>
+          a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+        )[0] || document.querySelector<HTMLElement>("[data-form-error]");
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Focus the field itself when the marker is a focusable control.
+      if (target.matches("input, select, textarea, button")) {
+        target.focus({ preventScroll: true });
+      }
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [errors, formError]);
 
   // The account holder's gender (prefilled from the profile, then locked) must be
   // the M/F/O code the gender select uses. A profile cached before normalisation
@@ -587,12 +649,43 @@ export default function RegistryWizard({
       return;
     }
     const apiFieldErrors = mapApiFieldErrors(err);
+    const message = getErrorMessage(err, t("registry.submitError"));
+    // Stage 8: a backend "<document> is required" rejection is pinned to that
+    // document's upload row (matched by its label) instead of the generic
+    // bottom banner, so the error shows at exactly the field it concerns.
+    if (step === 8) {
+      const lower = message.toLowerCase();
+      // "At least one parent Birth Certificate (father or mother)" concerns two
+      // rows at once — pin it to both the Father (2) and Mother (3) rows.
+      if (lower.includes("parent") && lower.includes("birth")) {
+        apiFieldErrors["attach2"] = message;
+        apiFieldErrors["attach3"] = message;
+      } else {
+        const hit = ATTACHMENT_TYPES.find((a) => lower.includes(a.label.toLowerCase()));
+        if (hit) apiFieldErrors[`attach${hit.id}`] = message;
+      }
+    }
+    // Some backend validation messages name the rejected value but not the
+    // field — e.g. "Document number may only contain … (received: 'lkjhgjkl;')".
+    // When nothing else mapped, locate the form field whose current value is
+    // exactly that rejected value and pin the message there.
+    if (Object.keys(apiFieldErrors).length === 0) {
+      const received = message.match(/received:\s*'([^']*)'/i)?.[1];
+      if (received) {
+        const hit = Object.entries(data).find(
+          ([, v]) => typeof v === "string" && v === received,
+        );
+        if (hit) apiFieldErrors[hit[0]] = message;
+      }
+    }
     const fieldKeys = Object.keys(apiFieldErrors);
     if (fieldKeys.length > 0) {
       setFieldErrors(apiFieldErrors);
       setErrors(fieldKeys);
+      // The message is now shown inline at the field — no duplicate banner or toast.
+      setFormError("");
+      return;
     }
-    const message = getErrorMessage(err, t("registry.submitError"));
     setFormError(message);
     notify(message, "error");
   }
@@ -736,6 +829,20 @@ export default function RegistryWizard({
         setFormError("");
         return;
       }
+
+      // Each parent must be at least 16 years older than the applicant — raise
+      // the error at that parent's date-of-birth field.
+      const subjectDob = typeof data.dob === "string" ? data.dob : "";
+      for (const p of ["father", "mother"] as const) {
+        const pDob = typeof data[`${p}Dob`] === "string" ? (data[`${p}Dob`] as string) : "";
+        if (subjectDob && pDob && !atLeastYearsOlder(pDob, subjectDob, 16)) {
+          const field = `${p}Dob`;
+          setErrors([field]);
+          setFieldErrors({ [field]: t(`registry.${p}TooYoung`) });
+          setFormError("");
+          return;
+        }
+      }
     }
 
     // Every phone field on this stage must be a valid number for its country —
@@ -771,6 +878,21 @@ export default function RegistryWizard({
         setFieldErrors({});
         setFormError(t("registry.schoolRequired"));
         return;
+      }
+      // A provided completion year must be a real year (1900 … current year) —
+      // reported at that school's year field, not snapped to a default.
+      const currentYear = new Date().getFullYear();
+      for (let i = 1; i <= count; i++) {
+        const p = `edu${i}`;
+        if (i > 1 && !filled(`${p}School`)) continue;
+        if (data[`${p}Completed`] !== true || !filled(`${p}Year`)) continue;
+        const year = Number((data[`${p}Year`] as string).trim());
+        if (!Number.isFinite(year) || year < 1900 || year > currentYear) {
+          setErrors([`${p}Year`]);
+          setFieldErrors({ [`${p}Year`]: t("registry.completionYearRange").replace("{year}", String(currentYear)) });
+          setFormError("");
+          return;
+        }
       }
     }
 
@@ -1057,14 +1179,14 @@ export default function RegistryWizard({
                   onGoToStep={goTo}
                   onSessionExpired={() => setSessionExpired(true)}
                 >
-                  <StepComponent />
+                  {stageLoading ? <StageSkeleton /> : <StepComponent />}
                 </WizardProvider>
 
                 {/* Field-level errors render inline at each field. Only a
                     genuine form-level message (e.g. a submit/API failure) is
                     surfaced here as a banner — never a grouped list of fields. */}
                 {formError && (
-                  <p role="alert" className="mt-6 text-sm font-medium text-danger">
+                  <p role="alert" data-form-error className="mt-6 text-sm font-medium text-danger">
                     {formError}
                   </p>
                 )}
