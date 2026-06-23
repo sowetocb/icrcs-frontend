@@ -224,6 +224,7 @@ export default function RegistryClient() {
           <div className="flex flex-1">
             <CitizenSidebar />
             <CitizenshipGate
+              isDependent={selfDone}
               onCitizen={() => {
                 setRegisteringMinor(false);
                 setMode("wizard");

@@ -163,7 +163,7 @@ function PersonBlock({
 }
 
 export default function StepFamily() {
-  const { data, set } = useWizard();
+  const { data, set, setQuiet } = useWizard();
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
 
@@ -182,7 +182,7 @@ export default function StepFamily() {
   })();
   const [minorChildrenConflict, setMinorChildrenConflict] = useState(false);
   useEffect(() => {
-    if (isMinor && data.hasChildren !== false) set("hasChildren", false);
+    if (isMinor && data.hasChildren !== false) setQuiet("hasChildren", false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMinor]);
 
@@ -199,7 +199,7 @@ export default function StepFamily() {
   // Keep the stored flag in sync with the locked, derived answer so the payload
   // and the spouse validation see the right value.
   useEffect(() => {
-    if (data.isMarried !== marriedAtStage1) set("isMarried", marriedAtStage1);
+    if (data.isMarried !== marriedAtStage1) setQuiet("isMarried", marriedAtStage1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marriedAtStage1]);
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
@@ -212,7 +212,7 @@ export default function StepFamily() {
     const holderPhone = typeof data.phone === "string" ? data.phone : "";
     if (!holderPhone || !hasChildren) return;
     for (let n = 1; n <= childCount; n++) {
-      if (!data[`ch${n}Phone`]) set(`ch${n}Phone`, holderPhone);
+      if (!data[`ch${n}Phone`]) setQuiet(`ch${n}Phone`, holderPhone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasChildren, childCount, data.phone]);

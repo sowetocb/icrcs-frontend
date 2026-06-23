@@ -244,7 +244,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
   const hasPhoto = Boolean(photoSrc);
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className="mx-auto w-full max-w-3xl">
       {onClose && (
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-navy-700">{t("profile.title")}</h2>

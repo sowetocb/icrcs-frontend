@@ -256,6 +256,13 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
   // ── Stage 4: Education & Employment ────────────────────────────────────────
   if (stage === 4) {
     const education = arr(d.educationList ?? d.educations);
+    // Restore the "Have you attended school?" toggle from the backend flag or
+    // infer it from an empty education list.
+    if (d.hasAttendedSchool === false || (d.hasAttendedSchool == null && education.length === 0)) {
+      out.neverAttendedSchool = true;
+    } else {
+      out.neverAttendedSchool = false;
+    }
     if (education.length > 0) {
       out.eduCount = String(education.length);
       education.forEach((e, i) => {
@@ -268,9 +275,15 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
       });
     }
     const job = d.employmentStatusId ?? d.employmentStatus;
-    if (job != null) out.jobStatus = employmentCode(job);
+    const jobCode = job != null ? employmentCode(job) : "";
+    if (job != null) out.jobStatus = jobCode;
     if (d.occupationTypeId != null) out.occupation = str(d.occupationTypeId);
-    if (d.organizationName != null) out.employer = str(d.organizationName);
+    // organizationName carries the employer (Employed) or the free-text trade
+    // (Self-employed) — route it back to the field the UI shows for that status.
+    if (d.organizationName != null) {
+      if (jobCode === "Self-employed") out.selfOccupation = str(d.organizationName);
+      else out.employer = str(d.organizationName);
+    }
     return out;
   }
 

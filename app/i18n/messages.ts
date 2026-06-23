@@ -193,15 +193,18 @@ const en = {
     checklistTitle: "Preparation Checklist",
     checklistSubtitle: "Ensure you have these ready before starting",
     downloadGuide: "Download Guide PDF",
-    nidaTitle: "National ID (NIDA)",
-    nidaDesc: "Valid National Identification Authority card or number confirmation.",
+    photoTitle: "Passport Size Photo",
+    photoDesc:
+      "A recent, good-quality photo of the applicant clearly showing their face for identification.",
     birthTitle: "Birth Certificate",
-    birthDesc: "Verified copy of your national birth registration number.",
-    addressTitle: "Proof of Address",
-    addressDesc: "Valid utility bill or local authority residency letter.",
-    keyTitle: "Secure Key",
-    keyDesc: "The physical security key issued during pre-clearance.",
-
+    birthDesc:
+      "A valid copy of the applicant's birth certificate showing their basic details such as name, date and place of birth.",
+    parentTitle: "Parent(s) Certificate",
+    parentDesc:
+      "Official documents confirming the citizenship or identity of the applicant's parent or parents, where required.",
+    letterTitle: "Identification Letter from Local Government",
+    letterDesc:
+      "An official letter issued by the local or village government confirming the applicant's identity, residence and details.",
   },
   flabel: {
     spouse: "Spouse",
@@ -254,6 +257,9 @@ const en = {
     curCountry: "Current address country",
     curCity: "Current address city",
     jobStatus: "Employment status",
+    gateNationality: "Nationality",
+    gateDocType: "Travel document type",
+    gateDocNumber: "Document number",
     fallback: "a required field",
   },
   registry: {
@@ -289,6 +295,7 @@ const en = {
     spouseRequired: "Please provide details for at least one spouse.",
     marriageConflict: "You selected \"{status}\" as your marital status in Personal Information (Step 1). Please go back and update your marital status to \"Married\" before answering \"Yes\" here.",
     marriageLocked: "This is set automatically from your marital status in Personal Information (Step 1): \"{status}\". To change it, go back and update Step 1.",
+    unsavedWarning: "You have unsaved changes. Save before leaving, or your changes on this step will be lost. Leave anyway?",
     childrenMinorLocked: "An applicant under 18 cannot register children. This is set automatically from your date of birth in Personal Information (Step 1).",
     attachAdd: "Add document",
     attachPreview: "Preview",
@@ -497,7 +504,7 @@ const en = {
     removePhoto: "Remove photo",
     uploading: "Uploading…",
     removing: "Removing…",
-    photoHint: "JPG or PNG, up to 500KB.",
+    photoHint: "JPG or PNG, up to 300KB.",
     photoInvalidType: "Please choose a JPG or PNG image.",
     photoTooLarge: "Image must be 500KB or smaller.",
     photoUpdated: "Profile photo updated.",
@@ -597,6 +604,7 @@ const en = {
     curAddress: "Current Address", // REVIEW
     permAddress: "Permanent Address", // REVIEW
     citizenQuestion: "Are you a Tanzanian citizen?", // REVIEW
+    dependentCitizenQuestion: "Is your dependant / child a Tanzanian citizen?",
     citizenYes: "Yes", // REVIEW
     citizenNo: "No", // REVIEW
     nidaNumber: "NIDA Number", // REVIEW
@@ -675,6 +683,8 @@ const en = {
     phSelectType: "Select type", // REVIEW
     phSelectLevel: "Select level", // REVIEW
     phSelectOccupation: "Select occupation", // REVIEW
+    selfOccupation: "Nature of self-employment",
+    phSelfOccupation: "e.g. Artisan, Trader, Farmer",
     phSelectRelationship: "Select relationship", // REVIEW
   },
   // RECONSTRUCTED. opt.* values are derived from blocks.tsx / MOCK_* (reliable
@@ -729,7 +739,6 @@ const en = {
   },
   gate: {
     title: "Citizenship Check", // REVIEW
-    intro: "Confirm your citizenship status to begin registration.", // REVIEW
     travelDocType: "Travel Document Type", // REVIEW
     verifying: "Verifying…", // REVIEW
     notFoundTitle: "Record Not Found", // REVIEW
@@ -803,7 +812,7 @@ const en = {
     a3: "Mother Birth Certificate",
     a4: "Letter from Local Government / Employer",
     a5: "Passport Size Photo",
-    a6: "Naturalisation Certificate",
+    a6: "Naturalisation / Confirmation / Renounciation Certificate",
   },
   footer: "© 2026 The United Republic of Tanzania | Immigration Department",
 };
@@ -994,15 +1003,18 @@ const sw: typeof en = {
     checklistTitle: "Orodha ya Maandalizi",
     checklistSubtitle: "Hakikisha una vitu hivi tayari kabla ya kuanza",
     downloadGuide: "Pakua Mwongozo PDF",
-    nidaTitle: "Kitambulisho cha Taifa (NIDA)",
-    nidaDesc:
-      "Kitambulisho cha Taifa (NIDA) au uthibitisho wa namba yako ya kuzaliwa.",
+    photoTitle: "Picha ya Passport Size",
+    photoDesc:
+      "Picha ya hivi karibuni ya mwombaji yenye ubora mzuri, ikionyesha sura yake wazi kwa ajili ya utambulisho.",
     birthTitle: "Cheti cha Kuzaliwa",
-    birthDesc: "Nakala iliyothibitishwa ya namba yako ya usajili wa kuzaliwa.",
-    addressTitle: "Uthibitisho wa Makazi",
-    addressDesc: "Bili halali ya huduma au barua ya makazi kutoka mamlaka ya eneo.",
-    keyTitle: "Ufunguo wa Usalama",
-    keyDesc: "Ufunguo wa usalama wa kimwili uliotolewa wakati wa uhakiki wa awali.",
+    birthDesc:
+      "Nakala halali ya cheti cha kuzaliwa cha mwombaji kinachoonyesha taarifa zake za msingi kama jina, tarehe na mahali pa kuzaliwa.",
+    parentTitle: "Cheti cha Mzazi/Wazazi",
+    parentDesc:
+      "Nyaraka rasmi zinazothibitisha uraia au utambulisho wa mzazi au wazazi wa mwombaji, pale inapohitajika.",
+    letterTitle: "Barua ya Utambulisho kutoka Serikali za Mitaa",
+    letterDesc:
+      "Barua rasmi inayotolewa na serikali ya mtaa au kijiji inayothibitisha utambulisho, makazi, na taarifa za mwombaji.",
   },
   flabel: {
     spouse: "Mwenzi",
@@ -1055,6 +1067,9 @@ const sw: typeof en = {
     curCountry: "Nchi ya sasa",
     curCity: "Jiji la sasa",
     jobStatus: "Hali ya ajira",
+    gateNationality: "Uraia",
+    gateDocType: "Aina ya hati ya safari",
+    gateDocNumber: "Namba ya hati",
     fallback: "sehemu inayohitajika",
   },
   registry: {
@@ -1090,6 +1105,7 @@ const sw: typeof en = {
     spouseRequired: "Tafadhali toa taarifa za angalau mwenzi mmoja wa ndoa.",
     marriageConflict: "Umechagua \"{status}\" kama hali ya ndoa katika Taarifa Binafsi (Hatua ya 1). Tafadhali rudi na ubadilishe hali ya ndoa kuwa \"Ameoa/Ameolewa\" kabla ya kujibu \"Ndiyo\" hapa.",
     marriageLocked: "Hii imewekwa moja kwa moja kutoka hali yako ya ndoa katika Taarifa Binafsi (Hatua ya 1): \"{status}\". Ili kuibadilisha, rudi Hatua ya 1.",
+    unsavedWarning: "Una mabadiliko ambayo hayajahifadhiwa. Hifadhi kabla ya kuondoka, vinginevyo mabadiliko ya hatua hii yatapotea. Ondoka hata hivyo?",
     childrenMinorLocked: "Mwombaji aliye chini ya miaka 18 hawezi kusajili watoto. Hii imewekwa moja kwa moja kutoka tarehe yako ya kuzaliwa katika Taarifa Binafsi (Hatua ya 1).",
     attachAdd: "Ongeza nyaraka",
     attachPreview: "Angalia",
@@ -1397,6 +1413,7 @@ const sw: typeof en = {
     curAddress: "Anuani ya Sasa", // REVIEW
     permAddress: "Anuani ya Kudumu", // REVIEW
     citizenQuestion: "Je, wewe ni raia wa Tanzania?", // REVIEW
+    dependentCitizenQuestion: "Je, mtegemewa / mtoto wako ni raia wa Tanzania?",
     citizenYes: "Ndiyo", // REVIEW
     citizenNo: "Hapana", // REVIEW
     nidaNumber: "Namba ya NIDA", // REVIEW
@@ -1475,6 +1492,8 @@ const sw: typeof en = {
     phSelectType: "Chagua aina", // REVIEW
     phSelectLevel: "Chagua kiwango", // REVIEW
     phSelectOccupation: "Chagua kazi", // REVIEW
+    selfOccupation: "Aina ya kujiajiri",
+    phSelfOccupation: "k.m. Fundi, Mfanyabiashara, Mkulima",
     phSelectRelationship: "Chagua uhusiano", // REVIEW
   },
   // RECONSTRUCTED — all values reconstructed; verify `// REVIEW`.
@@ -1487,8 +1506,8 @@ const sw: typeof en = {
     divorced: "Ametalikiana", // REVIEW
     widowed: "Mjane", // REVIEW
     separated: "Tumetengana", // REVIEW
-    employed: "Ameajiriwa", // REVIEW
-    selfEmployed: "Amejiajiri", // REVIEW
+    employed: "Nimeajiriwa", // REVIEW
+    selfEmployed: "Nimejiajiri", // REVIEW
     unemployed: "Hajaajiriwa", // REVIEW
     student: "Mwanafunzi", // REVIEW
     retired: "Mstaafu", // REVIEW
@@ -1528,7 +1547,6 @@ const sw: typeof en = {
   },
   gate: {
     title: "Uhakiki wa Uraia", // REVIEW
-    intro: "Thibitisha hali yako ya uraia kuanza usajili.", // REVIEW
     travelDocType: "Aina ya Hati ya Safari", // REVIEW
     verifying: "Inahakiki…", // REVIEW
     notFoundTitle: "Rekodi Haikupatikana", // REVIEW
@@ -1600,7 +1618,7 @@ const sw: typeof en = {
     a3: "Cheti cha Kuzaliwa cha Mama", // REVIEW
     a4: "Barua kutoka Serikali ya Mtaa / Mwajiri", // REVIEW
     a5: "Picha ya Saizi ya Pasipoti", // REVIEW
-    a6: "Cheti cha Uraia", // REVIEW
+    a6: "Cheti cha Uraia / Uthibitisho / Kuachia Uraia", // REVIEW
   },
   footer: "© 2026 Jamhuri ya Muungano wa Tanzania | Idara ya Uhamiaji",
 };

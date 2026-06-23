@@ -96,7 +96,7 @@ export default function StepAttachments() {
       fileHash: up.fileHash,
     });
     set("attachments", JSON.stringify(list));
-    if (typeId === 5) set("passportPhotoUploaded", "true");
+    if (typeId === PASSPORT_PHOTO_TYPE) set("passportPhotoUploaded", "true");
     if (typeId === 2) set("idDocumentUploaded", "true");
   }
 
@@ -112,9 +112,9 @@ export default function StepAttachments() {
       e.target.value = "";
       return;
     }
-    // Keep a local copy of the passport photo (type 5) as a data URL so it can
-    // be shown on the printable form — the backend doesn't serve uploaded images.
-    if (typeId === 5) {
+    // Keep a local copy of the passport photo as a data URL so it can be shown
+    // on the printable form — the backend doesn't serve uploaded images.
+    if (typeId === PASSPORT_PHOTO_TYPE) {
       if (file.type.startsWith("image/")) {
         readDataUrl(file).then((url) => set("passportPhotoData", url));
       } else {
@@ -152,7 +152,9 @@ export default function StepAttachments() {
       <p className="text-sm text-muted">{t("registry.attachHint")}</p>
 
       <ul className="space-y-3">
-        {ATTACHMENT_TYPES.map((type) => {
+        {/* The passport photo is supplied at Stage 1 and merged into the
+            upload payload automatically — it's never shown as its own row. */}
+        {ATTACHMENT_TYPES.filter((type) => type.id !== PASSPORT_PHOTO_TYPE).map((type) => {
           const savedAtt = savedByType.get(type.id);
           // The passport photo captured at Stage 1 satisfies this row — but only
           // when its image data is still available to re-attach on submit
@@ -182,7 +184,14 @@ export default function StepAttachments() {
                     className="h-4 w-4 shrink-0 rounded border-line accent-navy-700 disabled:opacity-60"
                   />
                   <span className="text-sm font-medium text-ink">
-                    {t(`attach.a${type.id}`)}
+                    {/* Prefer the translated name; fall back to the type's own
+                        label when no i18n key matches the id (avoids showing a
+                        raw "attach.aN" or a stale label after a renumber). */}
+                    {(() => {
+                      const key = `attach.a${type.id}`;
+                      const translated = t(key);
+                      return translated === key ? type.label : translated;
+                    })()}
                     {type.mandatory && (
                       <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-danger">
                         {t("fields.required")}

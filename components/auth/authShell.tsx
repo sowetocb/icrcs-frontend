@@ -401,8 +401,8 @@ export default function AuthShell({
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
-            {/* Footer */}
-            <p className="mt-4 text-center text-xs text-muted">
+            {/* Footer — kept on a single line */}
+            <p className="mt-4 whitespace-nowrap text-center text-[11px] text-muted">
               {t("footer")}
             </p>
           </div>

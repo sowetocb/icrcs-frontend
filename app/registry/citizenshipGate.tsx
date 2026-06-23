@@ -19,11 +19,15 @@ export default function CitizenshipGate({
   onCitizen,
   onRegisterMinor,
   onExit,
+  isDependent = false,
 }: {
   onCitizen: () => void;
   /** A verified non-citizen choosing to register a Tanzanian-origin minor. */
   onRegisterMinor: () => void;
   onExit: () => void;
+  /** True when the account holder is registering someone else (a dependent /
+   * child) rather than themselves — the question is phrased about the subject. */
+  isDependent?: boolean;
 }) {
   const { t } = useI18n();
   const [choice, setChoice] = useState<"yes" | "no" | "">("");
@@ -114,9 +118,8 @@ export default function CitizenshipGate({
       <div className="mx-auto w-full max-w-3xl">
         <p className="text-sm font-semibold text-success">{t("gate.title")}</p>
         <h1 className="mt-1 font-display text-4xl font-black tracking-tight text-navy-700">
-          {t("fields.citizenQuestion")}
+          {t(isDependent ? "fields.dependentCitizenQuestion" : "fields.citizenQuestion")}
         </h1>
-        <p className="mt-3 max-w-2xl leading-relaxed text-muted">{t("gate.intro")}</p>
 
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="rounded-2xl border border-line bg-card p-6 sm:p-8">
@@ -149,6 +152,7 @@ export default function CitizenshipGate({
               <WizardProvider
                 data={data}
                 set={set}
+                setQuiet={set}
                 errors={errors}
                 locked={[]}
                 isFirstPerson
@@ -161,7 +165,7 @@ export default function CitizenshipGate({
                     <Select name="gateDocType" placeholder={t("fields.phSelectType")} options={travelDocumentOptions(t)} />
                   </Field>
                   <Field label={t("fields.docNumberReq")} required>
-                    <TextInput name="gateDocNumber" placeholder={t("fields.phDocNumber")} />
+                    <TextInput name="gateDocNumber" placeholder={t("fields.phDocNumber")} maxLength={20} />
                   </Field>
                 </div>
               </WizardProvider>

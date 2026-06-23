@@ -187,6 +187,10 @@ export async function uploadPassportPhoto(
   subjectId: string,
   photoDataUrl: string,
 ): Promise<UploadedAttachment | null> {
+  // Only a freshly-captured data: URL is uploaded here. An already-uploaded
+  // photo (a re-hydrated http file URL) is NOT re-fetched — that would be a
+  // cross-origin request the browser blocks; it's registered directly from its
+  // existing URL by the caller instead.
   const photo = dataUrlToBlob(photoDataUrl);
   if (!photo || !subjectId) return null;
   const file = new File([photo.blob], `photo.${photo.ext}`, {
@@ -570,11 +574,18 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
   }
 
   return {
+    hasAttendedSchool: !never,
     educationList,
     employmentStatus: await resolveEmploymentStatusId(job),
-    // Occupation & employer apply only to the employed (hidden in the UI for
-    // every other status), so null them out otherwise.
-    organizationName: job === "Employed" ? str(data, "employer") || null : null,
+    // Occupation & employer apply only to the employed; the self-employed give a
+    // free-text trade (artisan, trader, …) carried in organizationName. Other
+    // statuses null both out.
+    organizationName:
+      job === "Employed"
+        ? str(data, "employer") || null
+        : job === "Self-employed"
+          ? str(data, "selfOccupation") || null
+          : null,
     occupationTypeId: job === "Employed" ? intOrNull(data, "occupation") ?? null : null,
   };
 }

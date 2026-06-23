@@ -14,7 +14,7 @@ services:
     container_name: icrcs-fe-portal
     # Pull from the local (insecure HTTP) registry. Override the tag with:
     #   IMAGE_TAG=v0.0.4 docker compose -f docker-compose.prod.yml up -d
-    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v0.5.0}
+    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v0.7.0}
     pull_policy: always
     ports:
       - "6060:6060"

@@ -7,6 +7,7 @@ import Stepper from "@/components/registry/stepper";
 import HelpfulTip from "@/components/registry/helpfulTip";
 import { useI18n } from "../i18n/localeProvider";
 import { loadRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
+import { useUnsavedChanges } from "./useUnsavedChanges";
 import { loadProfile, saveProfile, type Profile } from "@/lib/auth/profile";
 import { refreshMyProfile } from "@/lib/api/auth";
 import { generateApplicationId } from "./applicationId";
@@ -259,6 +260,10 @@ export default function RegistryWizard({
   // True while a submitted stage's data is being re-fetched from the backend, so
   // the step renders a skeleton instead of empty/stale fields until it arrives.
   const [stageLoading, setStageLoading] = useState(false);
+  // True once the user edits a field and false again after the data is saved —
+  // drives the "unsaved changes" reminder when leaving the page.
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t("registry.unsavedWarning"));
   // Stages already hydrated from the backend this session — the skeleton only
   // blocks the FIRST load; later visits already have the data, so it never
   // reappears (the refresh then happens silently behind the populated form).
@@ -400,8 +405,35 @@ export default function RegistryWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A subject who isn't the account holder (a dependent — including a minor)
+  // inherits the account holder's phone & email. Enforce it from the profile so
+  // those fields are populated even when a resumed/empty draft didn't carry them.
+  useEffect(() => {
+    if (!inheritsContact || !profile) return;
+    setData((d) => {
+      const phone = typeof d.phone === "string" ? d.phone.trim() : "";
+      const email = typeof d.email === "string" ? d.email.trim() : "";
+      const nextPhone = !phone && profile.phoneNumber ? profile.phoneNumber : d.phone;
+      const nextEmail = !email && profile.email ? profile.email : d.email;
+      if (nextPhone === d.phone && nextEmail === d.email) return d;
+      return { ...d, phone: nextPhone, email: nextEmail };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inheritsContact]);
+
+  // Programmatic, non-user updates (effect-driven defaults & sync). Updates the
+  // data WITHOUT marking the form dirty, so the "unsaved changes" reminder only
+  // fires for genuine user edits. No-ops when the value is unchanged.
+  const setQuiet = (name: string, value: string | boolean) => {
+    setData((d) => (d[name] === value ? d : { ...d, [name]: value }));
+  };
+
   const set = (name: string, value: string | boolean) => {
-    setData((d) => ({ ...d, [name]: value }));
+    // Only mark the form dirty on an ACTUAL change. Some controlled inputs
+    // (notably on Firefox) emit a change event carrying the unchanged value on
+    // mount/restore — that must not trip the unsaved-changes reminder.
+    if (data[name] !== value) setDirty(true);
+    setData((d) => (d[name] === value ? d : { ...d, [name]: value }));
     setErrors((e) => (e.includes(name) ? e.filter((n) => n !== name) : e));
     setFieldErrors((fe) => {
       if (!(name in fe)) return fe;
@@ -599,7 +631,10 @@ export default function RegistryWizard({
   function goTo(n: number) {
     // Allow navigation to any stage already reached (not just earlier ones), so
     // editing an earlier stage doesn't lock the user out of later completed ones.
-    if (n >= 1 && n <= maxStep) {
+    if (n >= 1 && n <= maxStep && n !== step) {
+      // Switching stages doesn't persist the current step — warn if it has
+      // unsaved edits, since they aren't written until the stage is saved.
+      if (dirty && !window.confirm(t("registry.unsavedWarning"))) return;
       setErrors([]);
       setFieldErrors({});
       setFormError("");
@@ -624,6 +659,7 @@ export default function RegistryWizard({
       submittedStages: [...submittedStages],
       data,
     });
+    setDirty(false);
   }
 
   // Session expired mid-flow: keep the draft (so it can be resumed after
@@ -665,6 +701,30 @@ export default function RegistryWizard({
         if (hit) apiFieldErrors[`attach${hit.id}`] = message;
       }
     }
+    // A backend NIDA rejection ("NIDA number must be exactly 20 digits") names no
+    // field — pin it to the offending NIDA document-number field on this stage
+    // (the one whose number isn't 20 digits, else the first one filled).
+    if (Object.keys(apiFieldErrors).length === 0 && message.toUpperCase().includes("NIDA")) {
+      const prefixes = step === 1 ? ["idDoc"] : step === 3 ? ["fatherIdDoc", "motherIdDoc"] : [];
+      let target = "";
+      let firstFilled = "";
+      for (const pre of prefixes) {
+        const count = Math.max(1, Number(String(data[`${pre}Count`] ?? "")) || 1);
+        for (let i = 1; i <= count; i++) {
+          const key = `${pre}${i}Number`;
+          const v = typeof data[key] === "string" ? (data[key] as string).trim() : "";
+          if (!v) continue;
+          if (!firstFilled) firstFilled = key;
+          if (v.replace(/\D/g, "").length !== 20) {
+            target = key;
+            break;
+          }
+        }
+        if (target) break;
+      }
+      const field = target || firstFilled;
+      if (field) apiFieldErrors[field] = message;
+    }
     // Some backend validation messages name the rejected value but not the
     // field — e.g. "Document number may only contain … (received: 'lkjhgjkl;')".
     // When nothing else mapped, locate the form field whose current value is
@@ -704,7 +764,14 @@ export default function RegistryWizard({
       return null;
     }
     for (const { group, prefix } of groups) {
-      const nidaId = types[group].find((d) => (d.code ?? "").toUpperCase().includes("NIDA"))?.id;
+      // Detect NIDA the same way the dropdowns label it — by name OR code — so a
+      // missing `code` doesn't let an invalid NIDA slip past the client check
+      // (which would then surface as a generic backend banner).
+      const nidaId = types[group].find(
+        (d) =>
+          (d.code ?? "").toUpperCase().includes("NIDA") ||
+          (d.name ?? "").toUpperCase().includes("NIDA"),
+      )?.id;
       if (!nidaId) continue;
       const fieldPrefix = prefix ? `${prefix}IdDoc` : "idDoc";
       const countKey = prefix ? `${prefix}IdDocCount` : "idDocCount";
@@ -868,31 +935,35 @@ export default function RegistryWizard({
       // completed — for the primary school and any started extra school.
       const missing = ["edu1Level", "edu1School", "edu1District"].filter((n) => !filled(n));
       const count = Math.max(1, Number(data.eduCount) || 1);
-      for (let i = 1; i <= count; i++) {
-        const p = `edu${i}`;
-        if (i > 1 && !filled(`${p}School`)) continue;
-        if (data[`${p}Completed`] === true && !filled(`${p}Year`)) missing.push(`${p}Year`);
-      }
-      if (missing.length > 0) {
-        setErrors(missing);
-        setFieldErrors({});
-        setFormError(t("registry.schoolRequired"));
-        return;
-      }
-      // A provided completion year must be a real year (1900 … current year) —
-      // reported at that school's year field, not snapped to a default.
+      // A completion year entered anywhere must be a real year (1900 … current
+      // year) — reported at that school's year field, not snapped to a default.
+      // Collected alongside the missing fields so every problem on the stage is
+      // flagged at once (e.g. an out-of-range "100" shows even while other
+      // required fields are still empty).
       const currentYear = new Date().getFullYear();
+      const yearErrors: Record<string, string> = {};
       for (let i = 1; i <= count; i++) {
         const p = `edu${i}`;
         if (i > 1 && !filled(`${p}School`)) continue;
-        if (data[`${p}Completed`] !== true || !filled(`${p}Year`)) continue;
-        const year = Number((data[`${p}Year`] as string).trim());
-        if (!Number.isFinite(year) || year < 1900 || year > currentYear) {
-          setErrors([`${p}Year`]);
-          setFieldErrors({ [`${p}Year`]: t("registry.completionYearRange").replace("{year}", String(currentYear)) });
-          setFormError("");
-          return;
+        if (filled(`${p}Year`)) {
+          const year = Number((data[`${p}Year`] as string).trim());
+          if (!Number.isFinite(year) || year < 1900 || year > currentYear) {
+            yearErrors[`${p}Year`] = t("registry.completionYearRange").replace(
+              "{year}",
+              String(currentYear),
+            );
+          }
+        } else if (data[`${p}Completed`] === true) {
+          // Completed but no year → required.
+          missing.push(`${p}Year`);
         }
+      }
+      const invalidYears = Object.keys(yearErrors);
+      if (missing.length > 0 || invalidYears.length > 0) {
+        setErrors([...missing, ...invalidYears]);
+        setFieldErrors(yearErrors);
+        setFormError(missing.length > 0 ? t("registry.schoolRequired") : "");
+        return;
       }
     }
 
@@ -988,7 +1059,12 @@ export default function RegistryWizard({
     // MUST be uploaded before the stage can be submitted.
     if (step === 8) {
       const have = new Set(parseAttachments(data.attachments).map((a) => a.typeId));
-      const missing = MANDATORY_ATTACHMENT_TYPE_IDS.filter((id) => !have.has(id));
+      // The passport photo isn't shown as a row here — it's captured at Stage 1
+      // and uploaded/merged automatically by the submit path below — so it must
+      // not gate this visible pre-check (else Save dead-ends on a hidden row).
+      const missing = MANDATORY_ATTACHMENT_TYPE_IDS.filter(
+        (id) => id !== PASSPORT_PHOTO_TYPE && !have.has(id),
+      );
       if (missing.length > 0) {
         // Flag each missing document at its own row (no generic banner).
         setErrors(missing.map((id) => `attach${id}`));
@@ -1017,6 +1093,15 @@ export default function RegistryWizard({
         if (step === 1) {
           if (edit) {
             await editStage1(sid, data, isFirstPerson);
+            // The photo isn't part of the Stage 1 JSON — it's uploaded
+            // separately. On an edit, (re)upload it when the user captured a new
+            // photo (a data: URL) so the change actually reaches the backend.
+            const photoDataUrl =
+              typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : "";
+            if (sid && photoDataUrl.startsWith("data:")) {
+              const att = await uploadPassportPhoto(sid, photoDataUrl);
+              if (att) recordPhotoAttachment(att);
+            }
           } else {
             const photoDataUrl =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : undefined;
@@ -1057,13 +1142,25 @@ export default function RegistryWizard({
           // If it isn't (Stage 1 upload failed), retry the upload now and merge
           // it into the payload (local copy — setData is async).
           let data8 = data;
+          // The passport must be in the payload with a real fileUrl. A stale
+          // entry (e.g. an earlier id, or one with no fileUrl) doesn't count —
+          // re-derive the passport from the Stage 1 photo in that case.
           const hasPhoto = parseAttachments(data.attachments).some(
-            (a) => a.typeId === PASSPORT_PHOTO_TYPE,
+            (a) => a.typeId === PASSPORT_PHOTO_TYPE && !!a.fileUrl,
           );
           if (!hasPhoto) {
             const photoData =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : "";
-            const att = photoData && sid ? await uploadPassportPhoto(sid, photoData) : null;
+            let att: UploadedAttachment | null = null;
+            if (photoData.startsWith("data:")) {
+              // Freshly captured this session — upload it now.
+              att = sid ? await uploadPassportPhoto(sid, photoData) : null;
+            } else if (photoData) {
+              // Already uploaded at Stage 1 (a re-hydrated file URL): that URL IS
+              // the stored photo, so register it directly — no re-upload (which
+              // would be a CORS-blocked cross-origin fetch).
+              att = { fileId: "", fileUrl: photoData, mimeType: "image/jpeg", fileSizeBytes: 0, fileHash: "" };
+            }
             if (att) {
               data8 = mergePhotoAttachment(data, att);
               recordPhotoAttachment(att);
@@ -1131,10 +1228,15 @@ export default function RegistryWizard({
       submittedStages: [...updatedStages],
       data: mergedData ?? data,
     });
+    // The stage's data is now persisted — no longer dirty.
+    setDirty(false);
     setStep(next);
   }
 
   function handleBack() {
+    // Going back — whether exiting from Stage 1 or stepping to an earlier stage —
+    // doesn't persist the current step, so remind the user of unsaved edits first.
+    if (dirty && !window.confirm(t("registry.unsavedWarning"))) return;
     setErrors([]);
     setFieldErrors({});
     setFormError("");
@@ -1172,6 +1274,7 @@ export default function RegistryWizard({
                 <WizardProvider
                   data={data}
                   set={set}
+                  setQuiet={setQuiet}
                   errors={errors}
                   fieldErrors={fieldErrors}
                   locked={locked}

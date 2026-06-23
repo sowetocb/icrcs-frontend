@@ -8,16 +8,6 @@ import { loadProfile } from "@/lib/auth/profile";
 
 type IconProps = { className?: string };
 
-function IdCardIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <circle cx="8" cy="11" r="2" />
-      <path d="M5 16c.5-1.5 1.7-2.5 3-2.5s2.5 1 3 2.5" />
-      <path d="M14 9h5M14 12h5M14 15h3" />
-    </svg>
-  );
-}
 function FileIcon({ className }: IconProps) {
   return (
     <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -27,11 +17,28 @@ function FileIcon({ className }: IconProps) {
     </svg>
   );
 }
-function PinIcon({ className }: IconProps) {
+function CameraIcon({ className }: IconProps) {
   return (
     <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="3" />
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+function UsersIcon({ className }: IconProps) {
+  return (
+    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+function MailIcon({ className }: IconProps) {
+  return (
+    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 6L2 7" />
     </svg>
   );
 }
@@ -52,9 +59,10 @@ export default function DashboardHome() {
   }, []);
 
   const checklist = [
+    { key: "photo", Icon: CameraIcon },
     { key: "birth", Icon: FileIcon },
-    { key: "address", Icon: PinIcon },
-    { key: "nida", Icon: IdCardIcon },
+    { key: "parent", Icon: UsersIcon },
+    { key: "letter", Icon: MailIcon },
   ] as const;
 
   return (

@@ -153,6 +153,12 @@ export async function reviewToForm(reviewData: unknown): Promise<Data> {
 
   // ── Education ─────────────────────────────────────────────────────────────
   const education = arr(d.educationList);
+  // Restore the "Have you attended school?" toggle.
+  if (d.hasAttendedSchool === false || (d.hasAttendedSchool == null && education.length === 0)) {
+    out.neverAttendedSchool = true;
+  } else {
+    out.neverAttendedSchool = false;
+  }
   if (education.length > 0) {
     out.eduCount = String(education.length);
     education.forEach((e, i) => {

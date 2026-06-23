@@ -74,10 +74,10 @@ export default function StepAddress() {
           {permIsTz ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t("fields.phHouseStreet")}>
-                <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} />
+                <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={15} />
               </Field>
               <Field label={t("fields.phPostal")}>
-                <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} />
+                <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={15} />
               </Field>
             </div>
           ) : permIsForeign ? (
@@ -105,10 +105,10 @@ export default function StepAddress() {
             {curIsTz ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label={t("fields.phHouseStreet")}>
-                  <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} />
+                  <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={15} />
                 </Field>
                 <Field label={t("fields.phPostal")}>
-                  <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} />
+                  <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={15} />
                 </Field>
               </div>
             ) : curIsForeign ? (

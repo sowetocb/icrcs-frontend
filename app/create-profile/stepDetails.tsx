@@ -297,7 +297,9 @@ export default function StepDetails({
               type="email"
               autoComplete="email"
               value={form.email}
-              onChange={(e) => update("email", e.target.value)}
+              // Allow only email-safe characters: letters, digits, "@" and ".".
+              // Anything else (spaces, symbols) is stripped as it's typed.
+              onChange={(e) => update("email", e.target.value.replace(/[^a-zA-Z0-9@.]/g, ""))}
               placeholder={t("form.emailPlaceholder")}
               aria-invalid={emailInvalid}
               aria-describedby={errors.email ? "email-error" : undefined}

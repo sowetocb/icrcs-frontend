@@ -18,16 +18,20 @@ export type AttachmentType = {
 //   1 = Applicant Birth Certificate   4 = Letter from Local Government / Employer
 //   2 = Father Birth Certificate      5 = Passport Size Photo
 //   3 = Mother Birth Certificate      6 = Naturalisation Certificate
+// Ids MUST match the backend's attachment-type lookup (see the table above):
+// the passport photo is id 5 and is uploaded in the background (hidden from the
+// list); the Naturalisation certificate is id 6.
 export const ATTACHMENT_TYPES: AttachmentType[] = [
   { id: 1, label: "Applicant Birth Certificate", mandatory: true },
   { id: 2, label: "Father Birth Certificate", mandatory: false },
   { id: 3, label: "Mother Birth Certificate", mandatory: false },
   { id: 4, label: "Letter from Local Government / Employer", mandatory: true },
-  { id: 6, label: "Naturalisation Certificate", mandatory: false },
-  { id: 7, label: "Renounciation Certificate ", mandatory: true },
+  { id: 5, label: "Passport Size Photo", mandatory: true },
+  { id: 6, label: "Naturalisation / Confirmation / Renounciation Certificate", mandatory: false },
 ];
 
-/** The backend's mandatory passport-size photo attachment type. */
+/** The backend's mandatory passport-size photo attachment type. Hidden from the
+ * Stage 8 list — captured at Stage 1 and uploaded/merged automatically. */
 export const PASSPORT_PHOTO_TYPE = 5;
 
 /** Attachment types that MUST be uploaded before Stage 8 can be submitted. */

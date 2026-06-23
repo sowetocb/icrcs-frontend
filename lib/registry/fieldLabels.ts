@@ -29,6 +29,10 @@ const EXACT = new Set([
   "curCountry",
   "curCity",
   "jobStatus",
+  // Citizenship gate fields.
+  "gateNationality",
+  "gateDocType",
+  "gateDocNumber",
 ]);
 
 // Suffix (the part after a person prefix) → i18n suffix key.

@@ -11,6 +11,10 @@ type Value = string | boolean;
 type WizardContextValue = {
   data: Record<string, Value>;
   set: (name: string, value: Value) => void;
+  /** Like `set`, but does NOT mark the form as having unsaved changes. For
+   * programmatic defaults/sync (effects), not user edits, so the "unsaved
+   * changes" reminder isn't triggered when the user hasn't touched anything. */
+  setQuiet: (name: string, value: Value) => void;
   errors: string[];
   /** Optional per-field error message, keyed by field name. Falls back to a
    * generic "required" message for any field listed in `errors` without one. */
@@ -30,6 +34,7 @@ const WizardContext = createContext<WizardContextValue | null>(null);
 export function WizardProvider({
   data,
   set,
+  setQuiet,
   errors,
   fieldErrors,
   locked,
@@ -40,7 +45,7 @@ export function WizardProvider({
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
+      value={{ data, set, setQuiet, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
     >
       {children}
     </WizardContext.Provider>
@@ -124,6 +129,7 @@ export function TextInput({
   maxLength,
   numeric = false,
   lettersOnly = false,
+  allowChars,
   min,
   max,
 }: {
@@ -136,6 +142,9 @@ export function TextInput({
   numeric?: boolean;
   /** Restrict input to letters and spaces only (strict text) — names/city. */
   lettersOnly?: boolean;
+  /** A regex character-class body (e.g. "A-Za-z0-9 ") of the ONLY characters
+   * allowed; anything outside it is stripped as the user types. */
+  allowChars?: string;
   /** Numeric bounds (type="number"): the value is clamped to [min, max] on blur. */
   min?: number;
   max?: number;
@@ -152,7 +161,9 @@ export function TextInput({
       ? raw.replace(/\D/g, "")
       : lettersOnly
         ? raw.replace(/[^\p{L} '’-]/gu, "")
-        : raw.replace(/^\s+/, "");
+        : allowChars
+          ? raw.replace(new RegExp(`[^${allowChars}]`, "gu"), "")
+          : raw.replace(/^\s+/, "");
   // For a bounded numeric field, keep the typed value inside [min, max] live:
   // the upper bound is enforced immediately; the lower bound only once the entry
   // is full-width (so partial input like "1" isn't snapped up to "1900").

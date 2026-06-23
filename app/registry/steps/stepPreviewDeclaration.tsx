@@ -10,6 +10,7 @@ import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import {
   documentTypeOptions,
+  usePersonDocumentTypeOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
 } from "@/components/registry/blocks";
@@ -18,13 +19,6 @@ import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
 
 /** The same document-type labels used in the identification documents repeater
  * on Personal Information and Parents, keyed by the form value. */
-const ID_DOC_TYPE_LABELS: Record<string, string> = {
-  nida: "NIDA Number",
-  voter: "Voters ID",
-  tin: "TIN Number",
-  driving: "Driving License",
-};
-
 /** First letter of each word capitalised, the rest lower-cased. Used for the
  * lookup-sourced values the backend returns in UPPERCASE (regions, wards, …). */
 function titleCase(value: string): string {
@@ -126,6 +120,12 @@ export default function StepPreviewDeclaration() {
   };
   const genderLabel = (v: string) =>
     v === "M" ? t("opt.male") : v === "F" ? t("opt.female") : v === "O" ? t("opt.other") : v;
+
+  // Identification-document type names come from the same per-person lookup that
+  // populated the Stage 3 dropdowns (option value = documentTypeId). Used to show
+  // the document NAME in the preview instead of the raw type id.
+  const fatherDocOptions = usePersonDocumentTypeOptions("father");
+  const motherDocOptions = usePersonDocumentTypeOptions("mother");
 
   // Translate id/enum-coded values (fetched by id) to readable labels.
   const { options: eduLevels } = useLookup(getEducationLevels, []);
@@ -312,7 +312,7 @@ export default function StepPreviewDeclaration() {
               <PreviewRow
                 key={`fdoc${n}`}
                 label={`${t("preview.document")} ${count > 1 ? n : ""}`}
-                value={`${ID_DOC_TYPE_LABELS[s(`fatherIdDoc${n}Type`)] ?? s(`fatherIdDoc${n}Type`)}: ${s(`fatherIdDoc${n}Number`)}`}
+                value={`${optionLabel(fatherDocOptions, s(`fatherIdDoc${n}Type`))}: ${s(`fatherIdDoc${n}Number`)}`}
               />
             ));
         })()}
@@ -335,7 +335,7 @@ export default function StepPreviewDeclaration() {
               <PreviewRow
                 key={`mdoc${n}`}
                 label={`${t("preview.document")} ${count > 1 ? n : ""}`}
-                value={`${ID_DOC_TYPE_LABELS[s(`motherIdDoc${n}Type`)] ?? s(`motherIdDoc${n}Type`)}: ${s(`motherIdDoc${n}Number`)}`}
+                value={`${optionLabel(motherDocOptions, s(`motherIdDoc${n}Type`))}: ${s(`motherIdDoc${n}Number`)}`}
               />
             ));
         })()}

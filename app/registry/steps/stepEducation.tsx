@@ -112,7 +112,7 @@ function SchoolBlock({
 
 export default function StepEducation() {
   const { t } = useI18n();
-  const { data, set, isFirstPerson } = useWizard();
+  const { data, set, setQuiet, isFirstPerson } = useWizard();
   const occupations = useOccupationTypeOptions();
   // When "Employed" is chosen, only these occupations are relevant — the rest of
   // the lookup is hidden.
@@ -130,7 +130,7 @@ export default function StepEducation() {
 
   // "Have you attended school?" defaults to No (never attended) until answered.
   useEffect(() => {
-    if (data.neverAttendedSchool === undefined) set("neverAttendedSchool", true);
+    if (data.neverAttendedSchool === undefined) setQuiet("neverAttendedSchool", true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -245,6 +245,12 @@ export default function StepEducation() {
                 <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
               </Field>
             </>
+          )}
+          {/* The self-employed describe their own trade (artisan, trader, …). */}
+          {data.jobStatus === "Self-employed" && (
+            <Field label={t("fields.selfOccupation")} required>
+              <TextInput name="selfOccupation" placeholder={t("fields.phSelfOccupation")} />
+            </Field>
           )}
         </div>
       </div>
