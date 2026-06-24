@@ -235,8 +235,9 @@ export default function StepEducation() {
           <Field label={t("fields.employmentStatus")} required>
             <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
           </Field>
-          {/* Occupation & Employer only apply to the employed. */}
-          {data.jobStatus === "Employed" && (
+          {/* Occupation & Employer only apply to the employed. The status value
+              is the lookup CODE (e.g. "Self-Employed"), so compare case-insensitively. */}
+          {String(data.jobStatus).toLowerCase() === "employed" && (
             <>
               <Field label={t("fields.occupation")} required>
                 <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
@@ -246,10 +247,10 @@ export default function StepEducation() {
               </Field>
             </>
           )}
-          {/* The self-employed describe their own trade (artisan, trader, …). */}
-          {data.jobStatus === "Self-employed" && (
-            <Field label={t("fields.selfOccupation")} required>
-              <TextInput name="selfOccupation" placeholder={t("fields.phSelfOccupation")} />
+          {/* The self-employed enter a free-text occupation (max 20 chars, letters only). */}
+          {String(data.jobStatus).toLowerCase() === "self-employed" && (
+            <Field label={t("fields.occupation")} required>
+              <TextInput name="selfOccupation" placeholder={t("fields.phSelfOccupation")} lettersOnly maxLength={20} />
             </Field>
           )}
         </div>

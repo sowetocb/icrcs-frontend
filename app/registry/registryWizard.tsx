@@ -967,6 +967,17 @@ export default function RegistryWizard({
       }
     }
 
+    // Stage 4: self-employed must provide a text occupation (mandatory).
+    if (step === 4 && String(data.jobStatus ?? "") === "Self-employed") {
+      const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
+      if (!occ) {
+        setErrors(["selfOccupation"]);
+        setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+        setFormError("");
+        return;
+      }
+    }
+
     // Stage 6: if married, at least one spouse must be filled.
     if (step === 6 && data.isMarried === true) {
       const spouseCount = Math.max(1, Number(data.spouseCount) || 1);

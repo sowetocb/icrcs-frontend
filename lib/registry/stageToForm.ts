@@ -278,11 +278,17 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     const jobCode = job != null ? employmentCode(job) : "";
     if (job != null) out.jobStatus = jobCode;
     if (d.occupationTypeId != null) out.occupation = str(d.occupationTypeId);
-    // organizationName carries the employer (Employed) or the free-text trade
-    // (Self-employed) — route it back to the field the UI shows for that status.
-    if (d.organizationName != null) {
-      if (jobCode === "Self-employed") out.selfOccupation = str(d.organizationName);
-      else out.employer = str(d.organizationName);
+    // occupationName carries the self-employed free-text occupation (new field).
+    // organizationName carries the employer name (Employed); legacy data may
+    // also carry the self-employed text there — fall back for compatibility.
+    const isSelfEmployed = jobCode.toLowerCase() === "self-employed";
+    if (d.occupationName != null) {
+      out.selfOccupation = str(d.occupationName);
+    } else if (d.organizationName != null && isSelfEmployed) {
+      out.selfOccupation = str(d.organizationName);
+    }
+    if (d.organizationName != null && !isSelfEmployed) {
+      out.employer = str(d.organizationName);
     }
     return out;
   }

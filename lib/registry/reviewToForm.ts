@@ -173,8 +173,18 @@ export async function reviewToForm(reviewData: unknown): Promise<Data> {
 
   // ── Employment ────────────────────────────────────────────────────────────
   const emp = obj(d.employment);
-  if (emp.employmentStatus != null) out.jobStatus = employmentToCode(str(emp.employmentStatus));
-  if (emp.organizationName != null) out.employer = str(emp.organizationName);
+  const reviewJobStatus = emp.employmentStatus != null ? employmentToCode(str(emp.employmentStatus)) : "";
+  if (emp.employmentStatus != null) out.jobStatus = reviewJobStatus;
+  // occupationName carries the self-employed free-text occupation.
+  if (emp.occupationName != null) {
+    out.selfOccupation = str(emp.occupationName);
+  } else if (emp.organizationName != null && reviewJobStatus === "Self-employed") {
+    // Legacy: organizationName was previously used for self-employed occupation.
+    out.selfOccupation = str(emp.organizationName);
+  }
+  if (emp.organizationName != null && reviewJobStatus !== "Self-employed") {
+    out.employer = str(emp.organizationName);
+  }
 
   // ── Emergency contacts ────────────────────────────────────────────────────
   arr(d.emergencyContacts)

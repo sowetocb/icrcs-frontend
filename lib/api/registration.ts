@@ -548,7 +548,10 @@ function idDocuments(data: Data, prefix = ""): Record<string, unknown>[] {
 
 async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<string, unknown>> {
   const never = data.neverAttendedSchool === true;
+  // jobStatus is the lookup CODE (e.g. "Employed", "Self-Employed"); compare
+  // case-insensitively so casing differences don't drop occupation fields.
   const job = str(data, "jobStatus");
+  const jobLower = job.toLowerCase();
 
   // Build education list from the dynamic school repeater (edu1…eduN).
   const educationList: Record<string, unknown>[] = [];
@@ -577,16 +580,16 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
     hasAttendedSchool: !never,
     educationList,
     employmentStatus: await resolveEmploymentStatusId(job),
-    // Occupation & employer apply only to the employed; the self-employed give a
-    // free-text trade (artisan, trader, …) carried in organizationName. Other
-    // statuses null both out.
+    // Occupation: Employed sends the dropdown id; Self-employed sends the
+    // free-text occupation name (letters only, max 20 chars) in the same
+    // parallel field so the backend always receives the applicant's occupation.
+    occupationTypeId: jobLower === "employed" ? intOrNull(data, "occupation") ?? null : null,
+    occupationName: jobLower === "self-employed" ? str(data, "selfOccupation") || null : null,
+    // Employer / organisation name applies only to the employed.
     organizationName:
-      job === "Employed"
+      jobLower === "employed"
         ? str(data, "employer") || null
-        : job === "Self-employed"
-          ? str(data, "selfOccupation") || null
-          : null,
-    occupationTypeId: job === "Employed" ? intOrNull(data, "occupation") ?? null : null,
+        : null,
   };
 }
 
