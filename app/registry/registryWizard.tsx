@@ -447,13 +447,17 @@ export default function RegistryWizard({
       }
       // Conditional required fields on Step 4 (occupation / employer depend on jobStatus).
       const jobStatus = String(data.jobStatus ?? "").toLowerCase();
-      if (
-        step === 4 &&
-        ((name === "occupation" && jobStatus === "employed") ||
-          (name === "employer" && jobStatus === "employed") ||
-          (name === "selfOccupation" && jobStatus === "self-employed"))
-      ) {
-        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+      if (step === 4) {
+        if (jobStatus === "employed" && (name === "occupation" || name === "employer")) {
+          // Mark this field, then cross-check the other so skipping one still shows an error.
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+          const other = name === "occupation" ? "employer" : "occupation";
+          const otherVal = String(data[other] ?? "").trim();
+          if (!otherVal) setErrors((e) => (e.includes(other) ? e : [...e, other]));
+        }
+        if (jobStatus === "self-employed" && name === "selfOccupation") {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
       }
       return;
     }
