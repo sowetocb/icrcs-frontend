@@ -17,7 +17,7 @@ export default function CountrySelect({
   /** When true, Tanzania is excluded from the dropdown list. */
   excludeTanzania?: boolean;
 }) {
-  const { data, set, errors, locked } = useWizard();
+  const { data, set, blur, errors, locked } = useWizard();
   const value = (data[name] as string) ?? "";
   const invalid = errors.includes(name);
   const isDisabled = disabled || locked.includes(name);
@@ -40,6 +40,7 @@ export default function CountrySelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        onBlur={() => blur(name, value)}
         disabled={isDisabled}
         className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 ${
           invalid
