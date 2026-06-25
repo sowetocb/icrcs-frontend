@@ -9,11 +9,16 @@ import { useI18n } from "../../i18n/localeProvider";
 import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
-import { getRegistrationReview } from "@/lib/api/registration";
-import { reviewToForm } from "@/lib/registry/reviewToForm";
+import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadProfile } from "@/lib/auth/profile";
-import PrintableForm from "../printableForm";
-import { printRegistrationForm, registrationFormFileName } from "../printRegistrationForm";
+import { loadSession } from "@/lib/auth/session";
+import { registrationFormFileName } from "../printRegistrationForm";
+// ── OLD client-side print mechanism (replaced by the backend /review/pdf
+//    endpoint via downloadRegistrationReviewPdf). Kept commented for reference. ──
+// import { getRegistrationReview } from "@/lib/api/registration";
+// import { reviewToForm } from "@/lib/registry/reviewToForm";
+// import PrintableForm from "../printableForm";
+// import { printRegistrationForm } from "../printRegistrationForm";
 
 function DownloadIcon() {
   return (
@@ -85,7 +90,9 @@ export default function PeopleList() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   // The person whose form is rendered (hidden) for the next PDF download.
-  const [printPerson, setPrintPerson] = useState<Person | null>(null);
+  // OLD: drove the hidden PrintableForm for client-side printing — replaced by
+  // the backend /review/pdf download (handleDownloadPdf).
+  // const [printPerson, setPrintPerson] = useState<Person | null>(null);
   // Subject id currently being prepared for download (fetching the preview).
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   // Search + filter controls.
@@ -99,6 +106,14 @@ export default function PeopleList() {
     setPeople(loadPeople());
 
     async function fetchPeople() {
+      // AuthGuard gates the rendered UI, not this parent component's effects, so
+      // this runs even when logged out. Skip the protected fetch when there's no
+      // session — otherwise it hits the proxy with no cookie, gets a 403, and
+      // surfaces a spurious "session expired" while AuthGuard redirects to login.
+      if (!loadSession()) {
+        setLoading(false);
+        return;
+      }
       try {
         const fetched = await getRegisteredPeople();
         setRemotePeople(fetched);
@@ -208,67 +223,70 @@ export default function PeopleList() {
     return rowOf(person).id === accountHolderId;
   }
 
-  const handleDownloadRemote = async (rp: RegisteredPerson) => {
+  // Download the server-rendered registration PDF from the backend /review/pdf
+  // endpoint. The backend compiles the form from stored data, so we no longer
+  // fetch the review, map it to form fields, or render a hidden printable DOM.
+  const handleDownloadPdf = async (subjectId: string, fullName: string) => {
     if (downloadingId) return;
-    setDownloadingId(rp.subjectId);
+    setDownloadingId(subjectId);
     try {
-      const local = people.find((lp) => lp.applicationId === rp.subjectId);
-
-      // Base: the local draft if we have it, else a minimal name/email/phone
-      // fallback derived from the list row.
-      const nameParts = rp.fullName.trim().split(/\s+/).filter(Boolean);
-      const first = nameParts[0] || "";
-      const last = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
-      const middle = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
-      const baseData: Record<string, string | boolean> = local?.data ?? {
-        applicantFirst: first,
-        applicantMiddle: middle,
-        applicantLast: last,
-        email: rp.email,
-        phone: rp.phoneNumber,
-      };
-
-      // Fetch all stages from the server-compiled review and merge over the
-      // base so the PDF reflects everything the user filled. Falls back to the
-      // base data if the review is unavailable.
-      let data = baseData;
-      try {
-        const review = await getRegistrationReview(rp.subjectId);
-        if (review) data = { ...baseData, ...(await reviewToForm(review)) };
-      } catch {
-        // review unavailable — print the base data
-      }
-
-      const date = new Date(rp.createdAt);
-      const formattedDate = Number.isNaN(date.getTime())
-        ? rp.createdAt
-        : `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
-
-      setPrintPerson({
-        applicationId: rp.subjectId,
-        submittedDate: local?.submittedDate ?? formattedDate,
-        name: rp.fullName,
-        isCreator: local?.isCreator ?? false,
-        status: "submitted",
-        data,
-      });
+      await downloadRegistrationReviewPdf(
+        subjectId,
+        registrationFormFileName(fullName),
+      );
     } finally {
       setDownloadingId(null);
     }
   };
+  const handleDownloadRemote = (rp: RegisteredPerson) =>
+    handleDownloadPdf(rp.subjectId, rp.fullName);
 
-  // Once the chosen person's form is in the DOM, generate the PDF and reset.
-  useEffect(() => {
-    if (!printPerson) return;
-    (async () => {
-      await printRegistrationForm(
-        document.getElementById("printable-form"),
-        registrationFormFileName(printPerson.name),
-      );
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPrintPerson(null);
-    })();
-  }, [printPerson]);
+  // ── OLD client-side print mechanism (replaced by handleDownloadRemote above).
+  //    Built form data from the server review + local draft, then printed a
+  //    hidden #printable-form via window.print. Kept commented for reference. ──
+  // const handleDownloadRemoteOld = async (rp: RegisteredPerson) => {
+  //   if (downloadingId) return;
+  //   setDownloadingId(rp.subjectId);
+  //   try {
+  //     const local = people.find((lp) => lp.applicationId === rp.subjectId);
+  //     const nameParts = rp.fullName.trim().split(/\s+/).filter(Boolean);
+  //     const first = nameParts[0] || "";
+  //     const last = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+  //     const middle = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
+  //     const baseData: Record<string, string | boolean> = local?.data ?? {
+  //       applicantFirst: first, applicantMiddle: middle, applicantLast: last,
+  //       email: rp.email, phone: rp.phoneNumber,
+  //     };
+  //     let data = baseData;
+  //     try {
+  //       const review = await getRegistrationReview(rp.subjectId);
+  //       if (review) data = { ...baseData, ...(await reviewToForm(review)) };
+  //     } catch { /* review unavailable — print the base data */ }
+  //     const date = new Date(rp.createdAt);
+  //     const formattedDate = Number.isNaN(date.getTime())
+  //       ? rp.createdAt
+  //       : `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+  //     setPrintPerson({
+  //       applicationId: rp.subjectId, submittedDate: local?.submittedDate ?? formattedDate,
+  //       name: rp.fullName, isCreator: local?.isCreator ?? false, status: "submitted", data,
+  //     });
+  //   } finally { setDownloadingId(null); }
+  // };
+  // useEffect(() => {
+  //   if (!printPerson) return;
+  //   (async () => {
+  //     const fullName = ["applicantFirst", "applicantMiddle"]
+  //       .map((k) => printPerson.data[k])
+  //       .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+  //       .join(" ");
+  //     await printRegistrationForm(
+  //       document.getElementById("printable-form"),
+  //       registrationFormFileName(fullName || printPerson.name),
+  //     );
+  //     // eslint-disable-next-line react-hooks/set-state-in-effect
+  //     setPrintPerson(null);
+  //   })();
+  // }, [printPerson]);
 
   return (
     <AuthGuard>
@@ -442,11 +460,14 @@ export default function PeopleList() {
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => setPrintPerson(p)}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card"
+                                      onClick={() => handleDownloadPdf(p.applicationId, p.name)}
+                                      disabled={downloadingId === p.applicationId}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                       <DownloadIcon />
-                                      {t("people.download")}
+                                      {downloadingId === p.applicationId
+                                        ? t("people.preparing")
+                                        : t("people.download")}
                                     </button>
                                   )}
                                 </div>
@@ -463,14 +484,15 @@ export default function PeopleList() {
           </main>
         </div>
 
-        {/* Hidden form for the selected person — cloned into the PDF on download. */}
+        {/* OLD: hidden printable form for the client-side print mechanism —
+            replaced by the backend /review/pdf download.
         {printPerson && (
           <PrintableForm
             data={printPerson.data}
             applicationId={printPerson.applicationId}
             submittedDate={printPerson.submittedDate}
           />
-        )}
+        )} */}
       </div>
     </AuthGuard>
   );

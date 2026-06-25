@@ -9,10 +9,13 @@ export default function CountrySelect({
   name,
   placeholder,
   disabled = false,
+  excludeTanzania = false,
 }: {
   name: string;
   placeholder: string;
   disabled?: boolean;
+  /** When true, Tanzania is excluded from the dropdown list. */
+  excludeTanzania?: boolean;
 }) {
   const { data, set, errors, locked } = useWizard();
   const value = (data[name] as string) ?? "";
@@ -61,6 +64,7 @@ export default function CountrySelect({
         <CountryMenu
           onClose={() => setOpen(false)}
           onSelect={(c) => set(name, c.name)}
+          excludeTanzania={excludeTanzania}
         />
       )}
       <FieldError name={name} />

@@ -67,7 +67,7 @@ function PersonFields({ prefix }: { prefix: string }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.dob")} optional>
+        <Field label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
         </Field>
         <Field label={t("fields.gender")} required>

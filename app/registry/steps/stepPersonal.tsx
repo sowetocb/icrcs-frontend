@@ -313,7 +313,7 @@ export default function StepPersonal() {
           <PhoneInput name="phone" />
         </Field>
         <Field label={t("fields.email")} required>
-          <TextInput name="email" type="email" placeholder="test@test.com" />
+          <TextInput name="email" type="email" placeholder="test@test.com" maxLength={20} />
         </Field>
       </div>
     </div>

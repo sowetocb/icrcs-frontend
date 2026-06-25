@@ -119,40 +119,75 @@ export async function verifyOtp(
   );
 }
 
-/** POST /v1/auth/login — identifier (email/phone) + password → tokens. */
+/** POST /api/auth/login — authenticates via the server-side route that sets
+ * HttpOnly cookies. The tokens never reach the browser. */
 export async function login(identifier: string, password: string): Promise<Tokens> {
   if (BYPASS) {
     await delay(400);
     return { ...MOCK_TOKENS };
   }
-  return normalizeTokens(
-    await apiPost("/v1/auth/login", {
-      identifier: String(identifier),
-      password: String(password),
-    }),
-  );
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ identifier, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(
+      res.status,
+      (data as { error?: string } | null)?.error || `Login failed (${res.status})`,
+    );
+  }
+  // Tokens are in HttpOnly cookies; return stubs so saveSession can mark logged-in.
+  return { accessToken: "__httponly__", refreshToken: "__httponly__" };
 }
 
-/** POST /v1/auth/refresh — exchanges a refresh token for fresh tokens. */
-export async function refresh(refreshToken: string): Promise<Tokens> {
+// Single-flight guard: concurrent callers (SessionKeepAlive + every withFreshAuth
+// that hit a 401 at once) must share ONE /api/auth/refresh request. With backend
+// refresh-token rotation, parallel refreshes would each send the same refresh
+// cookie; the first rotates it and the rest get a 401 → spurious session-expiry
+// and logout. Sharing one in-flight request avoids that race.
+let refreshInFlight: Promise<Tokens> | null = null;
+
+/** POST /api/auth/refresh — exchanges the refresh cookie for fresh cookies.
+ * Deduplicated: overlapping calls resolve to the same in-flight request. */
+export async function refresh(_refreshToken?: string): Promise<Tokens> {
   if (BYPASS) {
     await delay(200);
     return { ...MOCK_TOKENS };
   }
-  // Keep the current refresh token if the backend rotates only the access token.
-  return normalizeTokens(
-    await apiPost("/v1/auth/refresh", { refreshToken }),
-    refreshToken,
-  );
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const res = await fetch("/api/auth/refresh", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, "Session expired");
+    }
+    // Tokens are in HttpOnly cookies; return stubs.
+    return { accessToken: "__httponly__", refreshToken: "__httponly__" } as Tokens;
+  })();
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
-/** POST /v1/auth/logout — invalidates the refresh token server-side. */
-export async function logout(refreshToken: string): Promise<unknown> {
+/** POST /api/auth/logout — clears HttpOnly cookies and invalidates the backend
+ * refresh token. */
+export async function logout(_refreshToken: string): Promise<unknown> {
   if (BYPASS) {
     await delay(200);
     return { ok: true, mock: true };
   }
-  return apiPost("/v1/auth/logout", { refreshToken });
+  const res = await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
+  return res.json().catch(() => ({ ok: true }));
 }
 
 /** POST /v1/auth/forgot-password — step 1: send reset OTP, returns profileId. */
@@ -280,13 +315,35 @@ export async function withFreshAuth<T>(
       clearSession();
       throw new SessionExpiredError();
     }
+    // Refresh, then retry once. Only a definitive 401/403 (dead refresh token /
+    // still-unauthorized retry) ends the session. A network error, timeout, or
+    // 5xx from a flaky backend is transient — keep the session and surface the
+    // error so the caller can show "try again" instead of forcing a logout.
+    let tokens: Tokens;
     try {
-      const tokens = await refresh(session.refreshToken);
-      saveSession(tokens);
+      tokens = await refresh(session.refreshToken);
+    } catch (refreshErr) {
+      if (
+        refreshErr instanceof ApiError &&
+        (refreshErr.status === 401 || refreshErr.status === 403)
+      ) {
+        clearSession();
+        throw new SessionExpiredError();
+      }
+      throw refreshErr; // transient — don't log the user out
+    }
+    saveSession(tokens);
+    try {
       return await call(tokens.accessToken);
-    } catch {
-      clearSession();
-      throw new SessionExpiredError();
+    } catch (retryErr) {
+      if (
+        retryErr instanceof ApiError &&
+        (retryErr.status === 401 || retryErr.status === 403)
+      ) {
+        clearSession();
+        throw new SessionExpiredError();
+      }
+      throw retryErr; // transient — don't log the user out
     }
   }
 }
@@ -325,9 +382,13 @@ export async function fetchProfilePicture(path: string): Promise<string | null> 
   try {
     const at = loadSession()?.accessToken;
     const res = await fetch(url, {
+      // Send the HttpOnly auth cookie to the same-origin proxy. The token lives
+      // in that cookie now, so we must NOT send the "__httponly__" stub as a
+      // bogus Bearer header (the proxy would forward it and the backend reject).
+      credentials: "include",
       headers: {
         accept: "image/*",
-        ...(at ? { authorization: `Bearer ${at}` } : {}),
+        ...(at && at !== "__httponly__" ? { authorization: `Bearer ${at}` } : {}),
       },
     });
     if (!res.ok) return null;

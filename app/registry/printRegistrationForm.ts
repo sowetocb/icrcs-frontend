@@ -11,11 +11,12 @@ export function registrationFormFileName(name: string): string {
  * already hide everything except `#printable-form` and the print‐specific
  * layout is provided by `/registry-print.css` (linked in the page head).
  *
- * The optional `_documentName` parameter is kept for call-site compatibility
- * but is unused — the browser sets the filename from the page title. */
+ * To give the saved PDF a consistent filename across all browsers, we
+ * temporarily set `document.title` to the desired name (browsers use the page
+ * title as the default "Save as PDF" filename). */
 export async function printRegistrationForm(
   root: HTMLElement | null,
-  _documentName = "Registration Form",
+  documentName = "Registration Form",
 ): Promise<void> {
   if (!root) return;
 
@@ -23,5 +24,13 @@ export async function printRegistrationForm(
   // #printable-form before we trigger the print dialog.
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+  // Set the page title to the desired filename so the browser's "Save as PDF"
+  // defaults to it. Restored after the dialog closes (or is cancelled).
+  const originalTitle = document.title;
+  document.title = documentName;
+
   window.print();
+
+  // Restore the original page title after the print dialog closes.
+  document.title = originalTitle;
 }

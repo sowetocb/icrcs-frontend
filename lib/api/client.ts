@@ -1,5 +1,14 @@
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+// When tokens are stored in HttpOnly cookies (the __httponly__ stub), the
+// Authorization header must NOT be sent — the proxy reads from the cookie
+// automatically. Real tokens (e.g. the pre-auth token during registration OTP)
+// are still passed as Bearer headers.
+function authHeaders(token?: string): Record<string, string> {
+  if (!token || token === "__httponly__") return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -18,9 +27,10 @@ export async function apiPost<T = unknown>(
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(token),
     },
     body: JSON.stringify(body),
   });
@@ -50,9 +60,10 @@ export async function apiPut<T = unknown>(
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "PUT",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(token),
     },
     body: JSON.stringify(body),
   });
@@ -81,9 +92,10 @@ export async function apiDelete<T = unknown>(
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "DELETE",
+    credentials: "include",
     headers: {
       accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(token),
     },
   });
 
@@ -114,9 +126,10 @@ export async function apiUpload<T = unknown>(
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: {
       accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(token),
     },
     body: form,
   });
@@ -141,9 +154,10 @@ export async function apiUpload<T = unknown>(
 
 export async function apiGet<T = unknown>(path: string, token?: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
     headers: {
       accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(token),
     },
   });
 

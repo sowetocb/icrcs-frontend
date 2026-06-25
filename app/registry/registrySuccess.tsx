@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
-import PrintableForm from "./printableForm";
-import { printRegistrationForm, registrationFormFileName } from "./printRegistrationForm";
-import { getRegistrationReview } from "@/lib/api/registration";
-import { reviewToForm } from "@/lib/registry/reviewToForm";
+import { registrationFormFileName } from "./printRegistrationForm";
+import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
 import { loadProfile } from "@/lib/auth/profile";
+// ── OLD client-side print mechanism (replaced by the backend /review/pdf
+//    endpoint). Kept commented for reference. ──
+// import { useEffect, useRef } from "react";
+// import PrintableForm from "./printableForm";
+// import { printRegistrationForm } from "./printRegistrationForm";
+// import { getRegistrationReview } from "@/lib/api/registration";
+// import { reviewToForm } from "@/lib/registry/reviewToForm";
 
 export default function RegistrySuccess({
   applicationId,
@@ -22,63 +27,55 @@ export default function RegistrySuccess({
   const { t } = useI18n();
   const router = useRouter();
 
-  // The form is printed from `formData`. It starts as the locally-entered data
-  // and is refreshed from the server-compiled preview when the user downloads.
-  const [formData, setFormData] = useState(data);
   const [busy, setBusy] = useState(false);
-  // Set once the (preview-merged) formData is committed and the DOM should be
-  // printed on the next paint.
-  const printPending = useRef(false);
 
-  async function doPrint() {
-    const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
-      .map((k) => formData[k])
-      .filter((v): v is string => typeof v === "string" && v.trim() !== "")
-      .join(" ");
-    await printRegistrationForm(
-      document.getElementById("printable-form"),
-      registrationFormFileName(fullName),
-    );
-  }
-
-  // Print after the preview-merged data has rendered into the hidden form.
-  useEffect(() => {
-    if (!printPending.current) return;
-    printPending.current = false;
-    (async () => {
-      try { await doPrint(); } finally { setBusy(false); }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData]);
-
+  // Download the server-rendered PDF from the backend /review/pdf endpoint. The
+  // backend compiles the form from stored data, so no local print DOM is needed.
   async function printForm() {
     if (busy) return;
     setBusy(true);
     try {
-      // Pull all stages from the server-compiled preview so the printout
-      // reflects exactly what the backend stored. Falls back to local data.
       const subjectId =
         loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ??
         loadRegistration()?.subjectId ??
+        applicationId ??
         "";
-      if (subjectId) {
-        const review = await getRegistrationReview(subjectId);
-        if (review) {
-          const mapped = await reviewToForm(review);
-          // Merge server data over local (local keeps cascade names/photo the
-          // preview doesn't carry); printing is triggered by the effect above.
-          printPending.current = true;
-          setFormData((prev) => ({ ...prev, ...mapped }));
-          return;
-        }
-      }
-      await doPrint();
-    } catch {
-      await doPrint(); // preview unavailable — print what we have locally
+      const fullName = ["applicantFirst", "applicantMiddle"]
+        .map((k) => data[k])
+        .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+        .join(" ");
+      await downloadRegistrationReviewPdf(
+        subjectId,
+        registrationFormFileName(fullName),
+      );
     } finally {
       setBusy(false);
     }
   }
+
+  // ── OLD client-side print mechanism (replaced by downloadRegistrationReviewPdf
+  //    above). Printed a hidden #printable-form via window.print after merging
+  //    the server review over local data. Kept commented for reference. ──
+  // const [formData, setFormData] = useState(data);
+  // const printPending = useRef(false);
+  // async function doPrint() {
+  //   const fullName = ["applicantFirst", "applicantMiddle"]
+  //     .map((k) => formData[k])
+  //     .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+  //     .join(" ");
+  //   await printRegistrationForm(
+  //     document.getElementById("printable-form"),
+  //     registrationFormFileName(fullName),
+  //   );
+  // }
+  // useEffect(() => {
+  //   if (!printPending.current) return;
+  //   printPending.current = false;
+  //   (async () => {
+  //     try { await doPrint(); } finally { setBusy(false); }
+  //   })();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [formData]);
 
   return (
     <main className="flex flex-1 items-start justify-center px-6 py-12">
@@ -150,11 +147,13 @@ export default function RegistrySuccess({
         </button>
       </div>
 
+      {/* OLD: hidden printable form used by the client-side window.print
+          mechanism — replaced by the backend /review/pdf download.
       <PrintableForm
         data={formData}
         applicationId={applicationId}
         submittedDate={submittedDate}
-      />
+      /> */}
     </main>
   );
 }

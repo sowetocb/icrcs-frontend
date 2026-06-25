@@ -800,6 +800,69 @@ export default function RegistryWizard({
       const field = target || firstFilled;
       if (field) apiFieldErrors[field] = message;
     }
+    // Stages 3/5/6: backend errors like "Relative date of birth is required"
+    // or "Father phone number is required" carry no structured field info —
+    // detect the person type + field keyword in the message and pin to the
+    // corresponding form field (first empty instance).
+    if (Object.keys(apiFieldErrors).length === 0 && [3, 5, 6].includes(step)) {
+      const lower = message.toLowerCase();
+      // Person groups relevant to the current stage.
+      type PersonGroup = { keyword: string; prefix: string; countKey?: string; min: number };
+      const stageGroups: Record<number, PersonGroup[]> = {
+        3: [
+          { keyword: "father", prefix: "father", min: 1 },
+          { keyword: "mother", prefix: "mother", min: 1 },
+        ],
+        5: [
+          { keyword: "emergency", prefix: "ec", countKey: "ecCount", min: 2 },
+          { keyword: "contact",   prefix: "ec", countKey: "ecCount", min: 2 },
+        ],
+        6: [
+          { keyword: "relative", prefix: "rel", countKey: "relativeCount", min: 2 },
+          { keyword: "spouse",   prefix: "sp",  countKey: "spouseCount",   min: 1 },
+          { keyword: "child",    prefix: "ch",  countKey: "childCount",    min: 1 },
+        ],
+      };
+      // Map error-message keywords to the form-field suffix.
+      const fieldKeywords: { keyword: string; suffix: string }[] = [
+        { keyword: "date of birth", suffix: "Dob" },
+        { keyword: "dob",           suffix: "Dob" },
+        { keyword: "first name",    suffix: "First" },
+        { keyword: "middle name",   suffix: "Middle" },
+        { keyword: "last name",     suffix: "Last" },
+        { keyword: "gender",        suffix: "Gender" },
+        { keyword: "sex",           suffix: "Gender" },
+        { keyword: "phone",         suffix: "Phone" },
+        { keyword: "nationality",   suffix: "NatCountry" },
+        { keyword: "occupation",    suffix: "OccType" },
+        { keyword: "relationship",  suffix: "RelType" },
+        { keyword: "country",       suffix: "ResCountry" },
+        { keyword: "residence",     suffix: "ResCountry" },
+      ];
+      const groups = stageGroups[step] ?? [];
+      for (const pg of groups) {
+        if (!lower.includes(pg.keyword)) continue;
+        const fk = fieldKeywords.find((k) => lower.includes(k.keyword));
+        if (!fk) break;
+        // Single-object parents (father/mother) have no count/index — they use
+        // the prefix directly (e.g. "fatherDob"). Indexed groups (rel, sp, ch,
+        // ec) pin to the first empty instance.
+        if (!pg.countKey) {
+          apiFieldErrors[`${pg.prefix}${fk.suffix}`] = message;
+        } else {
+          const count = Math.max(pg.min, Number(String(data[pg.countKey] ?? "")) || pg.min);
+          let target = `${pg.prefix}1${fk.suffix}`;
+          for (let i = 1; i <= count; i++) {
+            const key = `${pg.prefix}${i}${fk.suffix}`;
+            const v = typeof data[key] === "string" ? (data[key] as string).trim() : "";
+            if (!v) { target = key; break; }
+          }
+          apiFieldErrors[target] = message;
+        }
+        break;
+      }
+    }
+
     // Some backend validation messages name the rejected value but not the
     // field — e.g. "Document number may only contain … (received: 'lkjhgjkl;')".
     // When nothing else mapped, locate the form field whose current value is

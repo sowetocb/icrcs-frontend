@@ -27,6 +27,16 @@ import {
 const MAX_PHOTO = 300 * 1024; // 300KB
 const PHOTO_TYPES = ["image/jpeg", "image/png"];
 
+/** Normalise a phone value to the Tanzanian format: "+255" followed by at most
+ * 9 national digits (drops a duplicate leading 255 from a pasted full number).
+ * Returns "" for an empty input so the field stays blank when there's no phone. */
+function toTzPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  const national = (digits.startsWith("255") ? digits.slice(3) : digits).slice(0, 9);
+  return `+255${national}`;
+}
+
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
 const labelClass = "block text-sm font-medium text-navy-700";
@@ -95,7 +105,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         middleName: p.middleName ?? "",
         lastName: p.lastName ?? "",
         gender: p.gender ?? "",
-        phoneNumber: p.phoneNumber ?? "",
+        phoneNumber: toTzPhone(p.phoneNumber ?? ""),
       });
 
     const cached = loadProfile();
@@ -151,12 +161,15 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
   function setField(name: keyof typeof form, value: string) {
     dirtyRef.current = true;
     let next = value;
-    // Names accept letters only (plus spaces, hyphens, apostrophes); the phone
-    // accepts digits and a leading "+" only.
+    // Names accept letters only (plus spaces, hyphens, apostrophes). The phone is
+    // a Tanzanian number: force the "+255" country code and allow at most 9
+    // national digits after it (strip a duplicate leading 255 if the user pastes
+    // a full number), so the field can never exceed +255 + 9 digits.
     if (name === "firstName" || name === "middleName" || name === "lastName") {
       next = value.replace(/[^\p{L} '-]/gu, "");
     } else if (name === "phoneNumber") {
-      next = value.replace(/[^\d+\s]/g, "");
+      // Keep the "+255" prefix visible even while the national part is empty.
+      next = toTzPhone(value) || "+255";
     }
     setForm((f) => ({ ...f, [name]: next }));
   }
@@ -168,9 +181,11 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
     setNotice("");
     setPhoneError("");
 
-    // Validate phone: must have at least 7 digits to be meaningful.
-    const phoneDigits = form.phoneNumber.replace(/[^\d]/g, "");
-    if (form.phoneNumber.trim() && phoneDigits.length < 7) {
+    // Validate phone: a Tanzanian number must be +255 followed by exactly 9
+    // national digits (the country code is enforced live in setField).
+    const phoneDigits = form.phoneNumber.replace(/\D/g, "");
+    const national = phoneDigits.startsWith("255") ? phoneDigits.slice(3) : phoneDigits;
+    if (national.length > 0 && national.length !== 9) {
       setPhoneError(t("profile.phoneInvalid"));
       setSaving(false);
       return;
@@ -181,7 +196,8 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         middleName: form.middleName.trim(),
         lastName: form.lastName.trim(),
         gender: form.gender,
-        phoneNumber: form.phoneNumber.replace(/[^\d+]/g, ""),
+        // Send the full "+255XXXXXXXXX", or "" when only the prefix remains.
+        phoneNumber: national ? `+255${national}` : "",
       });
       // Keep any photo we already have if the response omits it.
       const merged: Profile = {

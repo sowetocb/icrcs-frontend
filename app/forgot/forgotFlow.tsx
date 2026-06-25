@@ -193,6 +193,7 @@ export default function ForgotFlow() {
             <input
               id="identifier"
               value={identifier}
+              maxLength={30}
               onChange={(e) => setIdentifier(e.target.value)}
               placeholder={t("forgot.identifierPlaceholder")}
               className={inputClass}

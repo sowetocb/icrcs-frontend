@@ -4,6 +4,8 @@
 // backend base for the whole app — auth, registration, profile, lookups, etc.
 // (AUTH_API_BASE_URL kept as a fallback for backwards compatibility.)
 
+import { cookies } from "next/headers";
+
 const BACKEND =
   process.env.BACKEND_API_BASE_URL ?? process.env.AUTH_API_BASE_URL ?? "";
 
@@ -83,7 +85,15 @@ async function forward(
   } else if (contentType) {
     headers.set("content-type", "application/json");
   }
-  const auth = request.headers.get("authorization");
+  // Prefer an explicit Authorization header (e.g. pre-auth tokens during
+  // registration). If absent, read the HttpOnly access-token cookie the login
+  // route set — the browser sends it automatically but JavaScript cannot read it.
+  let auth = request.headers.get("authorization");
+  if (!auth) {
+    const jar = await cookies();
+    const accessToken = jar.get("icrcs-access")?.value;
+    if (accessToken) auth = `Bearer ${accessToken}`;
+  }
   if (auth) headers.set("authorization", auth);
   // Forward the client's Accept (so binary assets like profile photos can be
   // requested with image/*); default to JSON for normal API calls.

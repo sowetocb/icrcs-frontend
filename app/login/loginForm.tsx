@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
-import { login, getMyProfile } from "@/lib/api/auth";
-import { isConnectionError } from "@/lib/api/client";
+import { getMyProfile } from "@/lib/api/auth";
 import { saveSession } from "@/lib/auth/session";
 import { saveProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
@@ -66,12 +65,26 @@ export default function LoginForm() {
 
     setSubmitting(true);
     try {
-      const tokens = await login(email.trim(), password);
-      saveSession(tokens);
+      // Login via the server-side route that sets HttpOnly cookies — the tokens
+      // never reach the browser (not in localStorage, not in the response body).
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ identifier: email.trim(), password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(
+          (data as { error?: string } | null)?.error || `Login failed (${res.status})`,
+        );
+      }
+      // Mark the session as active (the actual tokens are in HttpOnly cookies).
+      saveSession({ accessToken: "__httponly__", refreshToken: "__httponly__" });
       // Fetch the full profile once and cache it. Non-fatal: a failure here
       // shouldn't block sign-in — the dashboard can fall back gracefully.
       try {
-        const profile = await getMyProfile(tokens.accessToken);
+        const profile = await getMyProfile("__httponly__");
         saveProfile(profile);
         // Drop any locally cached registration/people that belong to a
         // different account on this browser, so a new user never inherits a
@@ -89,8 +102,11 @@ export default function LoginForm() {
     } catch (err) {
       setSubmitting(false);
       // A server/connection outage must not read as "invalid credentials".
+      const msg = err instanceof Error ? err.message : "";
       setLoginError(
-        isConnectionError(err) ? t("form.connectionError") : t("form.loginFailed"),
+        /unreachable|network|timeout|fetch/i.test(msg)
+          ? t("form.connectionError")
+          : t("form.loginFailed"),
       );
     }
   }
@@ -116,6 +132,7 @@ export default function LoginForm() {
             type="email"
             autoComplete="email"
             required
+            maxLength={30}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);

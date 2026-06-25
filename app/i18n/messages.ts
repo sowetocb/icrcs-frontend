@@ -520,7 +520,7 @@ const en = {
     save: "Save changes",
     saving: "Saving…",
     saved: "Profile updated.",
-    phoneInvalid: "Please enter a valid phone number (at least 7 digits).",
+    phoneInvalid: "Please enter exactly 9 digits after +255.",
     updateError: "Could not update your profile. Please try again.",
   },
   infoCards: {
@@ -1337,7 +1337,7 @@ const sw: typeof en = {
     save: "Hifadhi mabadiliko",
     saving: "Inahifadhi…",
     saved: "Wasifu umesasishwa.",
-    phoneInvalid: "Tafadhali weka namba sahihi ya simu (angalau tarakimu 7).",
+    phoneInvalid: "Tafadhali weka tarakimu 9 haswa baada ya +255.",
     updateError: "Imeshindwa kusasisha wasifu wako. Tafadhali jaribu tena.",
   },
   infoCards: {

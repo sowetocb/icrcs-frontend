@@ -10,10 +10,14 @@ export default function CountryMenu({
   onClose,
   onSelect,
   showDial = false,
+  excludeTanzania = false,
 }: {
   onClose: () => void;
   onSelect: (country: Country) => void;
   showDial?: boolean;
+  /** When true, Tanzania is excluded from the list (for non-citizens picking
+   * their nationality — they obviously aren't Tanzanian). */
+  excludeTanzania?: boolean;
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -31,19 +35,26 @@ export default function CountryMenu({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    let pool = COUNTRIES;
+    // Exclude Tanzania when the caller asks for it (non-citizen nationality).
+    if (excludeTanzania) pool = pool.filter((c) => c.code !== "TZ");
     const base = !q
-      ? COUNTRIES
-      : COUNTRIES.filter(
+      ? pool
+      : pool.filter(
           (c) =>
             c.name.toLowerCase().includes(q) ||
             c.dial.includes(q) ||
             c.code.toLowerCase() === q,
         );
-    // The system is used mostly by Tanzanians — pin Tanzania to the top.
-    const tz = base.filter((c) => c.code === "TZ");
-    const rest = base.filter((c) => c.code !== "TZ");
-    return [...tz, ...rest];
-  }, [query]);
+    // The system is used mostly by Tanzanians — pin Tanzania to the top
+    // (only when it's not excluded).
+    if (!excludeTanzania) {
+      const tz = base.filter((c) => c.code === "TZ");
+      const rest = base.filter((c) => c.code !== "TZ");
+      return [...tz, ...rest];
+    }
+    return base;
+  }, [query, excludeTanzania]);
 
   return (
     <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-line bg-card shadow-lg">

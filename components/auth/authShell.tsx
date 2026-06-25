@@ -402,7 +402,7 @@ export default function AuthShell({
             {children}
 
             {/* Footer — kept on a single line */}
-            <p className="mt-4 whitespace-nowrap text-center text-[11px] text-muted">
+            <p className="mt-4 whitespace-nowrap text-center text-[14px] text-muted">
               {t("footer")}
             </p>
           </div>

@@ -90,6 +90,7 @@ function CountryPicker({
   invalid,
   lookupCountries,
   onChange,
+  excludeTanzania = false,
 }: {
   countryName: string;
   placeholder: string;
@@ -97,6 +98,8 @@ function CountryPicker({
   invalid: boolean;
   lookupCountries: LookupItem[];
   onChange: (lookupItem: LookupItem | null, country: Country | null) => void;
+  /** When true, Tanzania is excluded from the dropdown list. */
+  excludeTanzania?: boolean;
 }) {
   const selected = COUNTRIES.find((c) => c.name === countryName);
   const [open, setOpen] = useState(false);
@@ -139,6 +142,7 @@ function CountryPicker({
       {open && (
         <CountryMenu
           onClose={() => setOpen(false)}
+          excludeTanzania={excludeTanzania}
           onSelect={(c) => {
             // Find the matching lookup item by name to get the API id
             const lookupMatch = lookupCountries.find(
@@ -166,6 +170,7 @@ export default function WardCascade({
   showCountry = true,
   showStreet = false,
   alwaysCascade = false,
+  excludeTanzania = false,
 }: {
   prefix: string;
   disabled?: boolean;
@@ -178,6 +183,8 @@ export default function WardCascade({
   /** Always show the Region/District/Ward cascade (even for non-Tanzania), so
    * Country + Region + District + Ward coexist (e.g. address forms). */
   alwaysCascade?: boolean;
+  /** When true, Tanzania is excluded from the country dropdown. */
+  excludeTanzania?: boolean;
 }) {
   const { data, set, errors } = useWizard();
   const { t } = useI18n();
@@ -262,6 +269,7 @@ export default function WardCascade({
             disabled={disabled}
             invalid={errors.includes(`${prefix}Country`)}
             lookupCountries={countries}
+            excludeTanzania={excludeTanzania}
             onChange={(lookupItem, country) => {
               set(`${prefix}CountryId`, lookupItem ? String(lookupItem.id) : "");
               set(`${prefix}Country`, country?.name ?? "");

@@ -842,7 +842,10 @@ export async function openRefereesForm(subjectId: string): Promise<boolean> {
   const at = loadSession()?.accessToken;
   try {
     const res = await fetch(`${base}/v1/registration/${subjectId}/stage7`, {
-      headers: at ? { authorization: `Bearer ${at}` } : {},
+      // The auth token is in an HttpOnly cookie — include it on this same-origin
+      // proxy request and don't send the "__httponly__" stub as a Bearer header.
+      credentials: "include",
+      headers: at && at !== "__httponly__" ? { authorization: `Bearer ${at}` } : {},
     });
     if (!res.ok) return false;
     const blob = await res.blob();
@@ -850,6 +853,47 @@ export async function openRefereesForm(subjectId: string): Promise<boolean> {
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener");
     // Revoke after the new tab has had time to load.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Download the registration form as a server-rendered PDF via the backend
+ * endpoint GET /v1/registration/{subjectId}/review/pdf (proxied). This replaces
+ * the old client-side print/PDF mechanism (printRegistrationForm + the hidden
+ * PrintableForm), so the downloaded document always matches what the backend
+ * stored. Streams the PDF blob and triggers a browser download. Returns false
+ * when the PDF can't be fetched (no subjectId, not submitted, backend error). */
+export async function downloadRegistrationReviewPdf(
+  subjectId: string,
+  fileName = "Registration Form",
+): Promise<boolean> {
+  if (!subjectId) return false;
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  const at = loadSession()?.accessToken;
+  try {
+    const res = await fetch(`${base}/v1/registration/${subjectId}/review/pdf`, {
+      // The auth token is in an HttpOnly cookie — include it on this same-origin
+      // proxy request; never send the "__httponly__" stub as a Bearer header.
+      credentials: "include",
+      headers: {
+        accept: "application/pdf",
+        ...(at && at !== "__httponly__" ? { authorization: `Bearer ${at}` } : {}),
+      },
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    if (!blob.size) return false;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoke after the download has had time to start.
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return true;
   } catch {

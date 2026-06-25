@@ -296,6 +296,7 @@ export default function StepDetails({
               id="email"
               type="email"
               autoComplete="email"
+              maxLength={30}
               value={form.email}
               // Allow only email-safe characters: letters, digits, "@" and ".".
               // Anything else (spaces, symbols) is stripped as it's typed.
