@@ -966,10 +966,6 @@ export default function RegistryWizard({
         const sp = Math.max(1, Number(String(data.spouseCount ?? "")) || 1);
         for (let i = 1; i <= sp; i++) out.push(`sp${i}Phone`);
       }
-      if (data.hasChildren === true) {
-        const ch = Math.max(1, Number(String(data.childCount ?? "")) || 1);
-        for (let i = 1; i <= ch; i++) out.push(`ch${i}Phone`);
-      }
       return out;
     }
     return [];

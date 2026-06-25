@@ -33,11 +33,18 @@ const PERSON_SUFFIXES = [
 ];
 const RELATIVE_SUFFIXES = ["RelType", "OccType", ...PERSON_SUFFIXES];
 const SPOUSE_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
-// Children use the same inputs as spouses.
-const CHILD_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
+// Children have no phone (ChildItemRequest has no phoneNumber field).
+const CHILD_SUFFIXES = [
+  "First", "Middle", "Last", "Dob", "Gender", "NatCountry",
+  "PobCountry", "PobCountryId", "PobRegionId", "PobRegion", "PobDistrictId",
+  "PobDistrict", "PobWardId", "PobWard", "Village", "ResCountry", "ResCountryId",
+  "ResRegionId", "ResRegion", "ResDistrictId", "ResDistrict", "ResWardId",
+  "ResWard", "ResCity", "ResStreet",
+];
 
-/** The common person inputs shared by relatives and spouses. */
-function PersonFields({ prefix }: { prefix: string }) {
+/** The common person inputs shared by relatives and spouses.
+ * `withPhone` is false for children — ChildItemRequest has no phone field. */
+function PersonFields({ prefix, withPhone = true }: { prefix: string; withPhone?: boolean }) {
   const { t } = useI18n();
   const { data } = useWizard();
   const genders = useGenderOptions();
@@ -73,9 +80,11 @@ function PersonFields({ prefix }: { prefix: string }) {
         <Field label={t("fields.gender")} required>
           <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
         </Field>
-        <Field label={t("fields.phone")} required>
-          <PhoneInput name={`${prefix}Phone`} />
-        </Field>
+        {withPhone && (
+          <Field label={t("fields.phone")} required>
+            <PhoneInput name={`${prefix}Phone`} />
+          </Field>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -115,6 +124,7 @@ function PersonBlock({
   label,
   withRelationship,
   withOccupation = true,
+  withPhone = true,
   onRemove,
 }: {
   prefix: string;
@@ -122,6 +132,8 @@ function PersonBlock({
   withRelationship: boolean;
   /** Children don't have an occupation, so it's hidden for them. */
   withOccupation?: boolean;
+  /** Children have no phoneNumber in ChildItemRequest — hide for them. */
+  withPhone?: boolean;
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
@@ -161,7 +173,7 @@ function PersonBlock({
         </div>
       )}
 
-      <PersonFields prefix={prefix} />
+      <PersonFields prefix={prefix} withPhone={withPhone} />
     </div>
   );
 }
@@ -210,16 +222,6 @@ export default function StepFamily() {
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
 
-  // A child shares the account holder's phone number — pre-fill it (only when the
-  // child's phone is still blank, so a manual edit is never overwritten).
-  useEffect(() => {
-    const holderPhone = typeof data.phone === "string" ? data.phone : "";
-    if (!holderPhone || !hasChildren) return;
-    for (let n = 1; n <= childCount; n++) {
-      if (!data[`ch${n}Phone`]) setQuiet(`ch${n}Phone`, holderPhone);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasChildren, childCount, data.phone]);
 
   function addChild() {
     set("childCount", String(childCount + 1));
@@ -299,6 +301,7 @@ export default function StepFamily() {
                 label={t("fields.childN").replace("{n}", String(n))}
                 withRelationship={false}
                 withOccupation={false}
+                withPhone={false}
                 onRemove={
                   n === childCount && childCount > MIN_CHILDREN ? removeLastChild : undefined
                 }
