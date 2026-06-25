@@ -445,21 +445,47 @@ export default function RegistryWizard({
       if (required.includes(name)) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
       }
-      // Conditional required fields on Step 4 (occupation / employer depend on jobStatus).
+      // Conditional required fields on Step 4.
       const jobStatus = String(data.jobStatus ?? "").toLowerCase();
       if (step === 4) {
         if (jobStatus === "employed" && (name === "occupation" || name === "employer")) {
-          // Mark this field, then cross-check the other so skipping one still shows an error.
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
           const other = name === "occupation" ? "employer" : "occupation";
-          const otherVal = String(data[other] ?? "").trim();
-          if (!otherVal) setErrors((e) => (e.includes(other) ? e : [...e, other]));
+          if (!String(data[other] ?? "").trim()) setErrors((e) => (e.includes(other) ? e : [...e, other]));
         }
         if (jobStatus === "self-employed" && name === "selfOccupation") {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
+        // First school's level/name/district are required when the user attended school.
+        if (
+          data.neverAttendedSchool !== true &&
+          (name === "edu1Level" || name === "edu1School" || name === "edu1District")
+        ) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        // Completion year: required when the matching school is marked "Completed".
+        const yearMatch = name.match(/^edu(\d+)Year$/);
+        if (yearMatch && data[`edu${yearMatch[1]}Completed`] === true) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+      }
+      // Step 6: first spouse required when married; first child required when has children.
+      if (step === 6) {
+        if (/^sp\d+First$/.test(name) && data.isMarried === true) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        if (/^ch\d+First$/.test(name) && data.hasChildren === true) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
       }
       return;
+    }
+    // Phone format — validate length for the selected country (fires when not empty).
+    if (name === "phone" || name.endsWith("Phone")) {
+      if (!isPhoneComplete(v.trim())) {
+        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        setFieldErrors((fe) => ({ ...fe, [name]: t("fields.phoneInvalid") }));
+      }
     }
     // Email format — only relevant at Step 1.
     if (name === "email") {
