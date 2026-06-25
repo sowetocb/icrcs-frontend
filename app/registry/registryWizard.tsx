@@ -428,6 +428,35 @@ export default function RegistryWizard({
     setData((d) => (d[name] === value ? d : { ...d, [name]: value }));
   };
 
+  // Real-time blur validation: marks a field invalid immediately when the user
+  // leaves it empty (if it is required for the current step) or with a bad
+  // email format. Errors added here are cleared normally by set() as the user
+  // corrects the field, so there is no double-flash or flickering.
+  const blur = (name: string, currentValue?: string) => {
+    const v =
+      currentValue !== undefined
+        ? currentValue
+        : typeof data[name] === "string"
+          ? (data[name] as string)
+          : "";
+    const empty = !v.trim();
+    if (empty) {
+      const required = REQUIRED_FIELDS[step - 1] ?? [];
+      if (required.includes(name)) {
+        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+      }
+      return;
+    }
+    // Email format — only relevant at Step 1.
+    if (name === "email") {
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!EMAIL_RE.test(v.trim())) {
+        setErrors((e) => (e.includes("email") ? e : [...e, "email"]));
+        setFieldErrors((fe) => ({ ...fe, email: t("form.emailInvalid") }));
+      }
+    }
+  };
+
   const set = (name: string, value: string | boolean) => {
     // Only mark the form dirty on an ACTUAL change. Some controlled inputs
     // (notably on Firefox) emit a change event carrying the unchanged value on
@@ -1511,6 +1540,7 @@ export default function RegistryWizard({
                   data={data}
                   set={set}
                   setQuiet={setQuiet}
+                  blur={blur}
                   errors={errors}
                   fieldErrors={fieldErrors}
                   locked={locked}

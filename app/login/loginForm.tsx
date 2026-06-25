@@ -138,6 +138,10 @@ export default function LoginForm() {
               setEmail(e.target.value);
               if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
             }}
+            onBlur={() => {
+              if (!EMAIL_RE.test(email.trim()))
+                setErrors((p) => ({ ...p, email: t("form.emailInvalid") }));
+            }}
             placeholder={t("form.emailPlaceholder")}
             aria-invalid={emailInvalid}
             aria-describedby={errors.email ? "email-error" : undefined}
@@ -170,6 +174,10 @@ export default function LoginForm() {
                 setPassword(e.target.value);
                 if (errors.password)
                   setErrors((p) => ({ ...p, password: undefined }));
+              }}
+              onBlur={() => {
+                if (!password)
+                  setErrors((p) => ({ ...p, password: t("form.passwordRequired") }));
               }}
               placeholder="••••••••"
               aria-invalid={passwordInvalid}

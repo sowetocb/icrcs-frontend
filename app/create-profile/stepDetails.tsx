@@ -213,6 +213,7 @@ export default function StepDetails({
               maxLength={15}
               value={form.firstName}
               onChange={(e) => update("firstName", e.target.value)}
+              onBlur={() => { if (!form.firstName.trim()) setErrors((e) => ({ ...e, firstName: true })); }}
               placeholder="Ally"
               aria-invalid={firstNameInvalid}
               aria-describedby={errors.firstName ? "firstName-error" : undefined}
@@ -232,6 +233,7 @@ export default function StepDetails({
               maxLength={15}
               value={form.middleName}
               onChange={(e) => update("middleName", e.target.value)}
+              onBlur={() => { if (!form.middleName.trim()) setErrors((e) => ({ ...e, middleName: true })); }}
               placeholder="Test"
               aria-invalid={middleNameInvalid}
               aria-describedby={errors.middleName ? "middleName-error" : undefined}
@@ -251,6 +253,7 @@ export default function StepDetails({
               maxLength={15}
               value={form.lastName}
               onChange={(e) => update("lastName", e.target.value)}
+              onBlur={() => { if (!form.lastName.trim()) setErrors((e) => ({ ...e, lastName: true })); }}
               placeholder="User"
               aria-invalid={lastNameInvalid}
               aria-describedby={errors.lastName ? "lastName-error" : undefined}
@@ -271,6 +274,7 @@ export default function StepDetails({
               id="gender"
               value={form.gender}
               onChange={(e) => update("gender", e.target.value as Gender)}
+              onBlur={() => { if (!form.gender) setErrors((e) => ({ ...e, gender: true })); }}
               aria-invalid={genderInvalid}
               aria-describedby={errors.gender ? "gender-error" : undefined}
               className={`${inputClass} appearance-none ${form.gender ? "text-ink" : "text-muted/70"} ${errors.gender ? errorRing : ""}`}
@@ -301,6 +305,7 @@ export default function StepDetails({
               // Allow only email-safe characters: letters, digits, "@" and ".".
               // Anything else (spaces, symbols) is stripped as it's typed.
               onChange={(e) => update("email", e.target.value.replace(/[^a-zA-Z0-9@.]/g, ""))}
+              onBlur={() => { if (!EMAIL_RE.test(form.email.trim())) setErrors((e) => ({ ...e, email: true })); }}
               placeholder={t("form.emailPlaceholder")}
               aria-invalid={emailInvalid}
               aria-describedby={errors.email ? "email-error" : undefined}

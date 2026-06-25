@@ -15,6 +15,11 @@ type WizardContextValue = {
    * programmatic defaults/sync (effects), not user edits, so the "unsaved
    * changes" reminder isn't triggered when the user hasn't touched anything. */
   setQuiet: (name: string, value: Value) => void;
+  /** Called when a field loses focus. Validates immediately (required check +
+   * email format) so errors appear as the user tabs through the form, not only
+   * on Save. Pass `currentValue` to avoid stale-closure issues when the value
+   * changes in the same onBlur handler before React re-renders. */
+  blur: (name: string, currentValue?: string) => void;
   errors: string[];
   /** Optional per-field error message, keyed by field name. Falls back to a
    * generic "required" message for any field listed in `errors` without one. */
@@ -35,6 +40,7 @@ export function WizardProvider({
   data,
   set,
   setQuiet,
+  blur,
   errors,
   fieldErrors,
   locked,
@@ -45,7 +51,7 @@ export function WizardProvider({
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, setQuiet, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
+      value={{ data, set, setQuiet, blur, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
     >
       {children}
     </WizardContext.Provider>
@@ -149,7 +155,7 @@ export function TextInput({
   min?: number;
   max?: number;
 }) {
-  const { data, set, errors, locked } = useWizard();
+  const { data, set, blur, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
@@ -188,7 +194,8 @@ export function TextInput({
         inputMode={numeric ? "numeric" : undefined}
         onChange={(e) => set(name, applyBounds(sanitize(e.target.value)))}
         // Re-sanitize on blur (clears any stale junk), then clamp a bounded
-        // number into [min, max].
+        // number into [min, max]. Finally run blur validation so required-field
+        // and format errors appear as soon as the user leaves the input.
         onBlur={(e) => {
           let v = sanitize(e.target.value).trim();
           if (v !== "" && (min !== undefined || max !== undefined)) {
@@ -196,6 +203,7 @@ export function TextInput({
             v = Number.isFinite(n) ? String(Math.min(max ?? n, Math.max(min ?? n, n))) : "";
           }
           if (v !== value) set(name, v);
+          blur(name, v);
         }}
         placeholder={placeholder}
         disabled={isLocked}
@@ -219,7 +227,7 @@ export function DateInput({
   maxDate?: string;
 }) {
   const { t } = useI18n();
-  const { data, set, errors, locked } = useWizard();
+  const { data, set, blur, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name);
   const iso = (data[name] as string) ?? "";
@@ -270,6 +278,7 @@ export function DateInput({
           placeholder="dd/mm/yyyy"
           value={text}
           onChange={handleTextChange}
+          onBlur={() => blur(name, iso)}
           disabled={isLocked}
           className={`${inputCls(invalid)} pr-10 ${text ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}
         />
@@ -319,7 +328,7 @@ export function Select({
   disabled?: boolean;
   onValueChange?: (value: string) => void;
 }) {
-  const { data, set, errors, locked } = useWizard();
+  const { data, set, blur, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
@@ -333,6 +342,7 @@ export function Select({
             set(name, e.target.value);
             onValueChange?.(e.target.value);
           }}
+          onBlur={() => blur(name, value)}
           aria-label={placeholder}
           disabled={isLocked}
           className={`${inputCls(invalid)} appearance-none pr-9 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}

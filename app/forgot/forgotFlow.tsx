@@ -194,7 +194,8 @@ export default function ForgotFlow() {
               id="identifier"
               value={identifier}
               maxLength={30}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(e) => { setIdentifier(e.target.value); if (error) setError(""); }}
+              onBlur={() => { if (!identifier.trim()) setError(t("forgot.identifierRequired")); }}
               placeholder={t("forgot.identifierPlaceholder")}
               className={inputClass}
             />

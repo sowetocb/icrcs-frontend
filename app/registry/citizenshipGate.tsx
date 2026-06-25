@@ -153,6 +153,7 @@ export default function CitizenshipGate({
                 data={data}
                 set={set}
                 setQuiet={set}
+                blur={() => {}}
                 errors={errors}
                 locked={[]}
                 isFirstPerson
