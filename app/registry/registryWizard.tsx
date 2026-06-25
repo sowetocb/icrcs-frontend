@@ -445,6 +445,16 @@ export default function RegistryWizard({
       if (required.includes(name)) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
       }
+      // Conditional required fields on Step 4 (occupation / employer depend on jobStatus).
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      if (
+        step === 4 &&
+        ((name === "occupation" && jobStatus === "employed") ||
+          (name === "employer" && jobStatus === "employed") ||
+          (name === "selfOccupation" && jobStatus === "self-employed"))
+      ) {
+        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+      }
       return;
     }
     // Email format — only relevant at Step 1.
@@ -1206,25 +1216,33 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 4: self-employed must provide a text occupation (mandatory).
-    if (step === 4 && String(data.jobStatus ?? "") === "Self-employed") {
-      const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
-      if (!occ) {
-        setErrors(["selfOccupation"]);
-        setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
-        setFormError("");
-        return;
+    // Stage 4: validate occupation / employer fields based on employment status.
+    if (step === 4) {
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      if (jobStatus === "employed") {
+        const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
+        if (!occ) {
+          setErrors(["occupation"]);
+          setFieldErrors({ occupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+          setFormError("");
+          return;
+        }
+        const emp = typeof data.employer === "string" ? data.employer.trim() : "";
+        if (!emp) {
+          setErrors(["employer"]);
+          setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
+          setFormError("");
+          return;
+        }
       }
-    }
-
-    // Stage 4: employed must provide an employer (mandatory).
-    if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "employed") {
-      const emp = typeof data.employer === "string" ? data.employer.trim() : "";
-      if (!emp) {
-        setErrors(["employer"]);
-        setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
-        setFormError("");
-        return;
+      if (jobStatus === "self-employed") {
+        const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
+        if (!occ) {
+          setErrors(["selfOccupation"]);
+          setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+          setFormError("");
+          return;
+        }
       }
     }
 
