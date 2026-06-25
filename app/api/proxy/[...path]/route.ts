@@ -18,19 +18,37 @@ function upstreamFor(path: string[]): string {
 }
 
 // ---- terminal logging -------------------------------------------------------
+// Status-line logs (method, path, status, latency) are always emitted. Request/
+// response BODIES are logged only when DEBUG_PROXY=true, because this is a civil
+// registration system: bodies are saturated with PII (names, national IDs, DOB,
+// addresses, contact details). Default off — never on in production.
+const LOG_BODIES = process.env.DEBUG_PROXY === "true";
+
 const truncate = (s: string, n = 800) =>
   s.length > n ? `${s.slice(0, n)}… (${s.length} bytes)` : s;
 
-/** Mask password-like fields so secrets never hit the terminal. */
+// Keys whose values must be masked before a body is ever written to the log
+// (only reachable when DEBUG_PROXY is on). Covers credentials AND the common
+// PII fields this app moves; matched case-insensitively as a substring.
+const SENSITIVE_KEY =
+  /password|secret|token|otp|email|phone|nin|nationalId|national_id|passport|firstName|middleName|lastName|fullName|maidenName|name|dateOfBirth|dob|birth|address|gps|latitude|longitude/i;
+
+/** Recursively mask credential/PII fields so they never hit the terminal. */
+function redactValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactValue);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = SENSITIVE_KEY.test(k) ? "***" : redactValue(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 function redact(text: string): string {
   try {
-    const obj = JSON.parse(text);
-    if (obj && typeof obj === "object") {
-      for (const k of Object.keys(obj)) {
-        if (/password|secret|token|otp/i.test(k)) obj[k] = "***";
-      }
-      return JSON.stringify(obj);
-    }
+    return JSON.stringify(redactValue(JSON.parse(text)));
   } catch {
     // not JSON — fall through
   }
@@ -77,10 +95,11 @@ async function forward(
       ? undefined
       : await request.arrayBuffer();
 
-  // One line per outgoing request. Skip request-body logging for file uploads.
+  // One line per outgoing request. Bodies are logged only under DEBUG_PROXY
+  // (and never for file uploads); otherwise just the method + path.
   const label = `${method} /${path.join("/")}${search}`;
   const reqBody =
-    body && body.byteLength > 0 && !isMultipart
+    LOG_BODIES && body && body.byteLength > 0 && !isMultipart
       ? redact(new TextDecoder().decode(body))
       : "";
   const started = Date.now();
@@ -121,13 +140,15 @@ async function forward(
       }
 
       const text = await res.text();
-      const respBody = text ? truncate(redact(text)) : "(empty)";
+      // The body is read to relay it downstream; it is only written to the log
+      // under DEBUG_PROXY (bodies carry PII). Otherwise log the status line only.
+      const tail = LOG_BODIES
+        ? `\n[api]    ↩ ${text ? truncate(redact(text)) : "(empty)"}`
+        : "";
       if (res.ok) {
-        console.log(`[api] ✓ ${res.status} ${label} (${ms}ms)\n[api]    ↩ ${respBody}`);
+        console.log(`[api] ✓ ${res.status} ${label} (${ms}ms)${tail}`);
       } else {
-        console.error(
-          `[api] ✗ ${res.status} ${label} (${ms}ms)\n[api]    ↩ ${respBody}`,
-        );
+        console.error(`[api] ✗ ${res.status} ${label} (${ms}ms)${tail}`);
       }
       const out = new Response(text, { status: res.status });
       if (respType) out.headers.set("content-type", respType);

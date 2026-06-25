@@ -37,7 +37,7 @@ import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
 import { useToast } from "@/components/ui/toast";
-import { resolveGenderCode, getPersonDocumentTypes, type PersonGroup } from "@/lib/api/lookup";
+import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type PersonGroup } from "@/lib/api/lookup";
 import { isPhoneComplete } from "@/lib/phoneLengths";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
@@ -442,7 +442,65 @@ export default function RegistryWizard({
       return next;
     });
     if (name === "dob") validateDob(typeof value === "string" ? value : "");
+    // Live NIDA length check on any identification-document number field
+    // (applicant: idDoc{n}Number; parents: father/motherIdDoc{n}Number).
+    if (/IdDoc\d+Number$/i.test(name)) {
+      void validateNidaField(name, typeof value === "string" ? value : "");
+    }
   };
+
+  // A NIDA document number must be exactly 20 digits. This pins the message to
+  // the exact number field — live, in both Personal (stage 1) and Parents
+  // (stage 3) — so the rule is visible while typing, not only on Save. Mirrors
+  // the authoritative Save-time check in nidaLengthError(); the field's own type
+  // selection is read from the current data snapshot (chosen before the number).
+  async function validateNidaField(numberField: string, value: string) {
+    // applicant fields use the bare "idDoc" prefix; parents use "<group>IdDoc".
+    const applicant = numberField.match(/^idDoc(\d+)Number$/);
+    const parent = numberField.match(/^(father|mother)IdDoc(\d+)Number$/);
+    let group: PersonGroup;
+    let typeField: string;
+    if (applicant) {
+      group = "applicant";
+      typeField = `idDoc${applicant[1]}Type`;
+    } else if (parent) {
+      group = parent[1] as PersonGroup;
+      typeField = `${parent[1]}IdDoc${parent[2]}Type`;
+    } else {
+      return;
+    }
+
+    let types;
+    try {
+      types = await getPersonDocumentTypes();
+    } catch {
+      return;
+    }
+    const nidaId = types[group]?.find(
+      (d) =>
+        (d.code ?? "").toUpperCase().includes("NIDA") ||
+        (d.name ?? "").toUpperCase().includes("NIDA"),
+    )?.id;
+    // Only enforce when this row's selected type is NIDA.
+    if (!nidaId || Number(String(data[typeField] ?? "")) !== nidaId) return;
+
+    const num = value.trim();
+    const bad = num !== "" && num.length !== 20;
+    setErrors((e) =>
+      bad
+        ? e.includes(numberField)
+          ? e
+          : [...e, numberField]
+        : e.filter((n) => n !== numberField),
+    );
+    setFieldErrors((fe) => {
+      if (bad) return { ...fe, [numberField]: t("registry.nidaExactDigits") };
+      if (!(numberField in fe)) return fe;
+      const next = { ...fe };
+      delete next[numberField];
+      return next;
+    });
+  }
 
   // Merge a typed attachment uploaded in an earlier stage into the attachments
   // list so Stage 8 registers it with the backend (the photo and birth
@@ -484,25 +542,39 @@ export default function RegistryWizard({
 
 
 
+  // Live DOB validation (runs on every date change). The reason is pinned to the
+  // DOB field via fieldErrors — never the bottom banner — so the message reads
+  // "…must be under 18…" at the field instead of a misleading generic "required"
+  // text plus a detached banner. Mirrors the proceed-handler checks for step 1.
   function validateDob(dob: string) {
-    if (!dob) {
+    const flagDob = (message: string) => {
+      setErrors((e) => (e.includes("dob") ? e : [...e, "dob"]));
+      setFieldErrors((fe) => ({ ...fe, dob: message }));
+    };
+    const clearDob = () => {
       setErrors((e) => e.filter((n) => n !== "dob"));
-      setFormError("");
+      setFieldErrors((fe) => {
+        if (!("dob" in fe)) return fe;
+        const next = { ...fe };
+        delete next.dob;
+        return next;
+      });
+    };
+
+    if (!dob) {
+      clearDob();
       return;
     }
     if (isFutureDate(dob)) {
-      setErrors((e) => (e.includes("dob") ? e : [...e, "dob"]));
-      setFormError(t("registry.futureDateError"));
+      flagDob(t("registry.futureDateError"));
       return;
     }
     const adult = isAtLeast18(dob);
     const invalid = isFirstPerson ? !adult : adult;
     if (invalid) {
-      setErrors((e) => (e.includes("dob") ? e : [...e, "dob"]));
-      setFormError(isFirstPerson ? t("registry.ageError") : t("registry.minorError"));
+      flagDob(isFirstPerson ? t("registry.ageError") : t("registry.minorError"));
     } else {
-      setErrors((e) => e.filter((n) => n !== "dob"));
-      setFormError("");
+      clearDob();
     }
   }
 
@@ -513,17 +585,17 @@ export default function RegistryWizard({
   function missingFields() {
     let required = REQUIRED_FIELDS[step - 1];
 
-    // Step 1: Place of birth. Tanzanian births need the Ward + Street/Mtaa from
-    // the cascade (the backend rejects Stage 1 without a street); foreign births
-    // hide those fields entirely.
+    // Step 1: Place of birth. Tanzanian births need the Territory + Ward + Street/
+    // Mtaa from the cascade (the backend rejects Stage 1 without a street);
+    // foreign births hide those fields entirely.
     if (step === 1) {
       const pobIsTz = data.pobCountry === "Tanzania";
       if (pobIsTz) {
-        required = [...required, "pobWard", "pobStreet"];
+        required = [...required, "pobTerritory", "pobWard", "pobStreet"];
       } else if (data.pobCountry) {
         // Foreign births: drop the TZ cascade fields and require the free-text
         // city of birth instead (the /foreign endpoint rejects a blank one).
-        const tzOnly = new Set(["pobRegion", "pobDistrict", "pobWard", "pobVillage"]);
+        const tzOnly = new Set(["pobTerritory", "pobRegion", "pobDistrict", "pobWard", "pobVillage"]);
         required = [...required.filter((n) => !tzOnly.has(n)), "pobCityVillage"];
       } else {
         // No country picked yet — require the country itself.
@@ -536,7 +608,10 @@ export default function RegistryWizard({
     // other countries, so don't require them there.
     if (step === 2) {
       const permIsTz = data.permCountry === "Tanzania";
-      if (!permIsTz && data.permCountry) {
+      if (permIsTz) {
+        // Territory is part of the cascade — require it alongside region/district/ward.
+        required = [...required, "permTerritory"];
+      } else if (!permIsTz && data.permCountry) {
         // Foreign permanent address: drop the TZ cascade, require the city.
         required = [
           ...required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n)),
@@ -552,7 +627,7 @@ export default function RegistryWizard({
       if (data.sameAsPerm !== true) {
         const curIsTz = data.curCountry === "Tanzania";
         if (curIsTz) {
-          required = [...required, "curRegion", "curDistrict", "curWard"];
+          required = [...required, "curTerritory", "curRegion", "curDistrict", "curWard"];
         } else if (data.curCountry) {
           required = [...required, "curCity"];
         } else {
@@ -568,9 +643,9 @@ export default function RegistryWizard({
       for (const p of ["father", "mother"]) {
         const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
         if (pobCountry === "Tanzania") {
-          // Every level of the cascade is reported, so the user sees exactly
-          // which one is missing (region, district, ward, street).
-          required = [...required, `${p}PobRegion`, `${p}PobDistrict`, `${p}PobWard`, `${p}PobStreet`];
+          // Every level of the cascade is reported (including territory), so the
+          // user sees exactly which one is missing.
+          required = [...required, `${p}PobTerritory`, `${p}PobRegion`, `${p}PobDistrict`, `${p}PobWard`, `${p}PobStreet`];
         } else if (pobCountry) {
           required = [...required, `${p}Village`];
         } else {
@@ -579,7 +654,7 @@ export default function RegistryWizard({
 
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -594,7 +669,7 @@ export default function RegistryWizard({
       for (const p of ["ec1", "ec2"]) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -610,7 +685,7 @@ export default function RegistryWizard({
       for (const p of ["rel1", "rel2"]) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -924,6 +999,20 @@ export default function RegistryWizard({
       setFormError("");
       return;
     }
+    // Stage 5: each emergency contact must be at least 18 years old (when a DOB
+    // is provided). Pinned to the offending date-of-birth field.
+    if (step === 5) {
+      for (const p of ["ec1", "ec2"]) {
+        const ecDob = typeof data[`${p}Dob`] === "string" ? (data[`${p}Dob`] as string).trim() : "";
+        if (ecDob && !isAtLeast18(ecDob)) {
+          const field = `${p}Dob`;
+          setErrors([field]);
+          setFieldErrors({ [field]: t("registry.ecAgeError") });
+          setFormError("");
+          return;
+        }
+      }
+    }
 
     // Stage 4: if the user said they attended school, at least the primary
     // education (first school) must be filled in.
@@ -935,11 +1024,10 @@ export default function RegistryWizard({
       // completed — for the primary school and any started extra school.
       const missing = ["edu1Level", "edu1School", "edu1District"].filter((n) => !filled(n));
       const count = Math.max(1, Number(data.eduCount) || 1);
-      // A completion year entered anywhere must be a real year (1900 … current
-      // year) — reported at that school's year field, not snapped to a default.
-      // Collected alongside the missing fields so every problem on the stage is
-      // flagged at once (e.g. an out-of-range "100" shows even while other
-      // required fields are still empty).
+      // Derive the birth year for completion-year lower bound.
+      const dobStr = typeof data.dob === "string" ? data.dob : "";
+      const birthYear = dobStr ? new Date(dobStr).getFullYear() : 1900;
+      const minYear = Number.isFinite(birthYear) && birthYear > 1900 ? birthYear : 1900;
       const currentYear = new Date().getFullYear();
       const yearErrors: Record<string, string> = {};
       for (let i = 1; i <= count; i++) {
@@ -947,11 +1035,10 @@ export default function RegistryWizard({
         if (i > 1 && !filled(`${p}School`)) continue;
         if (filled(`${p}Year`)) {
           const year = Number((data[`${p}Year`] as string).trim());
-          if (!Number.isFinite(year) || year < 1900 || year > currentYear) {
-            yearErrors[`${p}Year`] = t("registry.completionYearRange").replace(
-              "{year}",
-              String(currentYear),
-            );
+          if (!Number.isFinite(year) || year < minYear || year > currentYear) {
+            yearErrors[`${p}Year`] = t("registry.completionYearRange")
+              .replace("{min}", String(minYear))
+              .replace("{year}", String(currentYear));
           }
         } else if (data[`${p}Completed`] === true) {
           // Completed but no year → required.
@@ -965,6 +1052,70 @@ export default function RegistryWizard({
         setFormError(missing.length > 0 ? t("registry.schoolRequired") : "");
         return;
       }
+
+      // Education level gap validation: the gap between completion years of
+      // successive levels must meet the minimum:
+      //   Primary → Ordinary: 4 years
+      //   Ordinary → Advanced: 3 years
+      //   Advanced → Undergraduate: 3 years
+      // Levels are matched by name keywords from the lookup.
+      if (count > 1) {
+        // Collect all completed schools with valid years and resolve their level rank.
+        type EduEntry = { rank: number; year: number; field: string; label: string };
+        const GAP_RULES: { from: number; to: number; gap: number }[] = [
+          // Adjacent levels
+          { from: 0, to: 1, gap: 4 },  // Primary → Ordinary
+          { from: 1, to: 2, gap: 3 },  // Ordinary → Advanced
+          { from: 2, to: 3, gap: 3 },  // Advanced → Undergraduate
+          // Transitive (when intermediate levels are skipped)
+          { from: 0, to: 2, gap: 7 },  // Primary → Advanced (4+3)
+          { from: 1, to: 3, gap: 6 },  // Ordinary → Undergraduate (3+3)
+          { from: 0, to: 3, gap: 10 }, // Primary → Undergraduate (4+3+3)
+        ];
+        const RANK_LABELS = ["Primary", "Ordinary Level", "Advanced Level", "Undergraduate"];
+        let eduLevels: { id: number; name: string }[] = [];
+        try { eduLevels = await getEducationLevels(); } catch { /* ignore */ }
+        function levelRank(levelId: string): number {
+          const item = eduLevels.find((l) => String(l.id) === levelId);
+          if (!item) return -1;
+          const n = item.name.toLowerCase();
+          if (n.includes("primary") || n.includes("msingi")) return 0;
+          if (n.includes("ordinary") || n.includes("o level") || n.includes("sekondari")) return 1;
+          if (n.includes("advanced") || n.includes("a level")) return 2;
+          if (n.includes("undergraduate") || n.includes("shahada ya kwanza") || n.includes("degree")) return 3;
+          return -1;
+        }
+        const entries: EduEntry[] = [];
+        for (let i = 1; i <= count; i++) {
+          const p = `edu${i}`;
+          if (!filled(`${p}School`) || !filled(`${p}Year`) || !filled(`${p}Level`)) continue;
+          const rank = levelRank(String(data[`${p}Level`]));
+          if (rank < 0) continue;
+          entries.push({
+            rank,
+            year: Number((data[`${p}Year`] as string).trim()),
+            field: `${p}Year`,
+            label: RANK_LABELS[rank] || "",
+          });
+        }
+        // Sort by rank to compare adjacent levels.
+        entries.sort((a, b) => a.rank - b.rank);
+        for (const rule of GAP_RULES) {
+          const from = entries.find((e) => e.rank === rule.from);
+          const to = entries.find((e) => e.rank === rule.to);
+          if (from && to && to.year - from.year < rule.gap) {
+            setErrors([to.field]);
+            setFieldErrors({
+              [to.field]: t("registry.eduGapError")
+                .replace("{gap}", String(rule.gap))
+                .replace("{from}", RANK_LABELS[rule.from])
+                .replace("{to}", RANK_LABELS[rule.to]),
+            });
+            setFormError("");
+            return;
+          }
+        }
+      }
     }
 
     // Stage 4: self-employed must provide a text occupation (mandatory).
@@ -973,6 +1124,17 @@ export default function RegistryWizard({
       if (!occ) {
         setErrors(["selfOccupation"]);
         setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+        setFormError("");
+        return;
+      }
+    }
+
+    // Stage 4: employed must provide an employer (mandatory).
+    if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "employed") {
+      const emp = typeof data.employer === "string" ? data.employer.trim() : "";
+      if (!emp) {
+        setErrors(["employer"]);
+        setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
         setFormError("");
         return;
       }

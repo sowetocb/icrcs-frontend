@@ -30,12 +30,12 @@ export default function RegistrySuccess({
   // printed on the next paint.
   const printPending = useRef(false);
 
-  function doPrint() {
+  async function doPrint() {
     const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
       .map((k) => formData[k])
       .filter((v): v is string => typeof v === "string" && v.trim() !== "")
       .join(" ");
-    printRegistrationForm(
+    await printRegistrationForm(
       document.getElementById("printable-form"),
       registrationFormFileName(fullName),
     );
@@ -45,7 +45,9 @@ export default function RegistrySuccess({
   useEffect(() => {
     if (!printPending.current) return;
     printPending.current = false;
-    doPrint();
+    (async () => {
+      try { await doPrint(); } finally { setBusy(false); }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
@@ -70,9 +72,9 @@ export default function RegistrySuccess({
           return;
         }
       }
-      doPrint();
+      await doPrint();
     } catch {
-      doPrint(); // preview unavailable — print what we have locally
+      await doPrint(); // preview unavailable — print what we have locally
     } finally {
       setBusy(false);
     }

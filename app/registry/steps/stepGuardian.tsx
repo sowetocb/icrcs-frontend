@@ -122,19 +122,13 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                   <button
                     type="button"
                     onClick={() => removeIdDoc(n)}
-                    className="group inline-flex items-center gap-1.5 rounded-full border border-danger/30 bg-danger/5 px-3 py-1 text-xs font-semibold text-danger transition-all duration-200 hover:border-danger hover:bg-danger hover:text-white hover:shadow-md hover:shadow-danger/30 active:scale-95"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-danger transition-all duration-200 hover:bg-danger hover:text-white active:scale-95"
+                    aria-label={t("fields.remove")}
                   >
-                    <svg
-                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-                      className="transition-transform duration-200 group-hover:-rotate-12"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
-                    {t("fields.remove")}
                   </button>
                 </div>
               )}
@@ -148,7 +142,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                     {isNida ? (
                       <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
                     ) : (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" maxLength={10} />
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={20} />
                     )}
                   </Field>
                 )}

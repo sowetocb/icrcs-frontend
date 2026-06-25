@@ -45,9 +45,13 @@ function SchoolBlock({
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs font-semibold text-danger transition hover:underline"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-danger transition-all duration-200 hover:bg-danger hover:text-white active:scale-95"
+            aria-label={t("fields.remove")}
           >
-            {t("fields.remove")}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         )}
       </div>
@@ -103,7 +107,7 @@ function SchoolBlock({
           <TextInput name={`${p}District`} placeholder="Ilala" lettersOnly />
         </Field>
         <Field label={t("fields.indexNo")} optional>
-          <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" />
+          <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" allowChars="A-Za-z0-9\-" maxLength={20} />
         </Field>
       </div>
     </div>
@@ -243,7 +247,7 @@ export default function StepEducation() {
                 <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
               </Field>
               <Field label={t("fields.employer")} required>
-                <TextInput name="employer" placeholder="Tanzania Revenue Authority" />
+                <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
               </Field>
             </>
           )}

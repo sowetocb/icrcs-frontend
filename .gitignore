@@ -1,4 +1,9 @@
 node_modules/
 .next/
 *.log
+
+# Local environment / secrets — never commit. Keep the sanitized template
+# (.env.example) tracked so collaborators know which vars are required.
 .env
+.env.*
+!.env.example

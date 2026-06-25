@@ -260,12 +260,14 @@ export default function PeopleList() {
   // Once the chosen person's form is in the DOM, generate the PDF and reset.
   useEffect(() => {
     if (!printPerson) return;
-    printRegistrationForm(
-      document.getElementById("printable-form"),
-      registrationFormFileName(printPerson.name),
-    );
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPrintPerson(null);
+    (async () => {
+      await printRegistrationForm(
+        document.getElementById("printable-form"),
+        registrationFormFileName(printPerson.name),
+      );
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPrintPerson(null);
+    })();
   }, [printPerson]);
 
   return (

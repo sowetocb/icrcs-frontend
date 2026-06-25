@@ -122,8 +122,9 @@ export default function StepPreviewDeclaration() {
     v === "M" ? t("opt.male") : v === "F" ? t("opt.female") : v === "O" ? t("opt.other") : v;
 
   // Identification-document type names come from the same per-person lookup that
-  // populated the Stage 3 dropdowns (option value = documentTypeId). Used to show
-  // the document NAME in the preview instead of the raw type id.
+  // populated the Stage 1/3 dropdowns (option value = documentTypeId). Used to
+  // show the document NAME in the preview instead of the raw type id.
+  const applicantDocOptions = usePersonDocumentTypeOptions("applicant");
   const fatherDocOptions = usePersonDocumentTypeOptions("father");
   const motherDocOptions = usePersonDocumentTypeOptions("mother");
 
@@ -241,17 +242,33 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.fullName")} value={applicantName} />
         <PreviewRow label={t("preview.gender")} value={gender} />
         <PreviewRow label={t("preview.dob")} value={s("dob")} />
+        <PreviewRow label={t("preview.maritalStatus")} value={maritalLabel(s("marriage"))} />
         <PreviewRow label={t("preview.nationality")} value={s("nationalityCountry")} />
+        <PreviewRow label={t("preview.phone")} value={s("phone")} />
+        <PreviewRow label={t("preview.email")} value={s("email")} preserveCase />
+
+        {/* Identification documents (dynamic repeater) */}
+        {(() => {
+          const count = Math.max(1, Number(data.idDocCount) || 1);
+          return Array.from({ length: count }, (_, i) => i + 1)
+            .filter((n) => s(`idDoc${n}Type`))
+            .map((n) => (
+              <PreviewRow
+                key={`adoc${n}`}
+                label={`${t("preview.document")} ${count > 1 ? n : ""}`}
+                value={`${optionLabel(applicantDocOptions, s(`idDoc${n}Type`))}: ${s(`idDoc${n}Number`)}`}
+              />
+            ));
+        })()}
+
+        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
         <PreviewRow label={t("preview.countryOfBirth")} value={s("pobCountry")} />
         <PreviewRow label={t("preview.region")} value={titleCase(s("pobRegion"))} />
         <PreviewRow label={t("preview.district")} value={titleCase(s("pobDistrict"))} />
         <PreviewRow label={t("preview.ward")} value={titleCase(s("pobWard"))} />
         <PreviewRow label={t("preview.street")} value={titleCase(s("pobStreet"))} />
         <PreviewRow label={t("preview.villageStreet")} value={s("pobCityVillage")} />
-        <PreviewRow label={t("preview.birthCertNo")} value={s("birthCertNo")} />
-        <PreviewRow label={t("preview.maritalStatus")} value={maritalLabel(s("marriage"))} />
-        <PreviewRow label={t("preview.phone")} value={s("phone")} />
-        <PreviewRow label={t("preview.email")} value={s("email")} preserveCase />
+
         {s("citizenshipTypeId") === "3" && (
           <>
             <PreviewSubTitle>{t("preview.naturalization")}</PreviewSubTitle>
@@ -372,7 +389,6 @@ export default function StepPreviewDeclaration() {
             : optLabel(occupationOpts, s("occupation"))
         } />
         <PreviewRow label={t("preview.employer")} value={s("employer")} />
-        <PreviewRow label={t("preview.nida")} value={s("nidaNumber")} />
       </PreviewSection>
 
       {/* ─── Step 5: Emergency Contacts ─── */}
@@ -433,6 +449,10 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.phone")} value={s(`sp${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`sp${n}NatCountry`)} />
                 <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`sp${n}OccType`))} />
+                <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+                {cascadeRows(`sp${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`sp${n}Village`)} />)}
+                <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+                {cascadeRows(`sp${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`sp${n}ResCity`))} />)}
               </div>
             ))}
 
@@ -447,7 +467,10 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.gender")} value={genderLabel(s(`ch${n}Gender`))} />
                 <PreviewRow label={t("preview.phone")} value={s(`ch${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`ch${n}NatCountry`)} />
-                <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`ch${n}OccType`))} />
+                <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+                {cascadeRows(`ch${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`ch${n}Village`)} />)}
+                <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+                {cascadeRows(`ch${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`ch${n}ResCity`))} />)}
               </div>
             ))}
 
@@ -461,7 +484,12 @@ export default function StepPreviewDeclaration() {
               <PreviewRow label={t("preview.dob")} value={s(`rel${n}Dob`)} />
               <PreviewRow label={t("preview.gender")} value={genderLabel(s(`rel${n}Gender`))} />
               <PreviewRow label={t("preview.phone")} value={s(`rel${n}Phone`)} />
+              <PreviewRow label={t("preview.nationality")} value={s(`rel${n}NatCountry`)} />
               <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`rel${n}OccType`))} />
+              <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
+              {cascadeRows(`rel${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`rel${n}Village`)} />)}
+              <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+              {cascadeRows(`rel${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`rel${n}ResCity`))} />)}
             </div>
           ))}
       </PreviewSection>

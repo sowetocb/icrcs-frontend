@@ -52,6 +52,8 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
+        {/* Print-only stylesheet for the registration form layout */}
+        <link rel="stylesheet" href="/registry-print.css" media="print" />
       </head>
       <body className="min-h-full flex flex-col bg-surface text-ink">
         <ThemeProvider>

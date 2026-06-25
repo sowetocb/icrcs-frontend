@@ -33,6 +33,10 @@ const EXACT = new Set([
   "gateNationality",
   "gateDocType",
   "gateDocNumber",
+  // Territory fields (part of the TZ cascade).
+  "pobTerritory",
+  "permTerritory",
+  "curTerritory",
 ]);
 
 // Suffix (the part after a person prefix) → i18n suffix key.
@@ -57,6 +61,8 @@ const SUFFIX: Record<string, string> = {
   ResWard: "sResWard",
   ResStreet: "sResStreet",
   ResCity: "sResCity",
+  PobTerritory: "sPobTerritory",
+  ResTerritory: "sResTerritory",
 };
 
 // Education repeater field suffix → its `fields.*` i18n label key.

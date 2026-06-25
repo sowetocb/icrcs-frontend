@@ -218,8 +218,35 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
 
   // ── Stage 2: Address ───────────────────────────────────────────────────────
   if (stage === 2) {
+    // The backend may return addresses in TWO formats:
+    //   A) Flat: { permanentCountryCode, permanentStreetId, currentCountryCode, … }
+    //   B) Array: { addresses: [{ addressType: "PERMANENT", country: "AFG", … }, …] }
+    // Normalize format B into format A so the rest of the mapping works uniformly.
+    const addresses = arr(d.addresses);
+    if (addresses.length > 0) {
+      for (const addr of addresses) {
+        const type = str(addr.addressType).toUpperCase();
+        const prefix = type === "CURRENT" ? "current" : "permanent";
+        // Map each possible field from the array item into the flat namespace.
+        if (addr.country != null) d[`${prefix}CountryCode`] = addr.country;
+        if (addr.countryCode != null) d[`${prefix}CountryCode`] = addr.countryCode;
+        if (addr.city != null) d[`${prefix}City`] = addr.city;
+        if (addr.streetId != null) d[`${prefix}StreetId`] = addr.streetId;
+        if (addr.houseNo != null) d[`${prefix}HouseNo`] = addr.houseNo;
+        if (addr.houseNumber != null) d[`${prefix}HouseNumber`] = addr.houseNumber;
+        if (addr.postalAddress != null) d[`${prefix}PostalAddress`] = addr.postalAddress;
+        if (addr.postalCode != null) d[`${prefix}PostalCode`] = addr.postalCode;
+      }
+      // If the response doesn't carry a boolean flag, infer "same" when there is
+      // only one address or both addresses share a country + city.
+      if (d.permanentSameAsCurrent == null) {
+        if (addresses.length === 1) d.permanentSameAsCurrent = true;
+      }
+    }
+
     const same = d.permanentSameAsCurrent === true;
     out.sameAsPerm = same;
+
     // The form's PRIMARY address is permanent; current mirrors it when "same".
     const permSrc = same ? "current" : "permanent";
     await applyStreet("perm", d[`${permSrc}StreetId`]);

@@ -218,7 +218,6 @@ export default function PrintableForm({
         </RowGroup>
         <RowGroup>
           <Row label={tr("Village", "Kijiji")} value={val("pobCityVillage")} />
-          <Row label={tr("Birth Cert No.", "Namba Cheti")} value={val("birthCertNo")} />
         </RowGroup>
         <RowGroup>
           <Row label={tr("Phone", "Simu")} value={val("phone")} />
@@ -343,7 +342,6 @@ export default function PrintableForm({
         </RowGroup>
         <RowGroup>
           <Row label={tr("Employer", "Mwajiri")} value={val("employer")} />
-          <Row label={tr("NIDA", "NIDA")} value={val("nidaNumber")} />
         </RowGroup>
       </Section>
 
@@ -374,13 +372,14 @@ export default function PrintableForm({
                 <SubTitle>{`${tr("Spouse", "Mwenza")} ${n}`}</SubTitle>
                 <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`sp${n}`)} />
                 <RowGroup>
+                  <Row label={tr("Date of Birth", "Tarehe")} value={val(`sp${n}Dob`)} />
                   <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`sp${n}Gender`)] ?? val(`sp${n}Gender`)} />
-                  <Row label={tr("Phone", "Simu")} value={val(`sp${n}Phone`)} />
                 </RowGroup>
                 <RowGroup>
+                  <Row label={tr("Phone", "Simu")} value={val(`sp${n}Phone`)} />
                   <Row label={tr("Nationality", "Utaifa")} value={val(`sp${n}NatCountry`)} />
-                  <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`sp${n}OccType`)) || "—"} />
                 </RowGroup>
+                <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`sp${n}OccType`)) || "—"} />
                 <PobResidencePrint prefix={`sp${n}`} tr={tr} s={s} val={val} />
               </div>
             ))}
@@ -393,12 +392,12 @@ export default function PrintableForm({
                 <SubTitle>{`${tr("Child", "Mtoto")} ${n}`}</SubTitle>
                 <Row label={tr("Full Name", "Jina Kamili")} value={fullName(`ch${n}`)} />
                 <RowGroup>
+                  <Row label={tr("Date of Birth", "Tarehe")} value={val(`ch${n}Dob`)} />
                   <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`ch${n}Gender`)] ?? val(`ch${n}Gender`)} />
-                  <Row label={tr("Phone", "Simu")} value={val(`ch${n}Phone`)} />
                 </RowGroup>
                 <RowGroup>
+                  <Row label={tr("Phone", "Simu")} value={val(`ch${n}Phone`)} />
                   <Row label={tr("Nationality", "Utaifa")} value={val(`ch${n}NatCountry`)} />
-                  <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`ch${n}OccType`)) || "—"} />
                 </RowGroup>
                 <PobResidencePrint prefix={`ch${n}`} tr={tr} s={s} val={val} />
               </div>
@@ -416,10 +415,13 @@ export default function PrintableForm({
                 <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`rel${n}Gender`)] ?? val(`rel${n}Gender`)} />
               </RowGroup>
               <RowGroup>
+                <Row label={tr("Date of Birth", "Tarehe")} value={val(`rel${n}Dob`)} />
                 <Row label={tr("Phone", "Simu")} value={val(`rel${n}Phone`)} />
-                <Row label={tr("Nationality", "Utaifa")} value={val(`rel${n}NatCountry`)} />
               </RowGroup>
-              <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`rel${n}OccType`)) || "—"} />
+              <RowGroup>
+                <Row label={tr("Nationality", "Utaifa")} value={val(`rel${n}NatCountry`)} />
+                <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`rel${n}OccType`)) || "—"} />
+              </RowGroup>
               <Row label={tr("Document", "Hati")} value={
                 s(`rel${n}DocType`)
                   ? `${optionLabel(DOCUMENT_TYPE_OPTIONS, s(`rel${n}DocType`))}: ${val(`rel${n}DocNumber`)}`
@@ -624,10 +626,13 @@ function ParentPrintBlock({
       <SubTitle>{label}</SubTitle>
       <Row label={tr("Full Name", "Jina Kamili")} value={name} />
       <RowGroup>
+        <Row label={tr("Date of Birth", "Tarehe")} value={val(`${prefix}Dob`)} />
         <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
-        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
       </RowGroup>
-      <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
+      <RowGroup>
+        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+        <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
+      </RowGroup>
       <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
       <RowGroup>
         <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
@@ -715,10 +720,13 @@ function EmergencyPrintBlock({
         <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s(`${prefix}OccType`)) || "—"} />
       </RowGroup>
       <RowGroup>
+        <Row label={tr("Date of Birth", "Tarehe")} value={val(`${prefix}Dob`)} />
         <Row label={tr("Gender", "Jinsia")} value={genderMap[s(`${prefix}Gender`)] ?? val(`${prefix}Gender`)} />
-        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
       </RowGroup>
-      <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
+      <RowGroup>
+        <Row label={tr("Phone", "Simu")} value={val(`${prefix}Phone`)} />
+        <Row label={tr("Nationality", "Utaifa")} value={val(`${prefix}NatCountry`)} />
+      </RowGroup>
       <SubTitle>{tr("Place of Birth", "Mahali pa Kuzaliwa")}</SubTitle>
       <RowGroup>
         <Row label={tr("Country", "Nchi")} value={titleCase(s(`${prefix}PobCountry`))} />
