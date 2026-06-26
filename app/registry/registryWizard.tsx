@@ -518,23 +518,25 @@ export default function RegistryWizard({
       if (required.includes(name)) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
       }
-      // Step 4 conditional required fields
+      // Conditional required fields on Step 4.
       const jobStatus = String(data.jobStatus ?? "").toLowerCase();
       if (step === 4) {
-        // Only mark the blurred field — no cross-field pre-marking so the user
-        // doesn't see errors on fields they haven't visited yet.
         if (jobStatus === "employed" && (name === "occupation" || name === "employer")) {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
+          const other = name === "occupation" ? "employer" : "occupation";
+          if (!String(data[other] ?? "").trim()) setErrors((e) => (e.includes(other) ? e : [...e, other]));
         }
         if (jobStatus === "self-employed" && name === "selfOccupation") {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
+        // First school's level/name/district are required when the user attended school.
         if (
           data.neverAttendedSchool !== true &&
-          /^edu\d+(Level|School|District)$/.test(name)
+          (name === "edu1Level" || name === "edu1School" || name === "edu1District")
         ) {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
+        // Completion year: required when the matching school is marked "Completed".
         const yearMatch = name.match(/^edu(\d+)Year$/);
         if (yearMatch && data[`edu${yearMatch[1]}Completed`] === true) {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
@@ -1576,32 +1578,33 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 4: self-employed must provide a text occupation (mandatory).
-    if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "self-employed") {
-      const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
-      if (!occ) {
-        setErrors(["selfOccupation"]);
-        setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
-        setFormError("");
-        return;
+    // Stage 4: validate occupation / employer fields based on employment status.
+    if (step === 4) {
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      if (jobStatus === "employed") {
+        const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
+        if (!occ) {
+          setErrors(["occupation"]);
+          setFieldErrors({ occupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+          setFormError("");
+          return;
+        }
+        const emp = typeof data.employer === "string" ? data.employer.trim() : "";
+        if (!emp) {
+          setErrors(["employer"]);
+          setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
+          setFormError("");
+          return;
+        }
       }
-    }
-
-    // Stage 4: employed must provide an occupation type and an employer (both mandatory).
-    if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "employed") {
-      const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
-      if (!occ) {
-        setErrors(["occupation"]);
-        setFieldErrors({ occupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
-        setFormError("");
-        return;
-      }
-      const emp = typeof data.employer === "string" ? data.employer.trim() : "";
-      if (!emp) {
-        setErrors(["employer"]);
-        setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
-        setFormError("");
-        return;
+      if (jobStatus === "self-employed") {
+        const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
+        if (!occ) {
+          setErrors(["selfOccupation"]);
+          setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+          setFormError("");
+          return;
+        }
       }
     }
 

@@ -34,14 +34,15 @@ const PERSON_SUFFIXES = [
 ];
 const RELATIVE_SUFFIXES = ["RelType", "OccType", ...PERSON_SUFFIXES];
 const SPOUSE_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
-const CHILD_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
+// Children have no phone (ChildItemRequest has no phoneNumber field).
+const CHILD_SUFFIXES = [
+  "First", "Middle", "Last", "Dob", "Gender", "NatCountry",
+  "PobCountry", "PobCountryId", "PobRegionId", "PobRegion", "PobDistrictId",
+  "PobDistrict", "PobWardId", "PobWard", "Village", "ResCountry", "ResCountryId",
+  "ResRegionId", "ResRegion", "ResDistrictId", "ResDistrict", "ResWardId",
+  "ResWard", "ResCity", "ResStreet",
+];
 
-/**
- * Common person fields for relatives, spouses, and children.
- * - POB is excluded: RelatedPersonRequest and ChildItemRequest have no POB fields.
- * - showPhone: false for children (ChildItemRequest has no phoneNumber).
- * - phoneRequired: false for relatives (validator only checks format if provided).
- */
 function PersonFields({
   prefix,
   showPhone = true,
@@ -118,6 +119,7 @@ function PersonBlock({
   label,
   withRelationship,
   withOccupation = true,
+  withPhone = true,
   onRemove,
 }: {
   prefix: string;
@@ -125,6 +127,8 @@ function PersonBlock({
   withRelationship: boolean;
   /** Children don't have an occupation, so it's hidden for them. */
   withOccupation?: boolean;
+  /** Children have no phoneNumber in ChildItemRequest — hide for them. */
+  withPhone?: boolean;
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
@@ -295,6 +299,7 @@ export default function StepFamily() {
                 label={t("fields.childN").replace("{n}", String(n))}
                 withRelationship={false}
                 withOccupation={false}
+                withPhone={false}
                 onRemove={
                   n === childCount && childCount > MIN_CHILDREN ? removeLastChild : undefined
                 }

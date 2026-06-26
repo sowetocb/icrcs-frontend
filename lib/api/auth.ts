@@ -241,6 +241,16 @@ export async function resetPassword(
   });
 }
 
+/** POST /v1/auth/unlock-account — verify the one-time unlock token from the
+ * account-locked email and lift the lockout. */
+export async function unlockAccount(token: string): Promise<void> {
+  if (BYPASS) {
+    await delay(400);
+    return;
+  }
+  await apiPost("/v1/auth/unlock-account", { token: String(token) });
+}
+
 // Extract a raw gender value from the profile envelope, tolerating the backend's
 // many shapes: a code/name string, a numeric lookup id, a `genderId`/`genderName`
 // key, or a nested `{ id, name, code }` object. Normalised to the M/F/O code by

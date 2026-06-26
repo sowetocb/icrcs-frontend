@@ -8,8 +8,6 @@
 // citizenship/education) are submitted to the registration backend. They must
 // match that backend's dataset, or stored values will be mis-mapped.
 //
-// Results are cached per session so each list is fetched once.
-
 import { apiGet } from "./client";
 
 export type LookupItem = { id: number; name: string; code?: string };
@@ -20,26 +18,14 @@ type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v ?? 0);
 const str = (v: unknown) => String(v ?? "");
 
-// Per-session cache keyed by request path.
-const cache = new Map<string, Promise<LookupItem[]>>();
-
 function listEnvelope(raw: unknown): Row[] {
   const data = (raw as { data?: unknown })?.data;
   return Array.isArray(data) ? (data as Row[]) : [];
 }
 
-/** Fetch + map a lookup list, caching the in-flight promise by path. */
+/** Fetch + map a lookup list. No caching — always fetches fresh data. */
 function getList(path: string, map: (o: Row) => LookupItem): Promise<LookupItem[]> {
-  const cached = cache.get(path);
-  if (cached) return cached;
-  const p = apiGet(path)
-    .then((raw) => listEnvelope(raw).map(map))
-    .catch((err) => {
-      cache.delete(path); // allow a retry after a failure
-      throw err;
-    });
-  cache.set(path, p);
-  return p;
+  return apiGet(path).then((raw) => listEnvelope(raw).map(map));
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -472,19 +458,16 @@ const MOCK_PERSON_DOCUMENT_TYPES: PersonDocumentTypes = {
   ],
 };
 
-let personDocTypesCache: Promise<PersonDocumentTypes> | null = null;
-
 /** GET /v1/lookup/person-document-types — document types grouped by person. */
 export function getPersonDocumentTypes(): Promise<PersonDocumentTypes> {
   if (BYPASS) return Promise.resolve(MOCK_PERSON_DOCUMENT_TYPES);
-  if (personDocTypesCache) return personDocTypesCache;
   const mapGroup = (rows: unknown): LookupItem[] =>
     (Array.isArray(rows) ? (rows as Row[]) : []).map((o) => ({
       id: num(o.documentTypeId),
       name: str(o.documentName),
       code: str(o.code),
     }));
-  personDocTypesCache = apiGet("/v1/lookup/person-document-types")
+  return apiGet("/v1/lookup/person-document-types")
     .then((raw) => {
       const d = ((raw as { data?: unknown })?.data ?? raw) as Record<string, unknown>;
       return {
@@ -493,11 +476,7 @@ export function getPersonDocumentTypes(): Promise<PersonDocumentTypes> {
         mother: mapGroup(d.mother),
       };
     })
-    .catch((err) => {
-      personDocTypesCache = null;
-      throw err;
-    });
-  return personDocTypesCache.catch(() => MOCK_PERSON_DOCUMENT_TYPES);
+    .catch(() => MOCK_PERSON_DOCUMENT_TYPES);
 }
 
 /** Maps lookup items to the registry Select's option shape. */

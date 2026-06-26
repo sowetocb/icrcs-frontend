@@ -504,6 +504,17 @@ const en = {
     otpIncorrect: "The verification code you entered is incorrect or has expired. Please check the code and try again.",
     otpIncomplete: "Please enter the complete 6-digit verification code.",
   },
+  unlock: {
+    title: "Unlock Account",
+    verifying: "Verifying your unlock link…",
+    successTitle: "Account unlocked",
+    successMsg: "Your account has been unlocked. You can now sign in.",
+    errorTitle: "Link invalid or expired",
+    error: "The unlock link is invalid or has expired. Please try signing in again — a new unlock email will be sent if your account is still locked.",
+    missingToken: "No unlock token found. Please use the link from your email.",
+    signIn: "Sign in",
+    backToLogin: "Back to sign in",
+  },
   promo: {
     title: "A Modern, Welcoming Tanzania",
     subtitle:
@@ -1328,6 +1339,17 @@ const sw: typeof en = {
     error: "Hitilafu imetokea. Tafadhali jaribu tena.",
     otpIncorrect: "Msimbo wa uthibitisho uliouweka si sahihi au umekwisha muda. Tafadhali angalia msimbo na ujaribu tena.",
     otpIncomplete: "Tafadhali weka msimbo kamili wa tarakimu 6.",
+  },
+  unlock: {
+    title: "Fungua Akaunti",
+    verifying: "Inathibitisha kiungo chako cha kufungua…",
+    successTitle: "Akaunti imefunguliwa",
+    successMsg: "Akaunti yako imefunguliwa. Sasa unaweza kuingia.",
+    errorTitle: "Kiungo si sahihi au kimekwisha muda",
+    error: "Kiungo cha kufungua si sahihi au kimekwisha muda. Tafadhali jaribu kuingia tena — barua pepe mpya ya kufungua itatumwa ikiwa akaunti yako bado imefungwa.",
+    missingToken: "Hakuna tokeni ya kufungua. Tafadhali tumia kiungo kutoka kwa barua pepe yako.",
+    signIn: "Ingia",
+    backToLogin: "Rudi kwenye kuingia",
   },
   promo: {
     title: "Tanzania ya Kisasa, Yenye Ukaribu",

@@ -28,7 +28,7 @@ function detectCountry(stored: string): Country {
 }
 
 export default function PhoneInput({ name }: { name: string }) {
-  const { data, set, errors, locked } = useWizard();
+  const { data, set, blur, errors, locked } = useWizard();
   const { t } = useI18n();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name);
@@ -104,6 +104,7 @@ export default function PhoneInput({ name }: { name: string }) {
           autoComplete="tel-national"
           value={display}
           onChange={(e) => commit(country.dial, e.target.value.replace(/\D/g, ""))}
+          onBlur={() => blur(name, stored)}
           placeholder="624 839 009"
           aria-label={t("fields.phone")}
           disabled={isLocked}
