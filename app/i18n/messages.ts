@@ -532,7 +532,7 @@ const en = {
     removing: "Removing…",
     photoHint: "JPG or PNG, up to 300KB.",
     photoInvalidType: "Please choose a JPG or PNG image.",
-    photoTooLarge: "Image must be 500KB or smaller.",
+    photoTooLarge: "Image must be 300KB or smaller.",
     photoUpdated: "Profile photo updated.",
     photoRemoved: "Profile photo removed.",
     photoError: "Could not update the photo. Please try again.",
@@ -757,11 +757,12 @@ const en = {
     docVisa: "Visa",
     docPass: "Pass",
     docOther: "Any other",
+    travelPassport: "Passport",
     travelEtd: "Emergency Travel Document (ETD)",
     travelCoi: "Certificate of Identity",
     travelGeneva: "Geneva Convention Travel Document",
     travelLaissez: "Laissez-Passer",
-    travelOther: "Other Travel Doc",
+    travelOther: "Other Travel Document",
   },
   gate: {
     title: "Citizenship Check", // REVIEW
@@ -1366,9 +1367,9 @@ const sw: typeof en = {
     removePhoto: "Ondoa picha",
     uploading: "Inapakia…",
     removing: "Inaondoa…",
-    photoHint: "JPG au PNG, hadi 500KB.",
+    photoHint: "JPG au PNG, hadi 300KB.",
     photoInvalidType: "Tafadhali chagua picha ya JPG au PNG.",
-    photoTooLarge: "Picha lazima iwe 500KB au chini.",
+    photoTooLarge: "Picha lazima iwe 300KB au chini.",
     photoUpdated: "Picha ya wasifu imesasishwa.",
     photoRemoved: "Picha ya wasifu imeondolewa.",
     photoError: "Imeshindwa kusasisha picha. Tafadhali jaribu tena.",
@@ -1591,6 +1592,7 @@ const sw: typeof en = {
     docVisa: "Viza", // REVIEW
     docPass: "Pasi", // REVIEW
     docOther: "Nyingine yoyote", // REVIEW
+    travelPassport: "Pasipoti", // REVIEW
     travelEtd: "Hati ya Dharura ya Kusafiri (ETD)", // REVIEW
     travelCoi: "Cheti cha Utambulisho", // REVIEW
     travelGeneva: "Hati ya Kusafiri ya Mkataba wa Geneva", // REVIEW

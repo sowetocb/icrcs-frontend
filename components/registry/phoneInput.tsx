@@ -118,7 +118,10 @@ export default function PhoneInput({ name }: { name: string }) {
           showDial
           onSelect={(c) => {
             setCountry(c);
-            commit(c.dial, national);
+            // Changing the country code clears any typed number — the old
+            // national digits rarely belong to the newly chosen country, so
+            // forcing a fresh entry avoids storing a mismatched number.
+            commit(c.dial, "");
           }}
         />
       )}

@@ -3,6 +3,9 @@
 // guards the same-origin backend proxy (app/api/proxy/[...path]) and the auth
 // routes (app/api/auth/*). It is the single edge chokepoint that:
 //
+//   0. Enforces same-origin (CORS/CSRF): rejects requests carrying a foreign
+//      Origin, since auth rides on an ambient cookie and CORS alone won't block
+//      cross-origin writes. Override with ALLOWED_ORIGINS for trusted callers.
 //   1. Restricts HTTP methods on the API surface (drops TRACE/CONNECT/OPTIONS).
 //   2. Enforces a PATH ALLOWLIST on /api/proxy/* so the relay can only reach a
 //      known set of backend paths — it can't be abused to hit arbitrary internal
@@ -26,6 +29,41 @@ const PROXY_PREFIX = "/api/proxy/";
 // OPTIONS — no cross-origin preflight is needed for this same-origin proxy) is
 // rejected with 405.
 const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
+
+// ---- CORS / same-origin enforcement ----------------------------------------
+// The whole app is same-origin by design: the browser only ever calls
+// /api/proxy/* and /api/auth/*, which forward server-side (see .env / the proxy
+// route). So we deliberately never emit Access-Control-Allow-Origin — which
+// already blocks cross-origin *reads*. But auth rides on an ambient HttpOnly
+// cookie (icrcs-access), and CORS does NOT stop a cross-origin *write* (a
+// malicious page can still fire a "simple" POST with the cookie attached). This
+// guard closes that CSRF hole by rejecting any request whose Origin host is not
+// the host the request arrived on.
+//
+// Same-origin browser requests send Origin === page origin (host matches Host).
+// Server-side callers and top-level GET navigations omit Origin entirely and are
+// allowed through. For genuinely trusted external callers, set ALLOWED_ORIGINS
+// (comma-separated absolute origins) — empty by default.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
+);
+
+/** True when a request carries an Origin that is neither same-origin nor allowlisted. */
+function isDisallowedOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false; // no Origin → not a cross-origin browser request
+  if (ALLOWED_ORIGINS.has(origin)) return false;
+  try {
+    // Same-origin: the Origin's host matches the Host the request came in on
+    // (both reflect the public hostname the browser used, even behind a tunnel).
+    return new URL(origin).host !== request.headers.get("host");
+  } catch {
+    return true; // malformed Origin → treat as cross-origin
+  }
+}
 
 // Allowed second segment under /api/proxy/v1/*. The first segment must be "v1"
 // or "lookup" (the lookup microservice). Anything outside this set is 404'd.
@@ -93,6 +131,14 @@ export function proxy(request: NextRequest): Response {
   // 1. Method allowlist on the whole matched API surface.
   if (!ALLOWED_METHODS.has(method)) {
     return Response.json({ error: "method_not_allowed" }, { status: 405 });
+  }
+
+  // 1b. Same-origin (CORS/CSRF) gate. Reject any request bearing a foreign
+  // Origin before it can reach the cookie-authenticated relay. We don't set any
+  // Access-Control-* response headers, so legitimate cross-origin reads stay
+  // blocked by the browser too.
+  if (isDisallowedOrigin(request)) {
+    return Response.json({ error: "cross_origin_forbidden" }, { status: 403 });
   }
 
   // 2. Rate-limit sensitive auth/OTP endpoints per client IP.
