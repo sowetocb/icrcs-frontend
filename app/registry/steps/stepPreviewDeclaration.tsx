@@ -383,11 +383,7 @@ export default function StepPreviewDeclaration() {
         )}
         <PreviewSubTitle>{t("preview.employment")}</PreviewSubTitle>
         <PreviewRow label={t("preview.employmentStatus")} value={s("jobStatus")} />
-        <PreviewRow label={t("preview.occupation")} value={
-          s("jobStatus") === "Self-employed"
-            ? s("selfOccupation")
-            : optLabel(occupationOpts, s("occupation"))
-        } />
+        <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts, s("occupation"))} />
         <PreviewRow label={t("preview.employer")} value={s("employer")} />
       </PreviewSection>
 

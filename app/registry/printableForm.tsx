@@ -334,11 +334,7 @@ export default function PrintableForm({
         <SubTitle>{tr("Employment", "Ajira")}</SubTitle>
         <RowGroup>
           <Row label={tr("Status", "Hali")} value={val("jobStatus")} />
-          <Row label={tr("Occupation", "Kazi")} value={
-            s("jobStatus") === "Self-employed"
-              ? s("selfOccupation") || "—"
-              : optionLabel(OCCUPATION_TYPE_OPTIONS, s("occupation")) || "—"
-          } />
+          <Row label={tr("Occupation", "Kazi")} value={optionLabel(OCCUPATION_TYPE_OPTIONS, s("occupation")) || "—"} />
         </RowGroup>
         <RowGroup>
           <Row label={tr("Employer", "Mwajiri")} value={val("employer")} />

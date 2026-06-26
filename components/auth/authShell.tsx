@@ -8,6 +8,8 @@ import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
 import { ABOUT_GUIDE } from "./aboutGuide";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
 /** A gold bullet list item. */
 function Bullet({ text }: { text: string }) {
   return (
@@ -268,14 +270,14 @@ export default function AuthShell({
                   className="h-auto w-32 object-contain"
                 />
               </div>
-              <div className="mt-5 text-center">
+              {/* <div className="mt-5 text-center">
                 <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-200/80">
                   {t("brand.country")}
                 </p>
                 <p className="mt-1 font-display text-base font-bold text-white">
                   {t("brand.servicesDepartment")}
                 </p>
-              </div>
+              </div> */}
             </div>
 
             {/* Status check — below the emblem. Shown on the login screen only. */}
@@ -401,9 +403,10 @@ export default function AuthShell({
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
-            {/* Footer — kept on a single line */}
-            <p className="mt-4 whitespace-nowrap text-center text-[14px] text-muted">
+            {/* Footer — text and version kept together on a single line */}
+            <p className="mt-4 flex items-baseline justify-center gap-2 whitespace-nowrap text-center text-[14px] text-muted">
               {t("footer")}
+              {APP_VERSION && <span className="text-xs text-muted/70">v{APP_VERSION}</span>}
             </p>
           </div>
         </div>

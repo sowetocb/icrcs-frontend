@@ -280,6 +280,7 @@ const en = {
     minorError: "Dependents registered under your profile must be under 18 years old.",
     fatherTooYoung: "Father must be at least 16 years older than the applicant.",
     motherTooYoung: "Mother must be at least 16 years older than the applicant.",
+    parentAgeError: "Parent must be at least 18 years old.",
     futureDateError: "The date of birth cannot be in the future.",
     submitError: "Could not submit this step. Please try again.",
     attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
@@ -432,6 +433,8 @@ const en = {
     submittedHelp:
       "Download and print your application form, then present the printed copy at your nearest immigration office for further processing.",
     downloadPdf: "Download PDF",
+    downloadSuccess: "Form downloaded successfully.",
+    downloadError: "Could not download the form. Please try again.",
     printForm: "Print Form",
     returnDashboard: "Return to Dashboard",
     checkTitle: "Check Application Status",
@@ -841,7 +844,7 @@ const en = {
     a5: "Passport Size Photo",
     a6: "Naturalisation / Confirmation / Renounciation Certificate",
   },
-  footer: "© 2026 The United Republic of Tanzania | Immigration Department",
+  footer: "© 2026 All rights reserved.",
 };
 
 const sw: typeof en = {
@@ -1117,6 +1120,7 @@ const sw: typeof en = {
     minorError: "Wategemezi waliosajiliwa chini ya wasifu wako lazima wawe na umri chini ya miaka 18.",
     fatherTooYoung: "Baba lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji.",
     motherTooYoung: "Mama lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji.",
+    parentAgeError: "Mzazi lazima awe na umri wa angalau miaka 18.",
     futureDateError: "Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
     attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
@@ -1269,6 +1273,8 @@ const sw: typeof en = {
     submittedHelp:
       "Pakua na uchapishe fomu yako ya maombi, kisha uwasilishe nakala iliyochapishwa katika Ofisi ya Uhamiaji iliyo karibu nawe kwa hatua zaidi.",
     downloadPdf: "Pakua PDF",
+    downloadSuccess: "Fomu imepakuliwa kikamilifu.",
+    downloadError: "Haikuweza kupakua fomu. Tafadhali jaribu tena.",
     printForm: "Chapisha Fomu",
     returnDashboard: "Rudi kwenye Dashibodi",
     checkTitle: "Angalia Hali ya Maombi",

@@ -269,6 +269,12 @@ export default function RegistryWizard({
   // without an entry here fall back to a generic "required" message at the field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
+  // Bumped each time a SAVE is attempted (and only then). The error-focus effect
+  // keys off this — not off `errors` directly — so that focus moves to the first
+  // problem only on a save, never while the user is typing (which continuously
+  // shrinks `errors` as fields become valid and would otherwise yank focus from
+  // field to field). See the focus effect below.
+  const [saveAttempt, setSaveAttempt] = useState(0);
   // True while a submitted stage's data is being re-fetched from the backend, so
   // the step renders a skeleton instead of empty/stale fields until it arrives.
   const [stageLoading, setStageLoading] = useState(false);
@@ -358,6 +364,44 @@ export default function RegistryWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, subjectId]);
 
+  // The Preview & Declaration step renders its summary from the local `data`,
+  // but the per-step effect above only hydrates the stage the user has actually
+  // visited. Resuming on a fresh browser and landing straight on the preview
+  // would then show only Personal Information (which also falls back to the
+  // cross-browser profile) while every other section sits empty. So when the
+  // preview is reached, pull EVERY submitted form stage from the backend and
+  // merge it into `data` — the summary then reflects all the server has stored.
+  useEffect(() => {
+    if (step !== TOTAL || !subjectId) return;
+    let cancelled = false;
+    (async () => {
+      // Stages 1–6 carry form data; 7 (referees), 8 (uploads) and 9 (preview)
+      // have none. Hydrate any submitted stage not already loaded this session
+      // (so freshly-edited, already-hydrated stages aren't clobbered).
+      const pending = [1, 2, 3, 4, 5, 6].filter(
+        (n) => submittedStages.has(n) && !hydratedStages.current.has(n),
+      );
+      for (const n of pending) {
+        const raw = await getStageData(subjectId, n);
+        if (cancelled) return;
+        if (!raw) continue;
+        const mapped = await stageToForm(n, raw);
+        if (cancelled) return;
+        if (Object.keys(mapped).length === 0) continue;
+        setData((d) => {
+          const next = { ...d };
+          for (const [k, v] of Object.entries(mapped)) next[k] = v;
+          return next;
+        });
+        hydratedStages.current.add(n);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, subjectId, submittedStages]);
+
   // Pre-load NIDA and TIN type IDs once so blur() can validate them
   // synchronously without an async lookup on every keystroke.
   useEffect(() => {
@@ -380,10 +424,16 @@ export default function RegistryWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When errors are raised, shift focus to where the problem is: scroll the
+  // When a SAVE raises errors, shift focus to where the problem is: scroll the
   // topmost invalid field into view and focus it (so the user lands exactly on
   // it). Falls back to the form-level banner when no field marker matches.
+  //
+  // This intentionally keys off `saveAttempt` (bumped only on a save click), NOT
+  // off `errors`. Keying off `errors` re-ran on every keystroke: as the user
+  // typed and each field's error cleared, the effect would fire again and steal
+  // focus to the next still-invalid field — splitting a name across fields.
   useEffect(() => {
+    if (saveAttempt === 0) return;
     if (errors.length === 0 && !formError) return;
     const id = window.setTimeout(() => {
       // Collect the in-DOM markers for the errored fields (an input to focus,
@@ -406,7 +456,10 @@ export default function RegistryWizard({
       }
     }, 50);
     return () => window.clearTimeout(id);
-  }, [errors, formError]);
+    // Reads `errors`/`formError` but is gated on `saveAttempt` so it runs only
+    // on a save, not on every keystroke that mutates the error list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveAttempt]);
 
   // The account holder's gender (prefilled from the profile, then locked) must be
   // the M/F/O code the gender select uses. A profile cached before normalisation
@@ -490,7 +543,7 @@ export default function RegistryWizard({
       if (!typeId) return; // no type selected → field hidden → nothing to validate
       if (empty) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
-        setFieldErrors((fe) => ({ ...fe, [name]: t("flabel.docNumberReq") }));
+        setFieldErrors((fe) => ({ ...fe, [name]: t("fields.docNumberReq") }));
         return;
       }
       const isNida = nidaTypeIds.current.has(typeId);
@@ -525,9 +578,6 @@ export default function RegistryWizard({
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
           const other = name === "occupation" ? "employer" : "occupation";
           if (!String(data[other] ?? "").trim()) setErrors((e) => (e.includes(other) ? e : [...e, other]));
-        }
-        if (jobStatus === "self-employed" && name === "selfOccupation") {
-          setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
         // First school's level/name/district are required when the user attended school.
         if (
@@ -591,6 +641,9 @@ export default function RegistryWizard({
       if (/^ec\d+Dob$/.test(name) && !isAtLeast18(trimmed)) {
         flag(t("registry.ecAgeError"));
       }
+      if ((name === "fatherDob" || name === "motherDob") && !isAtLeast18(trimmed)) {
+        flag(t("registry.parentAgeError"));
+      }
       if (/^sp\d+Dob$/.test(name) && !isAtLeast16(trimmed)) {
         flag(t("registry.spouseAgeError"));
       }
@@ -598,8 +651,8 @@ export default function RegistryWizard({
       return;
     }
 
-    // 5. Employer, self-employment occupation, school name / district — min 2 chars
-    if (name === "employer" || name === "selfOccupation" || /^edu\d+(School|District)$/.test(name)) {
+    // 5. Employer, school name / district — min 2 chars
+    if (name === "employer" || /^edu\d+(School|District)$/.test(name)) {
       if (trimmed.length < 2) flag(t("registry.textTooShort"));
       return;
     }
@@ -1146,7 +1199,7 @@ export default function RegistryWizard({
               ? t("registry.nidaExactDigits")
               : tinTypeIds.current.has(tId)
                 ? t("registry.tinInvalid")
-                : t("flabel.docNumberReq");
+                : t("fields.docNumberReq");
           } else {
             friendlyMsg = t("fields.isRequired").replace("{field}", fieldName);
           }
@@ -1178,7 +1231,7 @@ export default function RegistryWizard({
           ? t("registry.nidaExactDigits")
           : tinTypeIds.current.has(tId)
             ? t("registry.tinInvalid")
-            : t("flabel.docNumberReq");
+            : t("fields.docNumberReq");
       } else {
         // Generic fallback — tell the user something is wrong with this field
         // without showing the technical backend detail.
@@ -1190,6 +1243,9 @@ export default function RegistryWizard({
     if (fieldKeys.length > 0) {
       setFieldErrors(apiFieldErrors);
       setErrors(fieldKeys);
+      // Backend errors arrive after the save's initial saveAttempt bump (which
+      // ran while errors were still empty) — re-arm so focus lands on them.
+      setSaveAttempt((n) => n + 1);
       // The message is now shown inline at the field — no duplicate banner or toast.
       setFormError("");
       return;
@@ -1271,6 +1327,10 @@ export default function RegistryWizard({
 
   async function handlePrimary(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Re-arm the error-focus effect for this save. Any setErrors() below now
+    // lands focus on the first invalid field; a clean save changes no errors so
+    // the effect's guard makes this a no-op.
+    setSaveAttempt((n) => n + 1);
     if (isLast) {
       if (!agreed) return;
       // Stage 9 — Declaration (final submit).
@@ -1373,7 +1433,7 @@ export default function RegistryWizard({
         const field = `idDoc${n}Number`;
         if (!num) {
           setErrors([field]);
-          setFieldErrors({ [field]: t("flabel.docNumberReq") });
+          setFieldErrors({ [field]: t("fields.docNumberReq") });
           setFormError("");
           return;
         }
@@ -1408,7 +1468,7 @@ export default function RegistryWizard({
           const field = `${pfx}IdDoc${n}Number`;
           if (!num) {
             setErrors([field]);
-            setFieldErrors({ [field]: t("flabel.docNumberReq") });
+            setFieldErrors({ [field]: t("fields.docNumberReq") });
             setFormError("");
             return;
           }
@@ -1432,13 +1492,19 @@ export default function RegistryWizard({
         return;
       }
 
-      // Each parent must be at least 16 years older than the applicant — raise
-      // the error at that parent's date-of-birth field.
+      // Each parent must be an adult (≥ 18) and at least 16 years older than the
+      // applicant — raise the error at that parent's date-of-birth field.
       const subjectDob = typeof data.dob === "string" ? data.dob : "";
       for (const p of ["father", "mother"] as const) {
         const pDob = typeof data[`${p}Dob`] === "string" ? (data[`${p}Dob`] as string) : "";
+        const field = `${p}Dob`;
+        if (pDob && !isAtLeast18(pDob)) {
+          setErrors([field]);
+          setFieldErrors({ [field]: t("registry.parentAgeError") });
+          setFormError("");
+          return;
+        }
         if (subjectDob && pDob && !atLeastYearsOlder(pDob, subjectDob, 16)) {
-          const field = `${p}Dob`;
           setErrors([field]);
           setFieldErrors({ [field]: t(`registry.${p}TooYoung`) });
           setFormError("");
@@ -1593,15 +1659,6 @@ export default function RegistryWizard({
         if (!emp) {
           setErrors(["employer"]);
           setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
-          setFormError("");
-          return;
-        }
-      }
-      if (jobStatus === "self-employed") {
-        const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
-        if (!occ) {
-          setErrors(["selfOccupation"]);
-          setFieldErrors({ selfOccupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
           setFormError("");
           return;
         }

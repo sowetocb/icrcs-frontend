@@ -12,7 +12,6 @@ import { loadRegistration, clearRegistration } from "@/app/registry/registration
 import { clearPeople } from "@/app/registry/peopleStore";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -235,10 +234,6 @@ export default function LoginForm() {
           {t("form.register")}
         </Link>
       </p>
-
-      {APP_VERSION && (
-        <p className="mt-4 text-center text-xs text-muted/70">v{APP_VERSION}</p>
-      )}
     </div>
   );
 }

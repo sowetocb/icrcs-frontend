@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AuthShell from "@/components/auth/authShell";
 import UnlockAccountFlow from "./unlockAccountFlow";
 
@@ -10,7 +11,11 @@ export const metadata: Metadata = {
 export default function UnlockAccountPage() {
   return (
     <AuthShell>
-      <UnlockAccountFlow />
+      {/* UnlockAccountFlow reads useSearchParams(); a Suspense boundary is
+          required so the static prerender can bail out to client rendering. */}
+      <Suspense fallback={null}>
+        <UnlockAccountFlow />
+      </Suspense>
     </AuthShell>
   );
 }

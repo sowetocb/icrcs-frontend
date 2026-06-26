@@ -6,6 +6,7 @@ import CitizenSidebar from "@/components/layout/citizenSidebar";
 import DashboardTopbar from "@/components/layout/dashboardTopbar";
 import AuthGuard from "@/components/auth/authGuard";
 import { useI18n } from "../../i18n/localeProvider";
+import { useToast } from "@/components/ui/toast";
 import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
@@ -85,6 +86,7 @@ function getStatusLabel(status: string, t: (key: string) => string): string {
 
 export default function PeopleList() {
   const { t } = useI18n();
+  const { notify } = useToast();
   const [people, setPeople] = useState<Person[]>([]);
   const [remotePeople, setRemotePeople] = useState<RegisteredPerson[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,6 +236,9 @@ export default function PeopleList() {
         subjectId,
         registrationFormFileName(fullName),
       );
+      notify(t("registry.downloadSuccess"), "success");
+    } catch {
+      notify(t("registry.downloadError"), "error");
     } finally {
       setDownloadingId(null);
     }

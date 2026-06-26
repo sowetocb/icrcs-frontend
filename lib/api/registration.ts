@@ -584,7 +584,9 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
     // free-text occupation name (letters only, max 20 chars) in the same
     // parallel field so the backend always receives the applicant's occupation.
     occupationTypeId: jobLower === "employed" ? intOrNull(data, "occupation") ?? null : null,
-    occupationName: jobLower === "self-employed" ? str(data, "selfOccupation") || null : null,
+    // Only the employed capture an occupation; every other status (self-employed,
+    // unemployed, …) sends none.
+    occupationName: null,
     // Employer / organisation name applies only to the employed.
     organizationName:
       jobLower === "employed"

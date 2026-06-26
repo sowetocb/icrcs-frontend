@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
+import { useToast } from "@/components/ui/toast";
 import { registrationFormFileName } from "./printRegistrationForm";
 import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
@@ -25,6 +26,7 @@ export default function RegistrySuccess({
   data: Record<string, string | boolean>;
 }) {
   const { t } = useI18n();
+  const { notify } = useToast();
   const router = useRouter();
 
   const [busy, setBusy] = useState(false);
@@ -48,6 +50,9 @@ export default function RegistrySuccess({
         subjectId,
         registrationFormFileName(fullName),
       );
+      notify(t("registry.downloadSuccess"), "success");
+    } catch {
+      notify(t("registry.downloadError"), "error");
     } finally {
       setBusy(false);
     }
