@@ -175,13 +175,15 @@ export async function reviewToForm(reviewData: unknown): Promise<Data> {
   const emp = obj(d.employment);
   const reviewJobStatus = emp.employmentStatus != null ? employmentToCode(str(emp.employmentStatus)) : "";
   if (emp.employmentStatus != null) out.jobStatus = reviewJobStatus;
-  // occupationName carries the self-employed free-text occupation.
-  if (emp.occupationName != null) {
-    out.selfOccupation = str(emp.occupationName);
-  } else if (emp.organizationName != null && reviewJobStatus === "Self-employed") {
-    // Legacy: organizationName was previously used for self-employed occupation.
-    out.selfOccupation = str(emp.organizationName);
+  if (emp.occupationTypeId != null) out.occupation = str(emp.occupationTypeId);
+  // otherOccupation carries the free-text "Other" (id 19) description, for both
+  // Employed and Self-employed. (Legacy data kept it in occupationName.)
+  if (emp.otherOccupation != null) {
+    out.otherOccupation = str(emp.otherOccupation);
+  } else if (emp.occupationName != null) {
+    out.otherOccupation = str(emp.occupationName);
   }
+  // organizationName carries the employer name (Employed only).
   if (emp.organizationName != null && reviewJobStatus !== "Self-employed") {
     out.employer = str(emp.organizationName);
   }

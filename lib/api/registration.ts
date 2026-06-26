@@ -580,13 +580,18 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
     hasAttendedSchool: !never,
     educationList,
     employmentStatus: await resolveEmploymentStatusId(job),
-    // Occupation: Employed sends the dropdown id; Self-employed sends the
-    // free-text occupation name (letters only, max 20 chars) in the same
-    // parallel field so the backend always receives the applicant's occupation.
-    occupationTypeId: jobLower === "employed" ? intOrNull(data, "occupation") ?? null : null,
-    // Only the employed capture an occupation; every other status (self-employed,
-    // unemployed, …) sends none.
-    occupationName: null,
+    // Occupation: Employed and Self-employed both pick from the occupation
+    // lookup (sending its id). When "Other" (id 19) is chosen, the free-text
+    // description rides along in otherOccupation.
+    occupationTypeId:
+      jobLower === "employed" || jobLower === "self-employed"
+        ? intOrNull(data, "occupation") ?? null
+        : null,
+    otherOccupation:
+      (jobLower === "employed" || jobLower === "self-employed") &&
+      str(data, "occupation") === "19"
+        ? str(data, "otherOccupation") || null
+        : null,
     // Employer / organisation name applies only to the employed.
     organizationName:
       jobLower === "employed"

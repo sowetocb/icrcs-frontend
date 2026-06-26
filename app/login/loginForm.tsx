@@ -11,7 +11,16 @@ import { saveProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Practical email format: a local part of letters/digits/._%+- , an @, a
+// domain of letters/digits/hyphens with at least one dot, and a ≥2-letter TLD.
+// Stricter than "anything@anything.anything" so structured junk like
+// "[[[@[[.co" is rejected, while every real-world address still passes.
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+// Characters that can legitimately appear anywhere in an email address (the
+// union of valid local-part and domain characters, plus the @). Anything else
+// is stripped as the user types so they can't enter what would never validate.
+const EMAIL_DISALLOWED = /[^A-Za-z0-9._%+\-@]/g;
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -134,7 +143,10 @@ export default function LoginForm() {
             maxLength={30}
             value={email}
             onChange={(e) => {
-              setEmail(e.target.value);
+              // Strip any character that can't appear in an email so the user
+              // can never type what wouldn't validate (e.g. brackets, quotes).
+              const cleaned = e.target.value.replace(EMAIL_DISALLOWED, "");
+              setEmail(cleaned);
               if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
             }}
             onBlur={() => {

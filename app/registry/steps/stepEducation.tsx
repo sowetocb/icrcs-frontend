@@ -12,17 +12,7 @@ const MIN_SCHOOLS = 1;
 // Per-school field suffixes — used to clear a removed/cleared school.
 const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo", "Completed"];
 
-// Occupations relevant when the employment status is "Employed" — the occupation
-// lookup is filtered to these (matched against the option label, case-insensitive).
-const EMPLOYED_OCCUPATIONS = [
-  "private",
-  "lawyer",
-  "accountant",
-  "driver",
-  "artisan",
-  "military police",
-  "other"
-];
+const OCCUPATION_OTHER_ID = "19"; // triggers free-text field
 
 function SchoolBlock({
   n,
@@ -118,11 +108,6 @@ export default function StepEducation() {
   const { t } = useI18n();
   const { data, set, setQuiet, isFirstPerson } = useWizard();
   const occupations = useOccupationTypeOptions();
-  // When "Employed" is chosen, only these occupations are relevant — the rest of
-  // the lookup is hidden.
-  const employedOccupations = occupations.filter((o) =>
-    EMPLOYED_OCCUPATIONS.some((a) => o.label.toLowerCase().includes(a)),
-  );
   const jobStatuses = useEmploymentStatusOptions();
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
@@ -260,19 +245,26 @@ export default function StepEducation() {
               <Field label={t("fields.employmentStatus")} required>
                 <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
               </Field>
-              {/* Occupation & Employer only apply to the employed. Every other
-                  status (self-employed, unemployed, student, …) captures no
-                  occupation. The status value is the lookup CODE (e.g.
-                  "Employed"), so compare case-insensitively. */}
+              {/* Occupation dropdown — Employed AND Self-Employed both pick from the full list */}
+              {(String(data.jobStatus).toLowerCase() === "employed" ||
+                String(data.jobStatus).toLowerCase() === "self-employed") && (
+                <Field label={t("fields.occupation")} required>
+                  <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
+                </Field>
+              )}
+              {/* When "Other" (ID 19) is chosen, require a free-text description */}
+              {(String(data.jobStatus).toLowerCase() === "employed" ||
+                String(data.jobStatus).toLowerCase() === "self-employed") &&
+                String(data.occupation) === OCCUPATION_OTHER_ID && (
+                <Field label={t("fields.otherOccupation")} required>
+                  <TextInput name="otherOccupation" placeholder={t("fields.phOtherOccupation")} lettersOnly maxLength={50} />
+                </Field>
+              )}
+              {/* Organisation name — only for Employed */}
               {String(data.jobStatus).toLowerCase() === "employed" && (
-                <>
-                  <Field label={t("fields.occupation")} required>
-                    <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
-                  </Field>
-                  <Field label={t("fields.employer")} required>
-                    <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
-                  </Field>
-                </>
+                <Field label={t("fields.employer")} required>
+                  <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
+                </Field>
               )}
             </div>
           </div>

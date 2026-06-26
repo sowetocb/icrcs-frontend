@@ -12,6 +12,8 @@ const EXACT = new Set([
   "dob",
   "nationalityCountry",
   "pobCountry",
+  "pobRegion",
+  "pobDistrict",
   "pobWard",
   "pobStreet",
   "pobCityVillage",

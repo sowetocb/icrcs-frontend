@@ -281,7 +281,7 @@ export default function StepPersonal() {
                   <Select name={`idDoc${n}Type`} placeholder={t("fields.phSelect")} options={availableOptions} />
                 </Field>
                 {type && (
-                  <Field label={t("fields.docNumber")} optional>
+                  <Field label={t("fields.docNumber")} required>
                     {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
                     {isNida ? (
                       <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />

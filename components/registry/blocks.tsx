@@ -100,8 +100,13 @@ function useLocalizedOptions(
   const { options: items } = useLookup(fetcher, []);
   const staticOpts = staticBuilder(t);
   if (!items.length) return staticOpts;
+  // Match the static (translatable) label to the backend value ignoring case,
+  // spaces and punctuation — so a code like "Self Employed" still resolves to
+  // the "Self-employed" option's localized label instead of falling back to the
+  // raw English name. (Numeric id values are unaffected.)
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const labelFor = (value: string) =>
-    staticOpts.find((o) => o.value === value)?.label;
+    staticOpts.find((o) => norm(o.value) === norm(value))?.label;
   return items.map((i) => {
     const value = valueKey === "id" ? String(i.id) : i.code ?? String(i.id);
     return { value, label: labelFor(value) ?? i.name };

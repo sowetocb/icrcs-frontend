@@ -49,13 +49,15 @@ function SearchIcon() {
   );
 }
 
-type StatusCategory = "completed" | "pending" | "rejected";
+type StatusCategory = "approved" | "assessed" | "enrolled" | "pending" | "rejected";
 
-/** Collapse the many raw backend status values into the three buckets used by
- *  the summary cards and the status filter. */
+/** Collapse the many raw backend status values into the buckets used by the
+ *  summary cards and the status filter. */
 function statusCategory(status: string): StatusCategory {
   const s = status.toUpperCase();
-  if (s === "APPROVED" || s === "COMPLETED" || s === "ACTIVE") return "completed";
+  if (s === "APPROVED" || s === "COMPLETED" || s === "ACTIVE") return "approved";
+  if (s === "ASSESSED") return "assessed";
+  if (s === "ENROLLED") return "enrolled";
   if (s === "REJECTED" || s === "DENIED" || s === "CANCELLED") return "rejected";
   return "pending";
 }
@@ -171,7 +173,7 @@ export default function PeopleList() {
       acc[statusCategory(rowOf(p).rawStatus)] += 1;
       return acc;
     },
-    { total: 0, completed: 0, pending: 0, rejected: 0 },
+    { total: 0, approved: 0, assessed: 0, enrolled: 0, pending: 0, rejected: 0 },
   );
 
   // Sort earliest-first: the first person registered under the account stays on
@@ -331,10 +333,12 @@ export default function PeopleList() {
               ) : (
                 <>
                   {/* Summary cards */}
-                  <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                  <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3">
                     {([
-                      { key: "total", label: t("people.statTotal"), value: counts.total, ring: "bg-navy-700 text-white" },
-                      { key: "completed", label: t("people.statCompleted"), value: counts.completed, ring: "bg-success/15 text-success" },
+                      { key: "total", label: t("people.statRegistered"), value: counts.total, ring: "bg-navy-700 text-white" },
+                      { key: "approved", label: t("people.statApproved"), value: counts.approved, ring: "bg-success/15 text-success" },
+                      { key: "assessed", label: t("people.statAssessed"), value: counts.assessed, ring: "bg-navy-500/15 text-navy-700" },
+                      { key: "enrolled", label: t("people.statEnrolled"), value: counts.enrolled, ring: "bg-gold/20 text-gold-700" },
                       { key: "pending", label: t("people.statPending"), value: counts.pending, ring: "bg-warning/15 text-warning" },
                       { key: "rejected", label: t("people.statRejected"), value: counts.rejected, ring: "bg-danger/15 text-danger" },
                     ] as const).map((card) => (
@@ -370,7 +374,9 @@ export default function PeopleList() {
                       className="rounded-lg border border-line bg-card px-3 py-2.5 text-sm font-semibold text-navy-700 outline-none transition focus:border-gold/50"
                     >
                       <option value="all">{t("people.filterAllStatus")}</option>
-                      <option value="completed">{t("people.statCompleted")}</option>
+                      <option value="approved">{t("people.statApproved")}</option>
+                      <option value="assessed">{t("people.statAssessed")}</option>
+                      <option value="enrolled">{t("people.statEnrolled")}</option>
                       <option value="pending">{t("people.statPending")}</option>
                       <option value="rejected">{t("people.statRejected")}</option>
                     </select>

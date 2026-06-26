@@ -36,6 +36,7 @@ import {
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
+import { localizeBackendMessage } from "@/lib/api/errorMessagesSw";
 import { useToast } from "@/components/ui/toast";
 import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type PersonGroup } from "@/lib/api/lookup";
 import { isPhoneComplete } from "@/lib/phoneLengths";
@@ -224,7 +225,7 @@ export default function RegistryWizard({
   onExit: () => void;
   onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { notify } = useToast();
   const router = useRouter();
 
@@ -574,10 +575,19 @@ export default function RegistryWizard({
       // Conditional required fields on Step 4.
       const jobStatus = String(data.jobStatus ?? "").toLowerCase();
       if (step === 4) {
-        if (jobStatus === "employed" && (name === "occupation" || name === "employer")) {
+        const isEmployed = jobStatus === "employed";
+        const isSelfEmployed = jobStatus === "self-employed";
+        if ((isEmployed || isSelfEmployed) && name === "occupation") {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
-          const other = name === "occupation" ? "employer" : "occupation";
-          if (!String(data[other] ?? "").trim()) setErrors((e) => (e.includes(other) ? e : [...e, other]));
+        }
+        if ((isEmployed || isSelfEmployed) && name === "otherOccupation" &&
+            String(data.occupation) === "19") {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        if (isEmployed && name === "employer") {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+          if (!String(data.occupation ?? "").trim())
+            setErrors((e) => (e.includes("occupation") ? e : [...e, "occupation"]));
         }
         // First school's level/name/district are required when the user attended school.
         if (
@@ -652,7 +662,7 @@ export default function RegistryWizard({
     }
 
     // 5. Employer, school name / district — min 2 chars
-    if (name === "employer" || /^edu\d+(School|District)$/.test(name)) {
+    if (name === "employer" || name === "otherOccupation" || /^edu\d+(School|District)$/.test(name)) {
       if (trimmed.length < 2) flag(t("registry.textTooShort"));
       return;
     }
@@ -861,12 +871,16 @@ export default function RegistryWizard({
   // errors never appear on fields that are still disabled (Region can't be
   // picked before Territory, District before Region, etc.).
   function cascadeRequired(pfx: string, needsStreet: boolean): string[] {
-    if (!Number(data[`${pfx}TerritoryId`]))                               return [`${pfx}Territory`];
-    if (!Number(data[`${pfx}RegionId`]))                                  return [`${pfx}Region`];
-    if (!Number(data[`${pfx}DistrictId`]))                                return [`${pfx}District`];
-    if (!Number(data[`${pfx}WardId`]))                                    return [`${pfx}Ward`];
-    if (needsStreet && !String(data[`${pfx}StreetId`] ?? "").trim())      return [`${pfx}Street`];
-    return [];
+    // Flag EVERY empty level of the cascade at once (not just the first), so a
+    // save surfaces all the missing required fields together rather than making
+    // the user fix them one at a time down the Territory → Ward chain.
+    const missing: string[] = [];
+    if (!Number(data[`${pfx}TerritoryId`]))                          missing.push(`${pfx}Territory`);
+    if (!Number(data[`${pfx}RegionId`]))                            missing.push(`${pfx}Region`);
+    if (!Number(data[`${pfx}DistrictId`]))                          missing.push(`${pfx}District`);
+    if (!Number(data[`${pfx}WardId`]))                              missing.push(`${pfx}Ward`);
+    if (needsStreet && !String(data[`${pfx}StreetId`] ?? "").trim()) missing.push(`${pfx}Street`);
+    return missing;
   }
 
   function missingFields() {
@@ -1241,6 +1255,12 @@ export default function RegistryWizard({
 
     const fieldKeys = Object.keys(apiFieldErrors);
     if (fieldKeys.length > 0) {
+      // Localize any still-English backend message to Swahili before showing it
+      // at the field (frontend-sourced messages aren't in the map, so they pass
+      // through unchanged).
+      for (const k of fieldKeys) {
+        apiFieldErrors[k] = localizeBackendMessage(apiFieldErrors[k], locale);
+      }
       setFieldErrors(apiFieldErrors);
       setErrors(fieldKeys);
       // Backend errors arrive after the save's initial saveAttempt bump (which
@@ -1250,8 +1270,9 @@ export default function RegistryWizard({
       setFormError("");
       return;
     }
-    setFormError(message);
-    notify(message, "error");
+    const shown = localizeBackendMessage(message, locale);
+    setFormError(shown);
+    notify(shown, "error");
   }
 
   // Validate that any NIDA document in an identification-documents repeater is
@@ -1647,7 +1668,9 @@ export default function RegistryWizard({
     // Stage 4: validate occupation / employer fields based on employment status.
     if (step === 4) {
       const jobStatus = String(data.jobStatus ?? "").toLowerCase();
-      if (jobStatus === "employed") {
+      const isEmployed = jobStatus === "employed";
+      const isSelfEmployed = jobStatus === "self-employed";
+      if (isEmployed || isSelfEmployed) {
         const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
         if (!occ) {
           setErrors(["occupation"]);
@@ -1655,12 +1678,23 @@ export default function RegistryWizard({
           setFormError("");
           return;
         }
-        const emp = typeof data.employer === "string" ? data.employer.trim() : "";
-        if (!emp) {
-          setErrors(["employer"]);
-          setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
-          setFormError("");
-          return;
+        if (occ === "19") {
+          const other = typeof data.otherOccupation === "string" ? data.otherOccupation.trim() : "";
+          if (!other) {
+            setErrors(["otherOccupation"]);
+            setFieldErrors({ otherOccupation: t("fields.isRequired").replace("{field}", t("fields.otherOccupation")) });
+            setFormError("");
+            return;
+          }
+        }
+        if (isEmployed) {
+          const emp = typeof data.employer === "string" ? data.employer.trim() : "";
+          if (!emp) {
+            setErrors(["employer"]);
+            setFieldErrors({ employer: t("fields.isRequired").replace("{field}", t("fields.employer")) });
+            setFormError("");
+            return;
+          }
         }
       }
     }

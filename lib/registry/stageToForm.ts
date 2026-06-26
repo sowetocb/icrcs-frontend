@@ -305,15 +305,16 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     const jobCode = job != null ? employmentCode(job) : "";
     if (job != null) out.jobStatus = jobCode;
     if (d.occupationTypeId != null) out.occupation = str(d.occupationTypeId);
-    // occupationName carries the self-employed free-text occupation (new field).
-    // organizationName carries the employer name (Employed); legacy data may
-    // also carry the self-employed text there — fall back for compatibility.
-    const isSelfEmployed = jobCode.toLowerCase() === "self-employed";
-    if (d.occupationName != null) {
-      out.selfOccupation = str(d.occupationName);
-    } else if (d.organizationName != null && isSelfEmployed) {
-      out.selfOccupation = str(d.organizationName);
+    // otherOccupation carries the free-text description chosen when the
+    // occupation is "Other" (id 19) — for both Employed and Self-employed.
+    // (Legacy data kept it in occupationName; fall back for compatibility.)
+    if (d.otherOccupation != null) {
+      out.otherOccupation = str(d.otherOccupation);
+    } else if (d.occupationName != null) {
+      out.otherOccupation = str(d.occupationName);
     }
+    // organizationName carries the employer name (Employed only).
+    const isSelfEmployed = jobCode.toLowerCase() === "self-employed";
     if (d.organizationName != null && !isSelfEmployed) {
       out.employer = str(d.organizationName);
     }

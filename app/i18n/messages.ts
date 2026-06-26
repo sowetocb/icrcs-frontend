@@ -169,9 +169,11 @@ const en = {
     colStatus: "Status",
     colRegisteredOn: "Registration Date",
     colActions: "Actions",
-    statTotal: "Total Registered",
-    statCompleted: "Completed",
-    statPending: "Pending",
+    statRegistered: "Registered",
+    statApproved: "Approved",
+    statAssessed: "Assessed",
+    statEnrolled: "Enrolled",
+    statPending: "Pending Enrollment",
     statRejected: "Rejected",
     searchPlaceholder: "Search by name or application ID…",
     filterAllStatus: "All Status",
@@ -243,6 +245,8 @@ const en = {
     nationalityCountry: "Nationality",
     pobCountry: "Country of birth",
     pobTerritory: "Territory of birth",
+    pobRegion: "Region of birth",
+    pobDistrict: "District of birth",
     pobWard: "Ward of birth",
     pobStreet: "Street/Mtaa of birth",
     pobCityVillage: "City/Town of birth",
@@ -685,7 +689,7 @@ const en = {
     required: "Required", // REVIEW
     photo: "Photo", // REVIEW
     photoHint: "Upload a passport-size photo (JPG or PNG).", // REVIEW
-    photoSizeError: "Photo is too large.", // REVIEW
+    photoSizeError: "Photo size should not be more than 300KB.", // REVIEW
     photoTypeError: "Invalid photo type.", // REVIEW
     uploadPhoto: "Upload Photo", // REVIEW
     changePhoto: "Change Photo", // REVIEW
@@ -714,6 +718,8 @@ const en = {
     phSelectOccupation: "Select occupation", // REVIEW
     selfOccupation: "Nature of self-employment",
     phSelfOccupation: "e.g. Artisan, Trader, Farmer",
+    otherOccupation: "Other Occupation",
+    phOtherOccupation: "e.g. Beekeeper, Painter",
     phSelectRelationship: "Select relationship", // REVIEW
   },
   // RECONSTRUCTED. opt.* values are derived from blocks.tsx / MOCK_* (reliable
@@ -728,7 +734,7 @@ const en = {
     widowed: "Widowed",
     separated: "Separated",
     employed: "Employed",
-    selfEmployed: "Self-employed",
+    selfEmployed: "Self employed",
     unemployed: "Unemployed",
     student: "Student",
     retired: "Retired",
@@ -1009,9 +1015,11 @@ const sw: typeof en = {
     colStatus: "Hali",
     colRegisteredOn: "Tarehe ya Usajili",
     colActions: "Vitendo",
-    statTotal: "Jumla Waliosajiliwa",
-    statCompleted: "Imekamilika",
-    statPending: "Inasubiri",
+    statRegistered: "Waliosajiliwa",
+    statApproved: "Imethibitishwa",
+    statAssessed: "Imetathminiwa",
+    statEnrolled: "Imeandikishwa",
+    statPending: "Inasubiri Uandikishaji",
     statRejected: "Imekataliwa",
     searchPlaceholder: "Tafuta kwa jina au kitambulisho cha maombi…",
     filterAllStatus: "Hali Zote",
@@ -1083,6 +1091,8 @@ const sw: typeof en = {
     nationalityCountry: "Uraia",
     pobCountry: "Nchi ya kuzaliwa",
     pobTerritory: "Himaya ya kuzaliwa",
+    pobRegion: "Mkoa wa kuzaliwa",
+    pobDistrict: "Wilaya ya kuzaliwa",
     pobWard: "Kata ya kuzaliwa",
     pobStreet: "Mtaa wa kuzaliwa",
     pobCityVillage: "Mji wa kuzaliwa",
@@ -1478,7 +1488,7 @@ const sw: typeof en = {
     nidaNumber: "Namba ya NIDA", // REVIEW
     birthCertNo: "Namba ya Cheti cha Kuzaliwa", // REVIEW
     birthCertFile: "Cheti cha Kuzaliwa (pakia)",
-    indexNo: "Namba ya Mtihani", // REVIEW
+    indexNo: "Namba ya Cheti", // REVIEW
     docType: "Aina ya Hati", // REVIEW
     docNumber: "Namba ya Hati", // REVIEW
     idDocNida: "Namba ya NIDA",
@@ -1553,6 +1563,8 @@ const sw: typeof en = {
     phSelectOccupation: "Chagua kazi", // REVIEW
     selfOccupation: "Aina ya kujiajiri",
     phSelfOccupation: "k.m. Fundi, Mfanyabiashara, Mkulima",
+    otherOccupation: "Kazi Nyingine",
+    phOtherOccupation: "k.m. Mfugaji wa nyuki, Mpaka rangi",
     phSelectRelationship: "Chagua uhusiano", // REVIEW
   },
   // RECONSTRUCTED — all values reconstructed; verify `// REVIEW`.
