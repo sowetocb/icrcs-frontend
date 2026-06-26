@@ -139,7 +139,7 @@ export default function LoginForm() {
               if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
             }}
             onBlur={() => {
-              if (!EMAIL_RE.test(email.trim()))
+              if (email.trim() && !EMAIL_RE.test(email.trim()))
                 setErrors((p) => ({ ...p, email: t("form.emailInvalid") }));
             }}
             placeholder={t("form.emailPlaceholder")}

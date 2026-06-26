@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { useGenderOptions, usePersonDocumentTypeOptions } from "@/components/registry/blocks";
+import { usePersonDocumentTypeOptions } from "@/components/registry/blocks";
 import type { PersonGroup } from "@/lib/api/lookup";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
@@ -13,26 +13,16 @@ import { useI18n } from "@/app/i18n/localeProvider";
 const ID_DOC_SUFFIXES = ["Type", "Number"];
 
 /**
- * Expanded parent block matching the Stage 3 API:
- *   name, DOB, gender, phone, nationality, place of birth, residence, documents.
- *
- * Documents use a repeatable identification documents list (same UX as
- * Personal Information): pick a type (NIDA, Voters ID, TIN, Driving Licence),
- * enter its number, and add more as needed.
+ * Parent block matching the Stage 3 RelatedPersonRequest DTO:
+ *   name, DOB, phone, nationality, residence, and identification documents.
+ * Place of birth is NOT in the DTO — the backend ignores it for parents.
  */
 function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const { t } = useI18n();
   const { data, set } = useWizard();
-  const genders = useGenderOptions();
 
-  // Place of birth / residence: the Region→District→Ward→Street cascade only
-  // applies when Tanzania is explicitly picked. The free-text village/city
-  // field shows only when a non-Tanzania country is explicitly picked. When
-  // no country is selected yet, only the country picker is shown.
-  const pobCountry = typeof data[`${prefix}PobCountry`] === "string" ? (data[`${prefix}PobCountry`] as string).trim() : "";
-  const pobIsTz = pobCountry === "Tanzania";
-  const pobIsForeign = pobCountry !== "" && !pobIsTz;
-
+  // Residence: the Region→District→Ward→Street cascade applies when Tanzania
+  // is picked; the free-text city shows for any other country.
   const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
   const resIsTz = resCountry === "Tanzania";
   const resIsForeign = resCountry !== "" && !resIsTz;
@@ -67,13 +57,13 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={100} />
         </Field>
       </div>
 
@@ -86,18 +76,6 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           <CountrySelect name={`${prefix}NatCountry`} placeholder={t("fields.phCountryNat")} />
         </Field>
       </div>
-
-      {/* Place of Birth — label on top, Country dropdown + cascade underneath */}
-      <Field label={t("fields.placeOfBirthRdw")} required>
-        <div className="space-y-3">
-          <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-          {pobIsForeign && (
-            <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
-            </Field>
-          )}
-        </div>
-      </Field>
 
       {/* Identification documents — repeatable, just like Personal Information */}
       <div className="space-y-3">

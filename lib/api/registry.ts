@@ -6,6 +6,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type RegisteredPerson = {
   subjectId: string;
+  applicationId: string;
   fullName: string;
   email: string;
   phoneNumber: string;
@@ -30,6 +31,7 @@ function normalizeRegisteredPerson(raw: unknown): RegisteredPerson {
   const obj = (raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}) ?? {};
   return {
     subjectId: String(obj.subjectId ?? obj.subjectID ?? obj.id ?? ""),
+    applicationId: String(obj.applicationId ?? obj.applicationNumber ?? obj.registrationNumber ?? ""),
     fullName: String(obj.fullName ?? obj.name ?? ""),
     email: String(obj.email ?? ""),
     phoneNumber: String(obj.phoneNumber ?? obj.phone ?? ""),

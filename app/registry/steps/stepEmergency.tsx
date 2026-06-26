@@ -1,6 +1,6 @@
 "use client";
 
-import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
+import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import {
   useGenderOptions,
   useRelationshipTypeOptions,
@@ -22,12 +22,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
   const relationships = useRelationshipTypeOptions();
   const occupations = useOccupationTypeOptions();
 
-  // Place of birth / residence: the cascade only applies when Tanzania is
-  // explicitly picked. City/village shows only for an explicit foreign country.
-  const pobCountry = typeof data[`${prefix}PobCountry`] === "string" ? (data[`${prefix}PobCountry`] as string).trim() : "";
-  const pobIsTz = pobCountry === "Tanzania";
-  const pobIsForeign = pobCountry !== "" && !pobIsTz;
-
+  // Residence: cascade for Tanzania, free-text city for any other country.
   const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
   const resIsTz = resCountry === "Tanzania";
   const resIsForeign = resCountry !== "" && !resIsTz;
@@ -58,20 +53,17 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
       {/* Person details */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={100} />
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label={t("fields.dob")} optional>
-          <DateInput name={`${prefix}Dob`} />
-        </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.gender")} required>
           <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
         </Field>
@@ -86,18 +78,6 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
         </Field>
       </div>
 
-      {/* Place of Birth and Residence are stacked (not side by side) so the two
-          identical cascades can't be confused. */}
-      <Field label={t("fields.placeOfBirth")} optional>
-        <div className="space-y-3">
-          <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-          {pobIsForeign && (
-            <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
-            </Field>
-          )}
-        </div>
-      </Field>
       <Field label={t("fields.residence")} required>
         <div className="space-y-3">
           <WardCascade prefix={`${prefix}Res`} showStreet />

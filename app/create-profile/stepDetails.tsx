@@ -302,9 +302,7 @@ export default function StepDetails({
               autoComplete="email"
               maxLength={30}
               value={form.email}
-              // Allow only email-safe characters: letters, digits, "@" and ".".
-              // Anything else (spaces, symbols) is stripped as it's typed.
-              onChange={(e) => update("email", e.target.value.replace(/[^a-zA-Z0-9@.]/g, ""))}
+              onChange={(e) => update("email", e.target.value)}
               onBlur={() => { if (!EMAIL_RE.test(form.email.trim())) setErrors((e) => ({ ...e, email: true })); }}
               placeholder={t("form.emailPlaceholder")}
               aria-invalid={emailInvalid}
@@ -327,6 +325,16 @@ export default function StepDetails({
               id="phoneNumber"
               value={form.phoneNumber}
               onChange={(v) => update("phoneNumber", v)}
+              onBlur={() => {
+                const digits = form.phoneNumber.replace(/[^\d]/g, "");
+                if (!form.phoneNumber.trim()) {
+                  setErrors((e) => ({ ...e, phoneNumber: true }));
+                  setPhoneFormatError(false);
+                } else if (digits.length < 7) {
+                  setErrors((e) => ({ ...e, phoneNumber: true }));
+                  setPhoneFormatError(true);
+                }
+              }}
               invalid={phoneInvalid}
               ariaLabel={t("register.phone")}
               describedBy={errors.phoneNumber ? "phoneNumber-error" : undefined}

@@ -92,47 +92,53 @@ const REQUIRED_FIELDS: string[][] = [
   ],
   // Step 2: Address (permanent Region/District/Ward; current added when unlinked)
   ["permRegion", "permDistrict", "permWard"],
-  // Step 3: Parents (father + mother full names + gender + nationality;
-  // phone and DOB are optional)
+  // Step 3: Parents — full names, DOB, nationality, residence country required.
   [
     ...nameFields("father"),
     "fatherGender",
     "fatherDob",
     "fatherNatCountry",
+    "fatherResCountry",
     ...nameFields("mother"),
     "motherGender",
     "motherDob",
     "motherNatCountry",
+    "motherResCountry",
   ],
   // Step 4: Education & Employment — employment status is mandatory (the backend
   // requires it); school is validated separately ("at least one if attended").
   ["jobStatus"],
-  // Step 5: Emergency Contacts (full name + gender + nationality required)
+  // Step 5: Emergency Contacts — relationship, name, gender, phone,
+  // nationality, and residence country are all required by the backend validator.
   [
     "ec1RelType",
     ...nameFields("ec1"),
     "ec1Gender",
     "ec1Phone",
     "ec1NatCountry",
+    "ec1ResCountry",
     "ec2RelType",
     ...nameFields("ec2"),
     "ec2Gender",
     "ec2Phone",
     "ec2NatCountry",
+    "ec2ResCountry",
   ],
-  // Step 6: Family — at least two relatives (full name + gender + nationality;
-  // residence is enforced conditionally in missingFields)
+  // Step 6: Family — at least two relatives (full name + dob + gender + nationality +
+  // residence country; phone is optional per backend; cascade is in missingFields)
   [
     "rel1RelType",
     ...nameFields("rel1"),
+    "rel1Dob",
     "rel1Gender",
-    "rel1Phone",
     "rel1NatCountry",
+    "rel1ResCountry",
     "rel2RelType",
     ...nameFields("rel2"),
+    "rel2Dob",
     "rel2Gender",
-    "rel2Phone",
     "rel2NatCountry",
+    "rel2ResCountry",
   ],
   // Step 7: Referees (print only — no required fields)
   [],
@@ -154,6 +160,10 @@ const PERSONAL_LOCK = [
 // Dependents inherit (and cannot edit) the account holder's contact details.
 const CONTACT_LOCK = ["phone", "email"];
 
+// Allowed characters in any name field (First / Middle / Last).
+// Covers Unicode letters, spaces, hyphens and apostrophes (straight + curly).
+const NAME_RE = /^[\p{L} '’ʼ-]+$/u;
+
 function isFutureDate(dob: string): boolean {
   const parts = dob.split("-").map(Number);
   if (parts.length !== 3 || parts.some(Number.isNaN)) return false;
@@ -164,7 +174,7 @@ function isFutureDate(dob: string): boolean {
   return birth.getTime() > today.getTime();
 }
 
-function isAtLeast18(dob: string): boolean {
+function isAtLeastAge(dob: string, minAge: number): boolean {
   const birth = new Date(dob);
   if (Number.isNaN(birth.getTime())) return false;
   const today = new Date();
@@ -173,8 +183,10 @@ function isAtLeast18(dob: string): boolean {
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  return age >= 18;
+  return age >= minAge;
 }
+function isAtLeast18(dob: string): boolean { return isAtLeastAge(dob, 18); }
+function isAtLeast16(dob: string): boolean { return isAtLeastAge(dob, 16); }
 
 /** True when `olderDob` is at least `years` years before `youngerDob`. Unknown/
  * unparseable dates pass (the check is skipped). */
@@ -268,6 +280,10 @@ export default function RegistryWizard({
   // blocks the FIRST load; later visits already have the data, so it never
   // reappears (the refresh then happens silently behind the populated form).
   const hydratedStages = useRef<Set<number>>(new Set());
+  // documentTypeId values for NIDA and TIN, cached so blur() can distinguish
+  // them from other doc types synchronously without an async lookup.
+  const nidaTypeIds = useRef<Set<number>>(new Set());
+  const tinTypeIds  = useRef<Set<number>>(new Set());
   // Readable labels of the fields the user skipped on the current step, shown
   // so they know specifically what to go back and fill.
   const [applicationId, setApplicationId] = useState(
@@ -341,6 +357,28 @@ export default function RegistryWizard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, subjectId]);
+
+  // Pre-load NIDA and TIN type IDs once so blur() can validate them
+  // synchronously without an async lookup on every keystroke.
+  useEffect(() => {
+    getPersonDocumentTypes()
+      .then((types) => {
+        const nida = new Set<number>();
+        const tin  = new Set<number>();
+        for (const docs of Object.values(types)) {
+          for (const d of docs) {
+            const code = (d.code ?? "").toUpperCase();
+            const name = (d.name ?? "").toUpperCase();
+            if (code.includes("NIDA") || name.includes("NIDA")) nida.add(d.id);
+            if (/\bTIN\b/.test(code) || /\bTIN\b/.test(name))  tin.add(d.id);
+          }
+        }
+        nidaTypeIds.current = nida;
+        tinTypeIds.current  = tin;
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // When errors are raised, shift focus to where the problem is: scroll the
   // topmost invalid field into view and focus it (so the user lands exactly on
@@ -428,10 +466,11 @@ export default function RegistryWizard({
     setData((d) => (d[name] === value ? d : { ...d, [name]: value }));
   };
 
-  // Real-time blur validation: marks a field invalid immediately when the user
-  // leaves it empty (if it is required for the current step) or with a bad
-  // email format. Errors added here are cleared normally by set() as the user
-  // corrects the field, so there is no double-flash or flickering.
+  // Real-time blur validation. Runs when the user leaves any field.
+  // Empty fields → required check. Non-empty fields → type-specific format rules.
+  // Errors are cleared automatically by set() as the user types, so there is no
+  // flickering. Every message here is a friendly frontend string — never raw
+  // backend text.
   const blur = (name: string, currentValue?: string) => {
     const v =
       currentValue !== undefined
@@ -439,21 +478,173 @@ export default function RegistryWizard({
         : typeof data[name] === "string"
           ? (data[name] as string)
           : "";
-    const empty = !v.trim();
+    const trimmed = v.trim();
+    const empty = !trimmed;
+
+    // ── Identification document number — handled before the generic empty block ─
+    // The number field is only visible when a type is selected. Validate as a
+    // unit: required when a type is chosen, and format-checked when non-empty.
+    if (/IdDoc\d+Number$/i.test(name)) {
+      const typeKey = name.replace(/Number$/, "Type");
+      const typeId = Number(String(data[typeKey] ?? ""));
+      if (!typeId) return; // no type selected → field hidden → nothing to validate
+      if (empty) {
+        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        setFieldErrors((fe) => ({ ...fe, [name]: t("flabel.docNumberReq") }));
+        return;
+      }
+      const isNida = nidaTypeIds.current.has(typeId);
+      const isTin  = tinTypeIds.current.has(typeId);
+      const flag = (msg: string) => {
+        setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        setFieldErrors((fe) => ({ ...fe, [name]: msg }));
+      };
+      if (isNida) {
+        if (trimmed.length !== 20) flag(t("registry.nidaExactDigits"));
+      } else if (isTin) {
+        // TIN: 9 digits (Business) or 10 digits (Individual), all numeric.
+        if (!/^\d+$/.test(trimmed) || (trimmed.length !== 9 && trimmed.length !== 10)) {
+          flag(t("registry.tinInvalid"));
+        }
+      } else if (trimmed.length < 3) {
+        flag(t("registry.docNumberTooShort"));
+      }
+      return;
+    }
+
+    // ── Empty: required check ────────────────────────────────────────────────
     if (empty) {
       const required = REQUIRED_FIELDS[step - 1] ?? [];
       if (required.includes(name)) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
       }
+      // Step 4 conditional required fields
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      if (step === 4) {
+        // Only mark the blurred field — no cross-field pre-marking so the user
+        // doesn't see errors on fields they haven't visited yet.
+        if (jobStatus === "employed" && (name === "occupation" || name === "employer")) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        if (jobStatus === "self-employed" && name === "selfOccupation") {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        if (
+          data.neverAttendedSchool !== true &&
+          /^edu\d+(Level|School|District)$/.test(name)
+        ) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+        const yearMatch = name.match(/^edu(\d+)Year$/);
+        if (yearMatch && data[`edu${yearMatch[1]}Completed`] === true) {
+          setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+      }
+      // Step 6 conditional required fields — spouses need all person fields + phone;
+      // children need all person fields except phone (ChildItemRequest has no phoneNumber).
+      // Guard against stale closure values from picker components (e.g. CountryMenu
+      // auto-focuses its search input on mount, firing onBlur on the picker button
+      // with the previous empty countryName before onChange has updated the data).
+      if (step === 6) {
+        const live = typeof data[name] === "string" ? (data[name] as string).trim() : "";
+        if (!live) {
+          if (data.isMarried === true && /^sp\d+(First|Middle|Last|Dob|Gender|Phone|NatCountry|ResCountry)$/.test(name))
+            setErrors((e) => (e.includes(name) ? e : [...e, name]));
+          if (data.hasChildren === true && /^ch\d+(First|Middle|Last|Dob|Gender|NatCountry|ResCountry)$/.test(name))
+            setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+      }
       return;
     }
-    // Email format — only relevant at Step 1.
+
+    // ── Non-empty: format / length rules ────────────────────────────────────
+
+    const flag = (msg: string) => {
+      setErrors((e) => (e.includes(name) ? e : [...e, name]));
+      setFieldErrors((fe) => ({ ...fe, [name]: msg }));
+    };
+
+    // 1. Phone number — must satisfy country-specific length
+    if (name === "phone" || name.endsWith("Phone")) {
+      if (!isPhoneComplete(trimmed)) flag(t("fields.phoneInvalid"));
+      return;
+    }
+
+    // 2. Email — standard format
     if (name === "email") {
-      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!EMAIL_RE.test(v.trim())) {
-        setErrors((e) => (e.includes("email") ? e : [...e, "email"]));
-        setFieldErrors((fe) => ({ ...fe, email: t("form.emailInvalid") }));
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) flag(t("form.emailInvalid"));
+      return;
+    }
+
+    // 3. Name fields (First / Middle / Last) — letters, spaces, hyphens, apostrophes
+    if (name.endsWith("First") || name.endsWith("Middle") || name.endsWith("Last")) {
+      if (trimmed.length < 2) { flag(t("registry.nameTooShort")); return; }
+      if (!NAME_RE.test(trimmed))  { flag(t("registry.nameInvalid")); return; }
+      return;
+    }
+
+    // 4. Date of birth fields — no future dates; age minimums per person type
+    if (name === "dob" || name.endsWith("Dob")) {
+      if (isFutureDate(trimmed)) { flag(t("registry.futureDateError")); return; }
+      if (/^ec\d+Dob$/.test(name) && !isAtLeast18(trimmed)) {
+        flag(t("registry.ecAgeError"));
       }
+      if (/^sp\d+Dob$/.test(name) && !isAtLeast16(trimmed)) {
+        flag(t("registry.spouseAgeError"));
+      }
+      // Applicant dob age rule is handled live by validateDob() via set()
+      return;
+    }
+
+    // 5. Employer, self-employment occupation, school name / district — min 2 chars
+    if (name === "employer" || name === "selfOccupation" || /^edu\d+(School|District)$/.test(name)) {
+      if (trimmed.length < 2) flag(t("registry.textTooShort"));
+      return;
+    }
+
+    // 6. City / village text fields — only rendered when the paired country is a
+    // non-Tanzania foreign country. Conditionally required + min 2 characters.
+    {
+      const geoCountryKey: string | null = (() => {
+        if (name === "pobCityVillage") return "pobCountry";
+        if (name === "permCity")       return "permCountry";
+        if (name === "curCity")        return data.sameAsPerm === true ? null : "curCountry";
+        // "{prefix}Village" → country at "{prefix}PobCountry"  (e.g. fatherVillage)
+        if (name.endsWith("Village"))  return `${name.slice(0, -7)}PobCountry`;
+        // "{prefix}ResCity" → country at "{prefix}ResCountry"  (e.g. ec1ResCity)
+        if (name.endsWith("ResCity"))  return `${name.slice(0, -7)}ResCountry`;
+        return null;
+      })();
+      if (geoCountryKey !== null) {
+        const country = String(data[geoCountryKey] ?? "").trim();
+        // Only validate when a non-Tanzania country is selected (field is visible).
+        if (country && country !== "Tanzania") {
+          if (empty) {
+            setErrors((e) => (e.includes(name) ? e : [...e, name]));
+            setFieldErrors((fe) => ({ ...fe, [name]: t("fields.fieldRequired") }));
+          } else if (trimmed.length < 2) {
+            flag(t("registry.textTooShort"));
+          }
+        }
+        return;
+      }
+    }
+
+    // 7. Education completion year — must be a year between birth year and today
+    if (/^edu\d+Year$/.test(name)) {
+      const yr = Number(trimmed);
+      const currentYear = new Date().getFullYear();
+      const dobStr = typeof data.dob === "string" ? data.dob : "";
+      const birthYear = dobStr ? new Date(dobStr).getFullYear() : 1900;
+      const minYear = Number.isFinite(birthYear) && birthYear > 1900 ? birthYear : 1900;
+      if (!Number.isFinite(yr) || yr < minYear || yr > currentYear) {
+        flag(
+          t("registry.completionYearRange")
+            .replace("{min}", String(minYear))
+            .replace("{year}", String(currentYear)),
+        );
+      }
+      return;
     }
   };
 
@@ -611,6 +802,18 @@ export default function RegistryWizard({
   const agreed = data.agree === true;
   const StepComponent = STEP_COMPONENTS[step - 1];
 
+  // Returns only the FIRST incomplete level of a Tanzania cascade so that
+  // errors never appear on fields that are still disabled (Region can't be
+  // picked before Territory, District before Region, etc.).
+  function cascadeRequired(pfx: string, needsStreet: boolean): string[] {
+    if (!Number(data[`${pfx}TerritoryId`]))                               return [`${pfx}Territory`];
+    if (!Number(data[`${pfx}RegionId`]))                                  return [`${pfx}Region`];
+    if (!Number(data[`${pfx}DistrictId`]))                                return [`${pfx}District`];
+    if (!Number(data[`${pfx}WardId`]))                                    return [`${pfx}Ward`];
+    if (needsStreet && !String(data[`${pfx}StreetId`] ?? "").trim())      return [`${pfx}Street`];
+    return [];
+  }
+
   function missingFields() {
     let required = REQUIRED_FIELDS[step - 1];
 
@@ -620,7 +823,7 @@ export default function RegistryWizard({
     if (step === 1) {
       const pobIsTz = data.pobCountry === "Tanzania";
       if (pobIsTz) {
-        required = [...required, "pobTerritory", "pobWard", "pobStreet"];
+        required = [...required, ...cascadeRequired("pob", true)];
       } else if (data.pobCountry) {
         // Foreign births: drop the TZ cascade fields and require the free-text
         // city of birth instead (the /foreign endpoint rejects a blank one).
@@ -630,25 +833,33 @@ export default function RegistryWizard({
         // No country picked yet — require the country itself.
         // (pobCountry is already in the base REQUIRED_FIELDS list.)
       }
+      // Marriage is hidden for all non-first-person registrations (forceSingle=true)
+      // and auto-set to Single — remove it so a slow lookup doesn't falsely block.
+      if (!isFirstPerson) {
+        required = required.filter((n) => n !== "marriage");
+      }
     }
 
 
     // Step 2: Region/District/Ward only apply to Tanzania — they're hidden for
     // other countries, so don't require them there.
     if (step === 2) {
+      const permCascadeStatic = ["permRegion", "permDistrict", "permWard"];
       const permIsTz = data.permCountry === "Tanzania";
       if (permIsTz) {
-        // Territory is part of the cascade — require it alongside region/district/ward.
-        required = [...required, "permTerritory"];
-      } else if (!permIsTz && data.permCountry) {
+        // Strip the static cascade fields and let cascadeRequired pick the first missing level.
+        required = required.filter((n) => !permCascadeStatic.includes(n));
+        required = [...required, ...cascadeRequired("perm", false)];
+      } else if (data.permCountry) {
         // Foreign permanent address: drop the TZ cascade, require the city.
         required = [
-          ...required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n)),
+          ...required.filter((n) => !permCascadeStatic.includes(n)),
           "permCity",
         ];
-      } else if (!data.permCountry) {
-        // No country selected yet — drop cascade requirements.
-        required = required.filter((n) => !["permRegion", "permDistrict", "permWard"].includes(n));
+      } else {
+        // No country selected yet — drop cascade requirements; permCountry is
+        // already in the base REQUIRED_FIELDS list so the user sees that error.
+        required = required.filter((n) => !permCascadeStatic.includes(n));
         required = [...required, "permCountry"];
       }
       // The current address (when not linked) needs its own R/D/W in Tanzania,
@@ -656,7 +867,7 @@ export default function RegistryWizard({
       if (data.sameAsPerm !== true) {
         const curIsTz = data.curCountry === "Tanzania";
         if (curIsTz) {
-          required = [...required, "curTerritory", "curRegion", "curDistrict", "curWard"];
+          required = [...required, ...cascadeRequired("cur", false)];
         } else if (data.curCountry) {
           required = [...required, "curCity"];
         } else {
@@ -665,31 +876,25 @@ export default function RegistryWizard({
       }
     }
 
-    // Step 3: Parents' place of birth + residence are mandatory. Each is a
-    // cascade — Tanzania needs the Ward (+ Street for residence); abroad needs
-    // the country + the free-text city/village. No country = require it.
+    // Step 3: Parents' residence is mandatory — Tanzania needs Ward + Street;
+    // abroad needs the country + free-text city. No country = require it.
     if (step === 3) {
       for (const p of ["father", "mother"]) {
-        const pobCountry = typeof data[`${p}PobCountry`] === "string" ? (data[`${p}PobCountry`] as string).trim() : "";
-        if (pobCountry === "Tanzania") {
-          // Every level of the cascade is reported (including territory), so the
-          // user sees exactly which one is missing.
-          required = [...required, `${p}PobTerritory`, `${p}PobRegion`, `${p}PobDistrict`, `${p}PobWard`, `${p}PobStreet`];
-        } else if (pobCountry) {
-          required = [...required, `${p}Village`];
-        } else {
-          required = [...required, `${p}PobCountry`];
-        }
-
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, ...cascadeRequired(`${p}Res`, true)];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
           required = [...required, `${p}ResCountry`];
         }
       }
+    }
+
+    // Step 4: Employment is hidden for minors and auto-set to "Student".
+    // !isFirstPerson is the definitive check (all dependents must be under 18).
+    if (step === 4 && !isFirstPerson) {
+      required = required.filter((n) => n !== "jobStatus");
     }
 
     // Step 5: Emergency contacts' residence is mandatory; place of birth is
@@ -698,7 +903,7 @@ export default function RegistryWizard({
       for (const p of ["ec1", "ec2"]) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, ...cascadeRequired(`${p}Res`, true)];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -707,14 +912,32 @@ export default function RegistryWizard({
       }
     }
 
-    // Step 6: Relatives' residence is mandatory — Tanzania needs Ward + Street,
-    // abroad needs City (the two mandatory relatives, rel1/rel2). No country =
-    // require it.
+    // Step 6: conditional required fields for spouses and children, plus
+    // residence cascade for relatives (mandatory), spouses, and children.
     if (step === 6) {
-      for (const p of ["rel1", "rel2"]) {
+      const SP_FIELDS = ["First", "Middle", "Last", "Dob", "Gender", "Phone", "NatCountry"];
+      const CH_FIELDS = ["First", "Middle", "Last", "Dob", "Gender", "NatCountry"];
+      const residencePrefixes: string[] = ["rel1", "rel2"];
+      if (data.isMarried === true) {
+        const spCount = Math.max(1, Number(data.spouseCount) || 1);
+        for (let i = 1; i <= spCount; i++) {
+          const p = `sp${i}`;
+          required = [...required, ...SP_FIELDS.map((s) => `${p}${s}`)];
+          residencePrefixes.push(p);
+        }
+      }
+      if (data.hasChildren === true) {
+        const chCount = Math.max(1, Number(data.childCount) || 1);
+        for (let i = 1; i <= chCount; i++) {
+          const p = `ch${i}`;
+          required = [...required, ...CH_FIELDS.map((s) => `${p}${s}`)];
+          residencePrefixes.push(p);
+        }
+      }
+      for (const p of residencePrefixes) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
-          required = [...required, `${p}ResTerritory`, `${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`];
+          required = [...required, ...cascadeRequired(`${p}Res`, true)];
         } else if (resCountry) {
           required = [...required, `${p}ResCity`];
         } else {
@@ -893,18 +1116,74 @@ export default function RegistryWizard({
     }
 
     // Some backend validation messages name the rejected value but not the
-    // field — e.g. "Document number may only contain … (received: 'lkjhgjkl;')".
-    // When nothing else mapped, locate the form field whose current value is
-    // exactly that rejected value and pin the message there.
+    // field — e.g. "Only letters … allowed (received: '-')". Locate the form
+    // field whose current value matches and pin a FRIENDLY frontend message
+    // there (never the raw backend text, which leaks internal field names and
+    // is not suitable to display to users).
     if (Object.keys(apiFieldErrors).length === 0) {
       const received = message.match(/received:\s*'([^']*)'/i)?.[1];
-      if (received) {
+      if (received !== undefined) {
         const hit = Object.entries(data).find(
           ([, v]) => typeof v === "string" && v === received,
         );
-        if (hit) apiFieldErrors[hit[0]] = message;
+        if (hit) {
+          const [fieldName] = hit;
+          let friendlyMsg: string;
+          if (fieldName.endsWith("First") || fieldName.endsWith("Middle") || fieldName.endsWith("Last")) {
+            friendlyMsg = locked.includes(fieldName)
+              ? t("registry.profileNameInvalid")
+              : t("registry.nameInvalid");
+          } else if (fieldName === "email") {
+            friendlyMsg = t("form.emailInvalid");
+          } else if (fieldName === "phone" || fieldName.endsWith("Phone")) {
+            friendlyMsg = t("fields.phoneInvalid");
+          } else if (/IdDoc\d+Number$/i.test(fieldName)) {
+            const tKey = fieldName.replace(/Number$/, "Type");
+            const tId = Number(String(data[tKey] ?? ""));
+            friendlyMsg = nidaTypeIds.current.has(tId)
+              ? t("registry.nidaExactDigits")
+              : tinTypeIds.current.has(tId)
+                ? t("registry.tinInvalid")
+                : t("flabel.docNumberReq");
+          } else {
+            friendlyMsg = t("fields.isRequired").replace("{field}", fieldName);
+          }
+          apiFieldErrors[fieldName] = friendlyMsg;
+        }
       }
     }
+
+    // Replace any raw backend messages that came through mapApiFieldErrors with
+    // friendly frontend equivalents based on field type.
+    for (const [fieldName, msg] of Object.entries(apiFieldErrors)) {
+      // Only sanitise messages that look like backend technical output
+      // (contain "received:", field path syntax like "firstName:", or are very
+      // long). User-facing messages are typically short and contain no colons.
+      const looksRaw = /received:|^\w+\.\w+:|^[a-z]+[A-Z]/.test(msg) || msg.length > 120;
+      if (!looksRaw) continue;
+      if (fieldName.endsWith("First") || fieldName.endsWith("Middle") || fieldName.endsWith("Last")) {
+        apiFieldErrors[fieldName] = locked.includes(fieldName)
+          ? t("registry.profileNameInvalid")
+          : t("registry.nameInvalid");
+      } else if (fieldName === "email") {
+        apiFieldErrors[fieldName] = t("form.emailInvalid");
+      } else if (fieldName === "phone" || fieldName.endsWith("Phone")) {
+        apiFieldErrors[fieldName] = t("fields.phoneInvalid");
+      } else if (/IdDoc\d+Number$/i.test(fieldName)) {
+        const tKey = fieldName.replace(/Number$/, "Type");
+        const tId = Number(String(data[tKey] ?? ""));
+        apiFieldErrors[fieldName] = nidaTypeIds.current.has(tId)
+          ? t("registry.nidaExactDigits")
+          : tinTypeIds.current.has(tId)
+            ? t("registry.tinInvalid")
+            : t("flabel.docNumberReq");
+      } else {
+        // Generic fallback — tell the user something is wrong with this field
+        // without showing the technical backend detail.
+        apiFieldErrors[fieldName] = t("fields.fieldRequired");
+      }
+    }
+
     const fieldKeys = Object.keys(apiFieldErrors);
     if (fieldKeys.length > 0) {
       setFieldErrors(apiFieldErrors);
@@ -929,6 +1208,22 @@ export default function RegistryWizard({
       types = await getPersonDocumentTypes();
     } catch {
       return null;
+    }
+    // Keep the synchronous caches in sync so blur() can validate immediately
+    // after the first submit attempt (types may load after the mount effect).
+    if (nidaTypeIds.current.size === 0 || tinTypeIds.current.size === 0) {
+      const nida = new Set<number>();
+      const tin  = new Set<number>();
+      for (const docs of Object.values(types)) {
+        for (const d of docs) {
+          const code = (d.code ?? "").toUpperCase();
+          const name = (d.name ?? "").toUpperCase();
+          if (code.includes("NIDA") || name.includes("NIDA")) nida.add(d.id);
+          if (/\bTIN\b/.test(code) || /\bTIN\b/.test(name))  tin.add(d.id);
+        }
+      }
+      if (nidaTypeIds.current.size === 0) nidaTypeIds.current = nida;
+      if (tinTypeIds.current.size  === 0) tinTypeIds.current  = tin;
     }
     for (const { group, prefix } of groups) {
       // Detect NIDA the same way the dropdowns label it — by name OR code — so a
@@ -966,10 +1261,7 @@ export default function RegistryWizard({
         const sp = Math.max(1, Number(String(data.spouseCount ?? "")) || 1);
         for (let i = 1; i <= sp; i++) out.push(`sp${i}Phone`);
       }
-      if (data.hasChildren === true) {
-        const ch = Math.max(1, Number(String(data.childCount ?? "")) || 1);
-        for (let i = 1; i <= ch; i++) out.push(`ch${i}Phone`);
-      }
+      // Children have no phone field (ChildItemRequest has no phoneNumber)
       return out;
     }
     return [];
@@ -999,6 +1291,35 @@ export default function RegistryWizard({
       setFormError("");
       return;
     }
+
+    // Pre-submit: validate every filled name field with frontend rules so the
+    // user never sees a raw backend "received: '-'" message.
+    {
+      const nameErrors: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (typeof v !== "string") continue;
+        if (!(k.endsWith("First") || k.endsWith("Middle") || k.endsWith("Last"))) continue;
+        const trimmed = v.trim();
+        if (!trimmed) continue; // already caught by missingFields()
+        if (trimmed.length < 2) {
+          nameErrors[k] = t("registry.nameTooShort");
+        } else if (!NAME_RE.test(trimmed)) {
+          // Locked fields (profile name) need a special message directing the
+          // user to fix their profile, not the form field.
+          nameErrors[k] = locked.includes(k)
+            ? t("registry.profileNameInvalid")
+            : t("registry.nameInvalid");
+        }
+      }
+      const nameErrKeys = Object.keys(nameErrors);
+      if (nameErrKeys.length > 0) {
+        setErrors(nameErrKeys);
+        setFieldErrors(nameErrors);
+        setFormError("");
+        return;
+      }
+    }
+
     if (step === 1) {
       // Each check below pins the message to its own field (no banner).
       // Email must be a valid format.
@@ -1041,6 +1362,28 @@ export default function RegistryWizard({
         return;
       }
 
+      // Each selected document type must have a number entered.
+      const docCount1 = Math.max(1, Number(String(data.idDocCount ?? "")) || 1);
+      for (let n = 1; n <= docCount1; n++) {
+        const typeId = Number(String(data[`idDoc${n}Type`] ?? ""));
+        if (!typeId) continue;
+        const num = String(data[`idDoc${n}Number`] ?? "").trim();
+        const field = `idDoc${n}Number`;
+        if (!num) {
+          setErrors([field]);
+          setFieldErrors({ [field]: t("flabel.docNumberReq") });
+          setFormError("");
+          return;
+        }
+        if (tinTypeIds.current.has(typeId)) {
+          if (!/^\d+$/.test(num) || (num.length !== 9 && num.length !== 10)) {
+            setErrors([field]); setFieldErrors({ [field]: t("registry.tinInvalid") }); setFormError(""); return;
+          }
+        } else if (!nidaTypeIds.current.has(typeId) && num.length < 3) {
+          setErrors([field]); setFieldErrors({ [field]: t("registry.docNumberTooShort") }); setFormError(""); return;
+        }
+      }
+
       // NIDA (optional) must be exactly 20 digits when provided.
       const nidaField = await nidaLengthError([{ group: "applicant", prefix: "" }]);
       if (nidaField) {
@@ -1051,8 +1394,31 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 3 — each parent's NIDA document must be exactly 20 digits when given.
+    // Stage 3 — each parent's document number required when type is selected; NIDA
+    // must be exactly 20 digits.
     if (step === 3) {
+      for (const pfx of ["father", "mother"]) {
+        const count = Math.max(1, Number(String(data[`${pfx}IdDocCount`] ?? "")) || 1);
+        for (let n = 1; n <= count; n++) {
+          const typeId = Number(String(data[`${pfx}IdDoc${n}Type`] ?? ""));
+          if (!typeId) continue;
+          const num = String(data[`${pfx}IdDoc${n}Number`] ?? "").trim();
+          const field = `${pfx}IdDoc${n}Number`;
+          if (!num) {
+            setErrors([field]);
+            setFieldErrors({ [field]: t("flabel.docNumberReq") });
+            setFormError("");
+            return;
+          }
+          if (tinTypeIds.current.has(typeId)) {
+            if (!/^\d+$/.test(num) || (num.length !== 9 && num.length !== 10)) {
+              setErrors([field]); setFieldErrors({ [field]: t("registry.tinInvalid") }); setFormError(""); return;
+            }
+          } else if (!nidaTypeIds.current.has(typeId) && num.length < 3) {
+            setErrors([field]); setFieldErrors({ [field]: t("registry.docNumberTooShort") }); setFormError(""); return;
+          }
+        }
+      }
       const nidaField = await nidaLengthError([
         { group: "father", prefix: "father" },
         { group: "mother", prefix: "mother" },
@@ -1211,7 +1577,7 @@ export default function RegistryWizard({
     }
 
     // Stage 4: self-employed must provide a text occupation (mandatory).
-    if (step === 4 && String(data.jobStatus ?? "") === "Self-employed") {
+    if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "self-employed") {
       const occ = typeof data.selfOccupation === "string" ? data.selfOccupation.trim() : "";
       if (!occ) {
         setErrors(["selfOccupation"]);
@@ -1221,8 +1587,15 @@ export default function RegistryWizard({
       }
     }
 
-    // Stage 4: employed must provide an employer (mandatory).
+    // Stage 4: employed must provide an occupation type and an employer (both mandatory).
     if (step === 4 && String(data.jobStatus ?? "").toLowerCase() === "employed") {
+      const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
+      if (!occ) {
+        setErrors(["occupation"]);
+        setFieldErrors({ occupation: t("fields.isRequired").replace("{field}", t("fields.occupation")) });
+        setFormError("");
+        return;
+      }
       const emp = typeof data.employer === "string" ? data.employer.trim() : "";
       if (!emp) {
         setErrors(["employer"]);
@@ -1258,7 +1631,7 @@ export default function RegistryWizard({
         if (!filled(`${p}First`)) continue;
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         const residence = resCountry === "Tanzania"
-          ? [`${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`]
+          ? cascadeRequired(`${p}Res`, true)
           : resCountry
             ? [`${p}ResCity`]
             : [`${p}ResCountry`];
@@ -1298,7 +1671,7 @@ export default function RegistryWizard({
         if (!filled(`${p}First`)) continue;
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         const residence = resCountry === "Tanzania"
-          ? [`${p}ResRegion`, `${p}ResDistrict`, `${p}ResWard`, `${p}ResStreet`]
+          ? cascadeRequired(`${p}Res`, true)
           : resCountry
             ? [`${p}ResCity`]
             : [`${p}ResCountry`];

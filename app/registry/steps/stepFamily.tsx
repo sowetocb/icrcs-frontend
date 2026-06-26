@@ -24,29 +24,36 @@ const MIN_SPOUSES = 1;
 const MIN_CHILDREN = 1;
 
 // Shared person field suffixes — used to clear a removed block.
+// Place of birth is NOT in RelatedPersonRequest or ChildItemRequest DTOs,
+// so those suffixes are not included.
 const PERSON_SUFFIXES = [
   "First", "Middle", "Last", "Dob", "Gender", "Phone", "NatCountry",
-  "PobCountry", "PobCountryId", "PobRegionId", "PobRegion", "PobDistrictId",
-  "PobDistrict", "PobWardId", "PobWard", "Village", "ResCountry", "ResCountryId",
+  "ResCountry", "ResCountryId",
   "ResRegionId", "ResRegion", "ResDistrictId", "ResDistrict", "ResWardId",
   "ResWard", "ResCity", "ResStreet", "DocType", "DocNumber", "DocFileUrl",
 ];
 const RELATIVE_SUFFIXES = ["RelType", "OccType", ...PERSON_SUFFIXES];
 const SPOUSE_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
-// Children use the same inputs as spouses.
 const CHILD_SUFFIXES = ["OccType", ...PERSON_SUFFIXES];
 
-/** The common person inputs shared by relatives and spouses. */
-function PersonFields({ prefix }: { prefix: string }) {
+/**
+ * Common person fields for relatives, spouses, and children.
+ * - POB is excluded: RelatedPersonRequest and ChildItemRequest have no POB fields.
+ * - showPhone: false for children (ChildItemRequest has no phoneNumber).
+ * - phoneRequired: false for relatives (validator only checks format if provided).
+ */
+function PersonFields({
+  prefix,
+  showPhone = true,
+  phoneRequired = true,
+}: {
+  prefix: string;
+  showPhone?: boolean;
+  phoneRequired?: boolean;
+}) {
   const { t } = useI18n();
   const { data } = useWizard();
   const genders = useGenderOptions();
-
-  // Place of birth / residence: the cascade only applies when Tanzania is
-  // explicitly picked. City/village shows only for an explicit foreign country.
-  const pobCountry = typeof data[`${prefix}PobCountry`] === "string" ? (data[`${prefix}PobCountry`] as string).trim() : "";
-  const pobIsTz = pobCountry === "Tanzania";
-  const pobIsForeign = pobCountry !== "" && !pobIsTz;
 
   const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
   const resIsTz = resCountry === "Tanzania";
@@ -56,26 +63,34 @@ function PersonFields({ prefix }: { prefix: string }) {
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={100} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={15} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={100} />
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className={`grid grid-cols-1 gap-4 ${showPhone ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <Field label={t("fields.dob")} required>
           <DateInput name={`${prefix}Dob`} />
         </Field>
         <Field label={t("fields.gender")} required>
           <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
         </Field>
-        <Field label={t("fields.phone")} required>
-          <PhoneInput name={`${prefix}Phone`} />
-        </Field>
+        {showPhone && (
+          phoneRequired ? (
+            <Field label={t("fields.phone")} required>
+              <PhoneInput name={`${prefix}Phone`} />
+            </Field>
+          ) : (
+            <Field label={t("fields.phone")} optional>
+              <PhoneInput name={`${prefix}Phone`} />
+            </Field>
+          )
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -84,18 +99,6 @@ function PersonFields({ prefix }: { prefix: string }) {
         </Field>
       </div>
 
-      {/* Place of Birth and Residence are stacked (not side by side) so the two
-          identical cascades can't be confused. */}
-      <Field label={t("fields.placeOfBirth")} optional>
-        <div className="space-y-3">
-          <WardCascade prefix={`${prefix}Pob`} showStreet={pobIsTz} />
-          {pobIsForeign && (
-            <Field label={t("fields.phVillage")}>
-              <TextInput name={`${prefix}Village`} placeholder={t("fields.phVillage")} lettersOnly maxLength={30} />
-            </Field>
-          )}
-        </div>
-      </Field>
       <Field label={t("fields.residence")} required>
         <div className="space-y-3">
           <WardCascade prefix={`${prefix}Res`} showStreet />
@@ -127,6 +130,10 @@ function PersonBlock({
   const { t } = useI18n();
   const relationships = useRelationshipTypeOptions();
   const occupations = useOccupationTypeOptions();
+  // Phone is shown for spouses and relatives (withOccupation=true) but not for children.
+  // Phone is required for spouses (not a relative) but optional for relatives.
+  const showPhone = withOccupation;
+  const phoneRequired = !withRelationship && withOccupation;
   return (
     <div className="space-y-5 rounded-xl border border-line bg-card p-5">
       <div className="flex items-center justify-between">
@@ -161,7 +168,7 @@ function PersonBlock({
         </div>
       )}
 
-      <PersonFields prefix={prefix} />
+      <PersonFields prefix={prefix} showPhone={showPhone} phoneRequired={phoneRequired} />
     </div>
   );
 }
@@ -209,17 +216,6 @@ export default function StepFamily() {
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
-
-  // A child shares the account holder's phone number — pre-fill it (only when the
-  // child's phone is still blank, so a manual edit is never overwritten).
-  useEffect(() => {
-    const holderPhone = typeof data.phone === "string" ? data.phone : "";
-    if (!holderPhone || !hasChildren) return;
-    for (let n = 1; n <= childCount; n++) {
-      if (!data[`ch${n}Phone`]) setQuiet(`ch${n}Phone`, holderPhone);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasChildren, childCount, data.phone]);
 
   function addChild() {
     set("childCount", String(childCount + 1));

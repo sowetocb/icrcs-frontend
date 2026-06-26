@@ -90,6 +90,7 @@ function CountryPicker({
   invalid,
   lookupCountries,
   onChange,
+  onBlur,
   excludeTanzania = false,
 }: {
   countryName: string;
@@ -98,6 +99,7 @@ function CountryPicker({
   invalid: boolean;
   lookupCountries: LookupItem[];
   onChange: (lookupItem: LookupItem | null, country: Country | null) => void;
+  onBlur?: () => void;
   /** When true, Tanzania is excluded from the dropdown list. */
   excludeTanzania?: boolean;
 }) {
@@ -119,6 +121,7 @@ function CountryPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        onBlur={onBlur}
         disabled={disabled}
         className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 ${
           invalid
@@ -186,7 +189,7 @@ export default function WardCascade({
   /** When true, Tanzania is excluded from the country dropdown. */
   excludeTanzania?: boolean;
 }) {
-  const { data, set, errors } = useWizard();
+  const { data, set, blur, errors } = useWizard();
   const { t } = useI18n();
 
   // The Tanzania cascade is rooted at Territory (Mainland / Zanzibar), which
@@ -270,6 +273,7 @@ export default function WardCascade({
             invalid={errors.includes(`${prefix}Country`)}
             lookupCountries={countries}
             excludeTanzania={excludeTanzania}
+            onBlur={() => blur(`${prefix}Country`, countryName)}
             onChange={(lookupItem, country) => {
               set(`${prefix}CountryId`, lookupItem ? String(lookupItem.id) : "");
               set(`${prefix}Country`, country?.name ?? "");

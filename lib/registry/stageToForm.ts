@@ -330,9 +330,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     let i = 0;
     for (const c of contacts) {
       i += 1;
-      // Merge the nested `person` (names/gender/residence) with the top-level
-      // relationship/occupation so applyPerson sees them all.
-      await applyPerson(`ec${i}`, { ...c, ...obj(c.person) });
+      // Stage 5 response is flat (no nested person sub-object). It carries a
+      // combined `fullName`, so splitFull=true splits it back into First/Middle/Last.
+      // Residence country arrives as `residenceCountryCode` (renamed from countryCode).
+      await applyPerson(`ec${i}`, c, true);
     }
     return out;
   }

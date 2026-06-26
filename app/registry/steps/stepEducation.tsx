@@ -127,10 +127,29 @@ export default function StepEducation() {
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
 
-  const bornAbroad = data.pobCountry && data.pobCountry !== "Tanzania";
-  const employmentRequired = isFirstPerson && !!bornAbroad;
   const neverAttendedSchool = data.neverAttendedSchool === true;
   const schoolCount = Math.max(MIN_SCHOOLS, Number(data.eduCount) || MIN_SCHOOLS);
+
+  // Non-first-person subjects are validated to be under 18 at Stage 1 — use that
+  // as the primary check. DOB-based fallback handles edge cases (e.g. incomplete drafts).
+  const isMinor = !isFirstPerson || (() => {
+    const dob = typeof data.dob === "string" ? data.dob : "";
+    if (!dob) return false;
+    const birth = new Date(dob);
+    if (Number.isNaN(birth.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age < 18;
+  })();
+  // Auto-select "Student" for minors so the backend's required employmentStatusId is satisfied.
+  const studentStatusValue = jobStatuses.find((o) => /student/i.test(o.label))?.value ?? "";
+  useEffect(() => {
+    if (isMinor && studentStatusValue && data.jobStatus !== studentStatusValue)
+      setQuiet("jobStatus", studentStatusValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMinor, studentStatusValue]);
 
   // "Have you attended school?" defaults to No (never attended) until answered.
   useEffect(() => {
@@ -231,34 +250,38 @@ export default function StepEducation() {
         )}
       </div>
 
-      <hr className="border-line" />
+      {!isMinor && (
+        <>
+          <hr className="border-line" />
 
-      <div className="space-y-5">
-        <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label={t("fields.employmentStatus")} required>
-            <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
-          </Field>
-          {/* Occupation & Employer only apply to the employed. The status value
-              is the lookup CODE (e.g. "Self-Employed"), so compare case-insensitively. */}
-          {String(data.jobStatus).toLowerCase() === "employed" && (
-            <>
-              <Field label={t("fields.occupation")} required>
-                <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
+          <div className="space-y-5">
+            <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Field label={t("fields.employmentStatus")} required>
+                <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
               </Field>
-              <Field label={t("fields.employer")} required>
-                <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
-              </Field>
-            </>
-          )}
-          {/* The self-employed enter a free-text occupation (max 20 chars, letters only). */}
-          {String(data.jobStatus).toLowerCase() === "self-employed" && (
-            <Field label={t("fields.occupation")} required>
-              <TextInput name="selfOccupation" placeholder={t("fields.phSelfOccupation")} lettersOnly maxLength={20} />
-            </Field>
-          )}
-        </div>
-      </div>
+              {/* Occupation & Employer only apply to the employed. The status value
+                  is the lookup CODE (e.g. "Self-Employed"), so compare case-insensitively. */}
+              {String(data.jobStatus).toLowerCase() === "employed" && (
+                <>
+                  <Field label={t("fields.occupation")} required>
+                    <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={employedOccupations} />
+                  </Field>
+                  <Field label={t("fields.employer")} required>
+                    <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
+                  </Field>
+                </>
+              )}
+              {/* The self-employed enter a free-text occupation (max 20 chars, letters only). */}
+              {String(data.jobStatus).toLowerCase() === "self-employed" && (
+                <Field label={t("fields.occupation")} required>
+                  <TextInput name="selfOccupation" placeholder={t("fields.phSelfOccupation")} lettersOnly maxLength={20} />
+                </Field>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

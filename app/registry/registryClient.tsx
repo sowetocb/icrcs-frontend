@@ -118,7 +118,7 @@ export default function RegistryClient() {
                 completed: false,
                 ownerId,
                 subjectId: remoteIncomplete.subjectId,
-                applicationId: remoteIncomplete.subjectId,
+                applicationId: remoteIncomplete.applicationId || remoteIncomplete.subjectId,
                 submittedStages: serverSubmitted,
                 data: {
                   applicantFirst: first,

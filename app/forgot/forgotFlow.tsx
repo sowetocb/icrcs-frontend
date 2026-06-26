@@ -10,6 +10,7 @@ import { getErrorMessage, ApiError } from "@/lib/api/client";
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
 // (mirrors the create-profile OTP).
 const OTP_RESEND_COOLDOWN = 180; // 10:00
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
@@ -195,7 +196,16 @@ export default function ForgotFlow() {
               value={identifier}
               maxLength={30}
               onChange={(e) => { setIdentifier(e.target.value); if (error) setError(""); }}
-              onBlur={() => { if (!identifier.trim()) setError(t("forgot.identifierRequired")); }}
+              onBlur={() => {
+                const v = identifier.trim();
+                if (!v) {
+                  setError(t("forgot.identifierRequired"));
+                } else if (v.includes("@") && !EMAIL_RE.test(v)) {
+                  setError(t("forgot.identifierInvalid"));
+                } else if (!v.includes("@") && v.replace(/\D/g, "").length < 7) {
+                  setError(t("forgot.identifierInvalid"));
+                }
+              }}
               placeholder={t("forgot.identifierPlaceholder")}
               className={inputClass}
             />

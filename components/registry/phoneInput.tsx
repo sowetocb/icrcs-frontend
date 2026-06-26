@@ -63,8 +63,16 @@ export default function PhoneInput({ name }: { name: string }) {
     // Length is validated per country from the phone-length guide; no fixed
     // leading-digit rule is imposed.
     let trimmed = natDigits.replace(/^0+/, "");
-    // Cap the national number to the selected country's maximum length.
-    trimmed = trimmed.slice(0, phoneLengthForDial(country.dial).max);
+    const dialNumeric = dial.replace(/\D/g, "");
+    const { max } = phoneLengthForDial(dial);
+    // When the user pastes a full E.164 number (e.g. "+255738997834" becomes
+    // "255738997834" after digit-only extraction), the dial prefix is already
+    // included in natDigits. Strip it so the country code is not counted against
+    // the national length cap and digits are not lost during truncation.
+    if (dialNumeric && trimmed.length > max && trimmed.startsWith(dialNumeric)) {
+      trimmed = trimmed.slice(dialNumeric.length);
+    }
+    trimmed = trimmed.slice(0, max);
     // Store empty when no national digits so the field still reads as "required".
     set(name, trimmed ? `${dial} ${chunk(trimmed)}` : "");
   }

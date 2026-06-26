@@ -125,7 +125,7 @@ export default function StepPersonal() {
   // account holder — every dependent registration (a citizen account holder's
   // dependents, or a foreign profile's Tanzanian minor) — and for any minor.
   // The account holder picks their own status.
-  const isMinor = (() => {
+  const isMinor = !isFirstPerson || (() => {
     const dob = typeof data.dob === "string" ? data.dob : "";
     if (!dob) return false;
     const birth = new Date(dob);
@@ -142,6 +142,28 @@ export default function StepPersonal() {
     if (forceSingle && singleValue && data.marriage !== singleValue) setQuiet("marriage", singleValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forceSingle, singleValue]);
+
+  // Minors only carry a birth certificate — filter the lookup to that type only.
+  const birthCertOptions = idDocTypeOptions.filter((o) => /birth/i.test(o.label));
+  const effectiveDocOptions = isMinor ? birthCertOptions : idDocTypeOptions;
+
+  // When switching to minor context (or when options first load), collapse extra
+  // documents to 1 and clear any non-birth-cert selection on document 1.
+  useEffect(() => {
+    if (!isMinor || birthCertOptions.length === 0) return;
+    const bcIds = new Set(birthCertOptions.map((o) => o.value));
+    for (let n = 2; n <= idDocCount; n++) {
+      for (const s of ID_DOC_SUFFIXES) set(`idDoc${n}${s}`, "");
+    }
+    if (idDocCount > 1) set("idDocCount", "1");
+    const doc1Type = typeof data.idDoc1Type === "string" ? data.idDoc1Type : "";
+    if (doc1Type && !bcIds.has(doc1Type)) {
+      set("idDoc1Type", "");
+      set("idDoc1Number", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMinor, birthCertOptions.length]);
+
   function addIdDoc() {
     set("idDocCount", String(idDocCount + 1));
   }
@@ -233,7 +255,7 @@ export default function StepPersonal() {
               .map((m) => (typeof data[`idDoc${m}Type`] === "string" ? (data[`idDoc${m}Type`] as string) : ""))
               .filter(Boolean),
           );
-          const availableOptions = idDocTypeOptions.filter((o) => o.value === type || !pickedElsewhere.has(o.value));
+          const availableOptions = effectiveDocOptions.filter((o) => o.value === type || !pickedElsewhere.has(o.value));
           return (
             <div key={n} className="space-y-4 rounded-xl border border-line bg-card p-4">
               {idDocCount > 1 && (
@@ -272,8 +294,8 @@ export default function StepPersonal() {
             </div>
           );
         })}
-        {/* Hide "Add" once every available document type has been used. */}
-        {idDocTypeOptions.length > 0 && idDocCount < idDocTypeOptions.length && (
+        {/* Minors have only one document type (birth cert) — hide Add entirely. */}
+        {!isMinor && effectiveDocOptions.length > 0 && idDocCount < effectiveDocOptions.length && (
           <button
             type="button"
             onClick={addIdDoc}
