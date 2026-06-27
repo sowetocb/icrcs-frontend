@@ -1,4 +1,16 @@
+import { localizeBackendMessage } from "./errorMessagesSw";
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+// The active locale is persisted by the LocaleProvider under this key. Reading it
+// here lets getErrorMessage() localize backend (English) messages without every
+// call site having to thread the locale through. (Mirrors STORAGE_KEY/DEFAULT in
+// app/i18n/localeProvider.tsx — keep in sync.)
+const LOCALE_STORAGE_KEY = "icrcs-locale";
+function activeLocale(): string {
+  if (typeof window === "undefined") return "en";
+  return window.localStorage.getItem(LOCALE_STORAGE_KEY) || "en";
+}
 
 // When tokens are stored in HttpOnly cookies (the __httponly__ stub), the
 // Authorization header must NOT be sent — the proxy reads from the cookie
@@ -195,14 +207,18 @@ export function isConnectionError(err: unknown): boolean {
   return false;
 }
 
-export function getErrorMessage(err: unknown, fallback: string): string {
+export function getErrorMessage(err: unknown, fallback: string, locale?: string): string {
+  // Backend messages arrive in English; translate known ones to Swahili so the
+  // SW UI never shows an English error. The fallback is already localized by the
+  // caller (a t() result), so it's returned as-is.
+  const localize = (m: string) => localizeBackendMessage(m, locale ?? activeLocale());
   if (err instanceof ApiError) {
     const gateway = err.status === 502 || err.status === 503 || err.status === 504;
     if (gateway || !err.message || TECHNICAL_ERROR.test(err.message)) return fallback;
-    return err.message;
+    return localize(err.message);
   }
   if (err instanceof Error && err.message && !TECHNICAL_ERROR.test(err.message)) {
-    return err.message;
+    return localize(err.message);
   }
   return fallback;
 }

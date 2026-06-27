@@ -373,6 +373,13 @@ export const ERROR_MESSAGES_SW: Record<string, string> = {
   "Child nationality must be a valid 3-letter ISO-3166-1 alpha-3 code":
     "Uraia wa mtoto lazima uwe msimbo halali wa herufi 3 wa ISO-3166-1 alpha-3",
   "Child residence address is required": "Anuani ya makazi ya mtoto inahitajika",
+  "Child residence country is required": "Nchi ya makazi ya mtoto inahitajika",
+  "Child residence country is not a valid ISO-3166-1 alpha-3 code":
+    "Nchi ya makazi ya mtoto si msimbo halali wa ISO-3166-1 alpha-3",
+  "Child residence street is required for Tanzania residence":
+    "Mtaa wa makazi ya mtoto unahitajika kwa makazi ya Tanzania",
+  "Child residence city is required for foreign residence":
+    "Jiji la makazi ya mtoto linahitajika kwa makazi ya nje ya nchi",
   "Too many children — maximum 30 allowed":
     "Watoto wengi mno — wanaoruhusiwa ni 30 kwa juu",
 
