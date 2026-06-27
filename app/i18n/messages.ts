@@ -643,7 +643,7 @@ const en = {
     nidaNumber: "NIDA Number", // REVIEW
     birthCertNo: "Birth Certificate Number", // REVIEW
     birthCertFile: "Upload Birth Certificate",
-    indexNo: "Index Number", // REVIEW
+    indexNo: "Namba ya cheti", // REVIEW
     docType: "Document Type", // REVIEW
     docNumber: "Document Number", // REVIEW
     idDocNida: "NIDA Number",
@@ -1534,7 +1534,7 @@ const sw: typeof en = {
     required: "Inahitajika", // REVIEW
     photo: "Picha", // REVIEW
     photoHint: "Pakia picha ya saizi ya pasipoti (JPG au PNG).", // REVIEW
-    photoSizeError: "Picha ni kubwa mno.", // REVIEW
+    photoSizeError: "Ukubwa wa picha usizidi 300KB.",
     photoTypeError: "Aina ya picha si sahihi.", // REVIEW
     uploadPhoto: "Pakia Picha", // REVIEW
     changePhoto: "Badilisha Picha", // REVIEW
@@ -1692,7 +1692,7 @@ const sw: typeof en = {
     a5: "Picha ya Saizi ya Pasipoti", // REVIEW
     a6: "Cheti cha Uraia / Uthibitisho / Kuachia Uraia", // REVIEW
   },
-  footer: "© 2026 Jamhuri ya Muungano wa Tanzania | Idara ya Uhamiaji",
+  footer: "© 2026 Haki zote zimehifadhiwa.",
 };
 
 export type Messages = typeof en;

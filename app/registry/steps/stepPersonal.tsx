@@ -18,22 +18,26 @@ function PhotoUpload() {
   const { t } = useI18n();
   const invalid = errors.includes("stage1PhotoData");
   const preview = (data.stage1PhotoData as string) || "";
-  const [error, setError] = useState("");
-  
+  // Store the error as a translation KEY (not the resolved string) so the
+  // message re-translates when the user switches language — a resolved string
+  // captured in state would stay in whatever locale was active at upload time.
+  const [errorKey, setErrorKey] = useState<"" | "photoTypeError" | "photoSizeError">("");
+  const error = errorKey ? t(`fields.${errorKey}`) : "";
 
   function handle(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     if (!["image/jpeg", "image/png"].includes(file.type)) {
-      setError(t("fields.photoTypeError"));
+      setErrorKey("photoTypeError");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setError(t("fields.photoSizeError"));
+    // Cap at 300KB to match the message and the app-wide photo/attachment limit.
+    if (file.size > 300 * 1024) {
+      setErrorKey("photoSizeError");
       return;
     }
-    setError("");
+    setErrorKey("");
     const reader = new FileReader();
     reader.onload = () => {
       set("stage1PhotoData", String(reader.result));
