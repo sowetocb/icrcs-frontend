@@ -573,10 +573,12 @@ export default function RegistryWizard({
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
       }
       // Conditional required fields on Step 4.
-      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      // Normalize (drop spaces/hyphens) — the stored value is the backend status
+      // name (e.g. "Self Employed"), not a fixed "self-employed" literal.
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
       if (step === 4) {
         const isEmployed = jobStatus === "employed";
-        const isSelfEmployed = jobStatus === "self-employed";
+        const isSelfEmployed = jobStatus === "selfemployed";
         if ((isEmployed || isSelfEmployed) && name === "occupation") {
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
@@ -918,7 +920,7 @@ export default function RegistryWizard({
       if (permIsTz) {
         // Strip the static cascade fields and let cascadeRequired pick the first missing level.
         required = required.filter((n) => !permCascadeStatic.includes(n));
-        required = [...required, ...cascadeRequired("perm", false)];
+        required = [...required, ...cascadeRequired("perm", true)];
       } else if (data.permCountry) {
         // Foreign permanent address: drop the TZ cascade, require the city.
         required = [
@@ -936,7 +938,7 @@ export default function RegistryWizard({
       if (data.sameAsPerm !== true) {
         const curIsTz = data.curCountry === "Tanzania";
         if (curIsTz) {
-          required = [...required, ...cascadeRequired("cur", false)];
+          required = [...required, ...cascadeRequired("cur", true)];
         } else if (data.curCountry) {
           required = [...required, "curCity"];
         } else {
@@ -1667,9 +1669,11 @@ export default function RegistryWizard({
 
     // Stage 4: validate occupation / employer fields based on employment status.
     if (step === 4) {
-      const jobStatus = String(data.jobStatus ?? "").toLowerCase();
+      // Stored value is the backend status name (e.g. "Self Employed"), so
+      // normalize (drop spaces/hyphens) before comparing.
+      const jobStatus = String(data.jobStatus ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const isEmployed = jobStatus === "employed";
-      const isSelfEmployed = jobStatus === "self-employed";
+      const isSelfEmployed = jobStatus === "selfemployed";
       if (isEmployed || isSelfEmployed) {
         const occ = typeof data.occupation === "string" ? data.occupation.trim() : "";
         if (!occ) {

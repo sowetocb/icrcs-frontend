@@ -41,7 +41,16 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-navy-700";
 const errorRing = "border-danger focus:border-danger focus:ring-danger/15";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Practical email format: a local part of letters/digits/._%+- , an @, a
+// domain of letters/digits/hyphens with at least one dot, and a ≥2-letter TLD.
+// Stricter than "anything@anything.anything" so structured junk like
+// "[[[@[[.co" is rejected, while every real-world address still passes.
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+// Characters that can legitimately appear anywhere in an email address (the
+// union of valid local-part and domain characters, plus the @). Anything else
+// is stripped as the user types so they can't enter what would never validate.
+const EMAIL_DISALLOWED = /[^A-Za-z0-9._%+\-@]/g;
 
 function FieldError({ id, message }: { id: string; message: string }) {
   return (
@@ -142,6 +151,10 @@ export default function StepDetails({
     // compound names) — no digits or other symbols.
     if (key === "firstName" || key === "middleName" || key === "lastName") {
       next = (value as string).replace(/[^\p{L} '’-]/gu, "") as RegistrationDetails[K];
+    } else if (key === "email") {
+      // Strip any character that can't appear in an email so the user can never
+      // type what wouldn't validate (e.g. brackets, quotes, spaces).
+      next = (value as string).replace(EMAIL_DISALLOWED, "") as RegistrationDetails[K];
     }
     setForm((f) => ({ ...f, [key]: next }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: false }));

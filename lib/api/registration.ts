@@ -551,7 +551,9 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
   // jobStatus is the lookup CODE (e.g. "Employed", "Self-Employed"); compare
   // case-insensitively so casing differences don't drop occupation fields.
   const job = str(data, "jobStatus");
-  const jobLower = job.toLowerCase();
+  // Normalize (drop spaces/hyphens) — the stored value is the backend status
+  // name (e.g. "Self Employed"), not a fixed "self-employed" literal.
+  const jobLower = job.toLowerCase().replace(/[^a-z0-9]/g, "");
 
   // Build education list from the dynamic school repeater (edu1…eduN).
   const educationList: Record<string, unknown>[] = [];
@@ -584,11 +586,11 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
     // lookup (sending its id). When "Other" (id 19) is chosen, the free-text
     // description rides along in otherOccupation.
     occupationTypeId:
-      jobLower === "employed" || jobLower === "self-employed"
+      jobLower === "employed" || jobLower === "selfemployed"
         ? intOrNull(data, "occupation") ?? null
         : null,
     otherOccupation:
-      (jobLower === "employed" || jobLower === "self-employed") &&
+      (jobLower === "employed" || jobLower === "selfemployed") &&
       str(data, "occupation") === "19"
         ? str(data, "otherOccupation") || null
         : null,
@@ -713,8 +715,8 @@ export async function editStage5(subjectId: string, data: Data): Promise<unknown
 // ──────────────────────────────────────────────────────────────────────────────
 
 /** Stage 6 child — a dedicated flat shape (NOT a RelatedPersonRequest): name +
- * sexId + DOB + nationality + residence. Domestic children send residenceStreetId
- * only; foreign children send residenceCountryCode + residenceCity. */
+ * sexId + DOB + nationality + residence. The backend requires residenceCountryCode
+ * in both cases; Tanzania children add residenceStreetId, foreign add residenceCity. */
 async function buildChildPayload(data: Data, prefix: string): Promise<Record<string, unknown>> {
   const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
   return {
@@ -724,12 +726,10 @@ async function buildChildPayload(data: Data, prefix: string): Promise<Record<str
     sexId: await resolveGenderId(str(data, `${prefix}Gender`)),
     dateOfBirth: str(data, `${prefix}Dob`) || null,
     nationalityCode: await resolveCountryCode(str(data, `${prefix}NatCountry`)),
+    residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
     ...(resTanzania
       ? { residenceStreetId: wardId(data, `${prefix}ResStreetId`) }
-      : {
-          residenceCountryCode: await resolveCountryCode(str(data, `${prefix}ResCountry`)),
-          residenceCity: str(data, `${prefix}ResCity`) || null,
-        }),
+      : { residenceCity: str(data, `${prefix}ResCity`) || null }),
   };
 }
 

@@ -314,7 +314,8 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
       out.otherOccupation = str(d.occupationName);
     }
     // organizationName carries the employer name (Employed only).
-    const isSelfEmployed = jobCode.toLowerCase() === "self-employed";
+    const isSelfEmployed =
+      jobCode.toLowerCase().replace(/[^a-z0-9]/g, "") === "selfemployed";
     if (d.organizationName != null && !isSelfEmployed) {
       out.employer = str(d.organizationName);
     }

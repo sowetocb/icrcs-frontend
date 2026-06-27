@@ -14,6 +14,22 @@ const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo", "Comp
 
 const OCCUPATION_OTHER_ID = "19"; // triggers free-text field
 
+// Employed AND Self-employed both pick from this narrowed occupation set
+// (matched by name against the live lookup, so the backend id is kept). "Other"
+// is now provided by the Lookup service; selecting it reveals the free-text
+// otherOccupation field.
+const ALLOWED_OCCUPATIONS = [
+  "Lawyer",
+  "Accountant",
+  "Driver",
+  "Trader/Vendor",
+  "Artisan/Craftsman",
+  "Military/Police",
+  "Other",
+];
+const normOcc = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+const ALLOWED_OCCUPATION_SET = new Set(ALLOWED_OCCUPATIONS.map(normOcc));
+
 function SchoolBlock({
   n,
   levelOptions,
@@ -109,6 +125,22 @@ export default function StepEducation() {
   const { data, set, setQuiet, isFirstPerson } = useWizard();
   const occupations = useOccupationTypeOptions();
   const jobStatuses = useEmploymentStatusOptions();
+
+  // The stored value is the backend status name (e.g. "Self Employed"), so
+  // compare on a normalized form (no spaces/hyphens) rather than a literal.
+  const jobStatus = normOcc(String(data.jobStatus));
+  const isEmployed = jobStatus === "employed";
+  const isSelfEmployed = jobStatus === "selfemployed";
+  // Both Employed and Self-employed render the same narrowed occupation set.
+  const occupationOptions = occupations.filter((o) => {
+    const n = normOcc(o.label);
+    if (!ALLOWED_OCCUPATION_SET.has(n)) return false;
+    // Two lookup rows can resolve to the label "Other": the genuine Lookup
+    // "Other" (id OCCUPATION_OTHER_ID, which reveals the free-text field) and a
+    // stale static-mapping artifact on another id. Keep only the genuine one.
+    if (n === "other") return String(o.value) === OCCUPATION_OTHER_ID;
+    return true;
+  });
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
 
@@ -245,23 +277,21 @@ export default function StepEducation() {
               <Field label={t("fields.employmentStatus")} required>
                 <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
               </Field>
-              {/* Occupation dropdown — Employed AND Self-Employed both pick from the full list */}
-              {(String(data.jobStatus).toLowerCase() === "employed" ||
-                String(data.jobStatus).toLowerCase() === "self-employed") && (
+              {/* Occupation dropdown — Employed AND Self-Employed pick from the same narrowed list */}
+              {(isEmployed || isSelfEmployed) && (
                 <Field label={t("fields.occupation")} required>
-                  <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupations} />
+                  <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupationOptions} />
                 </Field>
               )}
               {/* When "Other" (ID 19) is chosen, require a free-text description */}
-              {(String(data.jobStatus).toLowerCase() === "employed" ||
-                String(data.jobStatus).toLowerCase() === "self-employed") &&
+              {(isEmployed || isSelfEmployed) &&
                 String(data.occupation) === OCCUPATION_OTHER_ID && (
                 <Field label={t("fields.otherOccupation")} required>
                   <TextInput name="otherOccupation" placeholder={t("fields.phOtherOccupation")} lettersOnly maxLength={50} />
                 </Field>
               )}
-              {/* Organisation name — only for Employed */}
-              {String(data.jobStatus).toLowerCase() === "employed" && (
+              {/* Organisation name — only for Employed (Self-employed has none) */}
+              {isEmployed && (
                 <Field label={t("fields.employer")} required>
                   <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
                 </Field>
