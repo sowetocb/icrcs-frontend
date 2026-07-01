@@ -873,6 +873,17 @@ export async function openRefereesForm(subjectId: string): Promise<boolean> {
  * PrintableForm), so the downloaded document always matches what the backend
  * stored. Streams the PDF blob and triggers a browser download. Returns false
  * when the PDF can't be fetched (no subjectId, not submitted, backend error). */
+/** Read a Blob into a base64 `data:` URL (used so downloads work over HTTP —
+ * see downloadRegistrationReviewPdf). */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 export async function downloadRegistrationReviewPdf(
   subjectId: string,
   fileName = "Registration Form",
@@ -893,15 +904,20 @@ export async function downloadRegistrationReviewPdf(
     if (!res.ok) return false;
     const blob = await res.blob();
     if (!blob.size) return false;
-    const url = URL.createObjectURL(blob);
+    // Download via a data: URL rather than a blob: URL. When the app is served
+    // over plain HTTP, Chrome (desktop + Android) classifies a `blob:http://…`
+    // download as an "insecure download" and blocks it ("File can't be
+    // downloaded securely"). A `data:` URL is treated as part of the current
+    // document — no network scheme to flag — so it isn't blocked. (Serving the
+    // app over HTTPS is the proper end-state fix; this keeps downloads working
+    // on the internal HTTP deployment.)
+    const dataUrl = await blobToDataUrl(blob);
     const a = document.createElement("a");
-    a.href = url;
+    a.href = dataUrl;
     a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    // Revoke after the download has had time to start.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return true;
   } catch {
     return false;

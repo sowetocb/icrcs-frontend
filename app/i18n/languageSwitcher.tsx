@@ -1,33 +1,114 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { LOCALES } from "./messages";
 import { useI18n } from "./localeProvider";
 
-export default function LanguageSwitcher() {
+/** Globe + current-language dropdown (styled for the dark header). Click the
+ * trigger to reveal a light card menu listing the available languages. */
+export default function LanguageSwitcher({
+  variant = "onDark",
+}: {
+  variant?: "onDark" | "onLight";
+}) {
   const { locale, setLocale } = useI18n();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  // One segmented control: flush segments inside a single rounded, bordered
-  // container so it doesn't read as two separate buttons.
+  // Trigger colours adapt to the surface the switcher floats over: white on the
+  // navy post-login top bar, bluish (navy) on the light pre-login auth pages.
+  const triggerCls =
+    variant === "onLight"
+      ? "border-navy-700/25 bg-navy-700/5 text-navy-700 shadow-navy-900/10 hover:bg-navy-700/10"
+      : "border-white/25 bg-white/10 text-white shadow-black/40 hover:bg-white/20";
+
+  const current = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
+
+  // Close on outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="inline-flex items-center overflow-hidden rounded-lg border border-white/25 text-base leading-none shadow-lg shadow-black/60 backdrop-blur-sm">
-      {LOCALES.map(({ code, label }) => {
-        const active = locale === code;
-        return (
-          <button
-            key={code}
-            type="button"
-            onClick={() => setLocale(code)}
-            aria-pressed={active}
-            className={
-              active
-                ? "bg-[#16395c] px-5 py-2.5 font-semibold text-white"
-                : "bg-white/10 px-5 py-2.5 font-semibold text-white/90 transition hover:bg-white/20 hover:text-white"
-            }
-          >
-            {label}
-          </button>
-        );
-      })}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={current.label}
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-base font-semibold leading-none shadow-lg backdrop-blur-sm transition ${triggerCls}`}
+      >
+        {/* Globe */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
+        </svg>
+        <span className="">{current.label}</span>
+        {/* Chevron */}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          aria-label={current.label}
+          className="absolute right-0 z-50 mt-2 min-w-[9rem] overflow-hidden rounded-lg border border-line bg-card py-1 text-sm shadow-xl shadow-black/20"
+        >
+          {LOCALES.map(({ code, label }) => {
+            const active = locale === code;
+            return (
+              <li key={code} role="option" aria-selected={active}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocale(code);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-left transition ${
+                    active
+                      ? "bg-navy-700/10 font-semibold text-navy-700"
+                      : "text-ink hover:bg-surface"
+                  }`}
+                >
+                  <span>{label}</span>
+                  {active && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
