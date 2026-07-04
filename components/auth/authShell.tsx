@@ -7,6 +7,7 @@ import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
 import { ABOUT_GUIDE } from "./aboutGuide";
+import { X, ShieldCheck, ArrowRight, Info, LoaderCircle } from "lucide-react";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
@@ -50,9 +51,9 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
 
       <div className="relative z-10 flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-[#1e4d8a] to-[#0d2a52] px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-navy-700 to-navy-900 px-6 py-5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/80">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-icrcs-gold-light/80">
               {guide.systemName}
             </p>
             <h2 id="about-title" className="mt-1 font-display text-xl font-bold text-white">
@@ -65,10 +66,7 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
             aria-label={t("about.close")}
             className="shrink-0 rounded-lg p-1.5 text-white/80 transition hover:bg-white/15 hover:text-white"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -204,10 +202,7 @@ export default function AuthShell({
         }`}
       >
         <div className="flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={dark ? "text-green-300" : "text-success"} aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
+          <ShieldCheck className={dark ? "text-green-300" : "text-success"} size={14} aria-hidden="true" />
           <span className={`text-[12px] font-bold uppercase tracking-wider ${dark ? "text-white/90" : "text-navy-700"}`}>
             {t("status.heading")}
           </span>
@@ -237,15 +232,9 @@ export default function AuthShell({
             }`}
           >
             {statusLoading ? (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <LoaderCircle className="animate-spin h-4 w-4 text-white" aria-hidden="true" />
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
+              <ArrowRight size={16} aria-hidden="true" />
             )}
           </button>
         </form>
@@ -279,16 +268,16 @@ export default function AuthShell({
                 <p className={`mt-3 text-xs font-medium ${dark ? "text-white" : "text-ink"}`}>
                   {t("status.incomplete")}
                 </p>
-                <div className={`mt-2 space-y-1.5 text-left text-xs ${dark ? "text-blue-100" : "text-muted"}`}>
+                <div className={`mt-2 space-y-1.5 text-left text-xs ${dark ? "text-white/85" : "text-muted"}`}>
                   <p>
-                    <span className={dark ? "text-blue-200/70" : "text-muted"}>{t("status.atStage")}: </span>
+                    <span className={dark ? "text-white/70" : "text-muted"}>{t("status.atStage")}: </span>
                     <span className={`font-semibold ${dark ? "" : "text-ink"}`}>
                       {stage >= 1 ? `${t("registry.s" + stage + "Tag").split(" - ")[0]} — ` : ""}
                       {stageName(stage)}
                     </span>
                   </p>
                   <p>
-                    <span className={dark ? "text-blue-200/70" : "text-muted"}>{t("status.nextStage")}: </span>
+                    <span className={dark ? "text-white/70" : "text-muted"}>{t("status.nextStage")}: </span>
                     <span className={`font-semibold ${dark ? "text-green-200" : "text-success"}`}>
                       {`${t("registry.s" + (stage + 1) + "Tag").split(" - ")[0]} — `}
                       {stageName(stage + 1)}
@@ -297,7 +286,7 @@ export default function AuthShell({
                 </div>
               </>
             ) : (
-              <p className={`mt-3 text-xs leading-relaxed ${dark ? "text-blue-200/80" : "text-muted"}`}>
+              <p className={`mt-3 text-xs leading-relaxed ${dark ? "text-icrcs-gold-light/80" : "text-muted"}`}>
                 {t("status.hint")}
               </p>
             )}
@@ -317,11 +306,7 @@ export default function AuthShell({
           : "border-line bg-surface text-navy-700 hover:bg-line/40"
       }`}
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-      </svg>
+      <Info size={15} aria-hidden="true" />
       {t("about.trigger")}
     </button>
   );
@@ -333,7 +318,9 @@ export default function AuthShell({
       <div className="fixed inset-0 bg-gradient-to-br from-white/60 via-white/40 to-white/60 backdrop-blur-[2px]" />
 
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
-      <header className="relative z-20 border-b border-white/10 bg-[#16395c]">
+      <header className="relative z-20 border-b border-white/10 bg-navy-700">
+        {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
+        <div className="h-1.5 w-full bg-gold" aria-hidden="true" />
         <div className="mx-auto flex w-full max-w-7xl items-center gap-5 px-6 py-5 sm:gap-8">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -389,7 +376,7 @@ export default function AuthShell({
             check + "About ICRCS" are rendered below the form instead. */}
         <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
-          <div className="hidden w-[42%] flex-col items-center justify-start gap-5 bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] px-6 py-8 md:flex">
+          <div className="hidden w-[42%] flex-col items-center justify-start gap-5 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-6 py-8 md:flex">
             {/* Immigration emblem + branding — on top. The emblem sits on a light
                 pad so its blue ribbons and gold lettering stay legible against
                 the deep-blue panel. */}
@@ -405,7 +392,7 @@ export default function AuthShell({
                 />
               </div>
               {/* <div className="mt-5 text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-200/80">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-icrcs-gold-light/80">
                   {t("brand.country")}
                 </p>
                 <p className="mt-1 font-display text-base font-bold text-white">
@@ -429,7 +416,7 @@ export default function AuthShell({
                 check (login only) + About ICRCS live here, below the form and
                 above the footer. Wrapped in the same deep-blue panel so they
                 keep their bluish look on the white card. */}
-            <div className="mt-6 space-y-3 rounded-2xl bg-gradient-to-br from-[#1e4d8a] via-[#1a3d6e] to-[#0d2a52] p-4 md:hidden">
+            <div className="mt-6 space-y-3 rounded-2xl bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 p-4 md:hidden">
               {showStatusCheck && renderStatusCheck(true)}
               {renderAbout(true)}
             </div>

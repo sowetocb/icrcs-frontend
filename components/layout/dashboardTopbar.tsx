@@ -147,7 +147,7 @@ export default function DashboardTopbar() {
             className="h-18 w-18 object-contain"
           />
           <div className="hidden leading-tight sm:block">
-            <p className="text-xs font-medium uppercase tracking-wider text-blue-200/70">
+            <p className="text-xs font-medium uppercase tracking-wider text-icrcs-gold-light/80">
               {t("brand.country")}
             </p>
             <p className="font-display text-base font-bold text-white sm:text-lg">

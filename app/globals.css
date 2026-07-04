@@ -15,10 +15,11 @@
   --color-navy-700: #0b1d3a; /* icrcs navy — primary brand */
   --color-navy-900: #060f1e; /* icrcs navy-dark */
 
-  /* Sidebar-specific deeper blues matching the institutional CMS sidebar */
-  --color-sidebar: #1e3557;
-  --color-sidebar-hover: #263f65;
-  --color-sidebar-active: #2a5cb8;
+  /* Institutional chrome — deep navy sidebar/topbar with a gold active state,
+     matching the ICRCS status-determination portal. */
+  --color-sidebar: #0b1d3a; /* icrcs navy */
+  --color-sidebar-hover: #182b4d; /* navy hover tint */
+  --color-sidebar-active: #d4af37; /* gold — active nav item */
 
   /* Gold accent (shared ICRCS) */
   --color-gold-400: #e8c84a; /* gold-light */

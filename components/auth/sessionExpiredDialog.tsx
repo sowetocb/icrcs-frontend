@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { Clock } from "lucide-react";
 
 /**
  * Blocking dialog shown when the session has expired (and was cleared). It can't
@@ -32,10 +33,7 @@ export default function SessionExpiredDialog({ onSignIn }: { onSignIn: () => voi
       <div className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl bg-card shadow-2xl">
         <div className="px-6 py-6 text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning/15 text-warning">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <polyline points="12 7 12 12 15 14" />
-            </svg>
+            <Clock size={24} aria-hidden="true" />
           </span>
           <h2 id="session-expired-title" className="mt-4 font-display text-lg font-bold text-navy-700">
             {t("session.expiredTitle")}

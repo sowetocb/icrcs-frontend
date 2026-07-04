@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/ui/toast";
+import { LoaderCircle, X } from "lucide-react";
 import { useGenderOptions } from "@/components/registry/blocks";
 import {
   loadProfile,
@@ -42,12 +43,7 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-navy-700";
 
 function Spinner() {
-  return (
-    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-    </svg>
-  );
+  return <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />;
 }
 
 function initials(p: Profile | null): string {
@@ -270,10 +266,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             aria-label={t("about.close")}
             className="rounded-lg p-1.5 text-muted transition hover:bg-surface hover:text-navy-700"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -313,7 +306,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
               className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:opacity-70"
             >
               {uploading && <Spinner />}
-              {uploading ? t("profile.uploading") : t("Change Profile Photo")}
+              {uploading ? t("profile.uploading") : t("profile.changePhoto")}
             </button>
           </div>
           <p className="mt-2 text-xs text-muted">{t("profile.photoHint")}</p>

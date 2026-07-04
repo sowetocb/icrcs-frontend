@@ -7,6 +7,7 @@ import DashboardTopbar from "@/components/layout/dashboardTopbar";
 import AuthGuard from "@/components/auth/authGuard";
 import { useI18n } from "../../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
+import { Download, User, Search } from "lucide-react";
 import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
@@ -22,31 +23,15 @@ import { registrationFormFileName } from "../printRegistrationForm";
 // import { printRegistrationForm } from "../printRegistrationForm";
 
 function DownloadIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
+  return <Download size={15} aria-hidden="true" />;
 }
 
 function UserIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
+  return <User size={13} aria-hidden="true" />;
 }
 
 function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
+  return <Search size={16} aria-hidden="true" />;
 }
 
 type StatusCategory = "approved" | "assessed" | "enrolled" | "pending" | "rejected";

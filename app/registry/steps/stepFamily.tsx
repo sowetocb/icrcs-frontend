@@ -13,6 +13,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { X, Plus } from "lucide-react";
 
 /**
  * Stage 6 — Family: hasChildren, children[], isMarried, spouses[], relatives[].
@@ -149,10 +150,7 @@ function PersonBlock({
             className="flex h-6 w-6 items-center justify-center rounded-full text-danger transition-all duration-200 hover:bg-danger hover:text-white active:scale-95"
             aria-label={t("fields.remove")}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={14} strokeWidth={2.5} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -311,10 +309,7 @@ export default function StepFamily() {
               onClick={addChild}
               className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
               {t("fields.addChild")}
             </button>
           </div>
@@ -387,10 +382,7 @@ export default function StepFamily() {
               onClick={addSpouse}
               className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
               {t("fields.addSpouse")}
             </button>
           </div>
@@ -423,10 +415,7 @@ export default function StepFamily() {
           onClick={addRelative}
           className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
           {t("fields.addRelative")}
         </button>
       </div>

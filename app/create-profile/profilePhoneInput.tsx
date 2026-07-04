@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, flagEmoji, TANZANIA, type Country } from "@/lib/countries";
 import { phoneLengthForDial } from "@/lib/phoneLengths";
 import CountryMenu from "@/components/registry/countryMenu";
+import { ChevronDown } from "lucide-react";
 
 // Infer the country from a stored "+255786849280" value (longest dial match).
 function detectCountry(stored: string): Country {
@@ -99,9 +100,7 @@ export default function ProfilePhoneInput({
         >
           <span className="text-base leading-none">{flagEmoji(country.code)}</span>
           <span className="font-mono text-navy-700">{country.dial}</span>
-          <svg className="text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <ChevronDown className="text-muted" size={14} aria-hidden="true" />
         </button>
         <input
           id={id}

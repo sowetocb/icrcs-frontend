@@ -6,6 +6,7 @@ import OtpInput from "@/components/ui/otpInput";
 import { useI18n } from "../i18n/localeProvider";
 import { forgotPassword, verifyResetOtp, resetPassword } from "@/lib/api/auth";
 import { getErrorMessage, ApiError } from "@/lib/api/client";
+import { Eye, EyeOff, LoaderCircle, CircleCheck } from "lucide-react";
 
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
 // (mirrors the create-profile OTP).
@@ -17,38 +18,18 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-navy-700";
 
 function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-      <line x1="2" x2="22" y1="2" y2="22" />
-    </svg>
-  ) : (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+  return open ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />;
 }
 
 function Spinner() {
-  return (
-    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-    </svg>
-  );
+  return <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />;
 }
 
 function Requirement({ met, label }: { met: boolean; label: string }) {
   return (
     <li className="flex items-center gap-2">
       <span className={met ? "text-success" : "text-muted/50"}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
+        <CircleCheck size={15} strokeWidth={2.5} aria-hidden="true" />
       </span>
       <span className={met ? "text-ink" : "text-muted"}>{label}</span>
     </li>
@@ -349,10 +330,7 @@ export default function ForgotFlow() {
       {step === 4 && (
         <div className="text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="9 12 11 14 15 10" />
-            </svg>
+            <CircleCheck size={28} aria-hidden="true" />
           </span>
           <p className="mt-4 font-semibold text-navy-700">{t("forgot.successTitle")}</p>
           <p className="mt-1 text-sm text-muted">{t("forgot.successMsg")}</p>

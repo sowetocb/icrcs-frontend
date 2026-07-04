@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { registrationFormFileName } from "./printRegistrationForm";
 import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
+import { CircleCheck, Download, Printer } from "lucide-react";
 import { loadProfile } from "@/lib/auth/profile";
 // ── OLD client-side print mechanism (replaced by the backend /review/pdf
 //    endpoint). Kept commented for reference. ──
@@ -86,10 +87,7 @@ export default function RegistrySuccess({
     <main className="flex flex-1 items-start justify-center px-6 py-12">
       <div className="w-full max-w-lg rounded-2xl border border-line bg-card p-8 text-center shadow-[0_8px_40px_-12px_rgba(13,31,51,0.25)]">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="9 12 11 14 15 10" />
-          </svg>
+          <CircleCheck size={32} aria-hidden="true" />
         </span>
 
         <h1 className="mt-5 font-display text-2xl font-bold text-navy-700">
@@ -121,11 +119,7 @@ export default function RegistrySuccess({
             disabled={busy}
             className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <Download size={16} aria-hidden="true" />
             {t("registry.downloadPdf")}
           </button>
           <button
@@ -134,11 +128,7 @@ export default function RegistrySuccess({
             disabled={busy}
             className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="6 9 6 2 18 2 18 9" />
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-              <rect x="6" y="14" width="12" height="8" />
-            </svg>
+            <Printer size={16} aria-hidden="true" />
             {t("registry.printForm")}
           </button>
         </div>

@@ -5,42 +5,21 @@ import Link from "next/link";
 import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { loadProfile } from "@/lib/auth/profile";
+import { FileText, Camera, Users, Mail, Download } from "lucide-react";
 
 type IconProps = { className?: string };
 
 function FileIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M16 13H8M16 17H8M10 9H8" />
-    </svg>
-  );
+  return <FileText className={className} size={28} strokeWidth={1.8} aria-hidden="true" />;
 }
 function CameraIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  );
+  return <Camera className={className} size={28} strokeWidth={1.8} aria-hidden="true" />;
 }
 function UsersIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
+  return <Users className={className} size={28} strokeWidth={1.8} aria-hidden="true" />;
 }
 function MailIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="m22 7-10 6L2 7" />
-    </svg>
-  );
+  return <Mail className={className} size={28} strokeWidth={1.8} aria-hidden="true" />;
 }
 
 export default function DashboardHome() {
@@ -92,10 +71,7 @@ export default function DashboardHome() {
                 onClick={() => setShowRequirements(true)}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                </svg>
+                <FileText size={18} aria-hidden="true" />
                 {t("dashboard.viewRequirements")}
               </button>
             </div>
@@ -123,11 +99,7 @@ export default function DashboardHome() {
             href="/documents/registration-guide.pdf"
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-navy-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <Download size={16} aria-hidden="true" />
             {t("dashboard.downloadGuide")}
           </a>
         </div>
@@ -181,11 +153,7 @@ export default function DashboardHome() {
           href="/documents/registration-guide.pdf"
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-navy-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
+          <Download size={16} aria-hidden="true" />
           {t("dashboard.downloadGuide")}
         </a> */}
       </Modal>

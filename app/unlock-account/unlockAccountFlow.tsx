@@ -6,16 +6,12 @@ import Link from "next/link";
 import { unlockAccount } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { LoaderCircle, CircleCheck, CircleAlert, ArrowRight } from "lucide-react";
 
 type Status = "pending" | "success" | "error";
 
 function Spinner() {
-  return (
-    <svg className="animate-spin" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-    </svg>
-  );
+  return <LoaderCircle className="animate-spin" size={24} aria-hidden="true" />;
 }
 
 export default function UnlockAccountFlow() {
@@ -60,10 +56,7 @@ export default function UnlockAccountFlow() {
       {status === "success" && (
         <div className="flex flex-col items-center gap-5 py-6">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
+            <CircleCheck size={32} aria-hidden="true" />
           </span>
           <div className="space-y-1">
             <p className="font-semibold text-navy-700">{t("unlock.successTitle")}</p>
@@ -74,10 +67,7 @@ export default function UnlockAccountFlow() {
             className="inline-flex items-center gap-2 rounded-lg bg-navy-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-navy-500"
           >
             {t("unlock.signIn")}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
+            <ArrowRight size={16} aria-hidden="true" />
           </Link>
         </div>
       )}
@@ -85,11 +75,7 @@ export default function UnlockAccountFlow() {
       {status === "error" && (
         <div className="flex flex-col items-center gap-5 py-6">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+            <CircleAlert size={32} aria-hidden="true" />
           </span>
           <div className="space-y-1">
             <p className="font-semibold text-navy-700">{t("unlock.errorTitle")}</p>

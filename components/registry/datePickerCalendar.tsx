@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { localeTag, parseIso, toIso } from "@/lib/dateFormat";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 const WEEKDAY_COUNT = 7;
 
@@ -237,9 +238,7 @@ export default function DatePickerCalendar({
           className="rounded-md p-1.5 text-navy-700 transition hover:bg-surface"
           aria-label={t("fields.prevMonth")}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <ChevronLeft size={16} aria-hidden="true" />
         </button>
 
         <div className="flex items-center gap-1.5">
@@ -253,9 +252,7 @@ export default function DatePickerCalendar({
             className="rounded-md border border-line bg-card px-2 py-1 text-sm font-semibold text-navy-700 outline-none transition hover:bg-surface focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
           >
             {shortMonthLabels[viewMonth]}
-            <svg className="ml-1 inline-block text-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDown className="ml-1 inline-block text-muted" size={12} strokeWidth={2.5} aria-hidden="true" />
           </button>
           {/* Year button — opens multi-column year grid */}
           <button
@@ -267,9 +264,7 @@ export default function DatePickerCalendar({
             className="rounded-md border border-line bg-card px-2 py-1 text-sm font-semibold text-navy-700 outline-none transition hover:bg-surface focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
           >
             {viewYear}
-            <svg className="ml-1 inline-block text-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDown className="ml-1 inline-block text-muted" size={12} strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
 
@@ -279,9 +274,7 @@ export default function DatePickerCalendar({
           className="rounded-md p-1.5 text-navy-700 transition hover:bg-surface"
           aria-label={t("fields.nextMonth")}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+          <ChevronRight size={16} aria-hidden="true" />
         </button>
       </div>
 

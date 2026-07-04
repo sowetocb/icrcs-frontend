@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import OtpInput from "@/components/ui/otpInput";
 import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
+import { LoaderCircle } from "lucide-react";
 
 const OTP_TTL = 180; // 3:00
 
@@ -133,10 +135,7 @@ export default function StepOtp({
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-60"
         >
           {submitting && (
-            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-              <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            </svg>
+            <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
           )}
           {t("otp.next")}
         </button>
@@ -164,9 +163,9 @@ export default function StepOtp({
 
       <p className="mt-6 text-center text-sm text-muted">
         {t("otp.haveAccount")}{" "}
-        <a href="/login" className="font-semibold text-gold-700 hover:text-gold">
+        <Link href="/login" className="font-semibold text-gold-700 hover:text-gold">
           {t("otp.login")}
-        </a>
+        </Link>
       </p>
 
       <Modal

@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { Check, ChevronRight, X } from "lucide-react";
 
 const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
+  return <Check size={14} strokeWidth={3} aria-hidden="true" />;
 }
 
 export default function Stepper({
@@ -49,10 +46,7 @@ export default function Stepper({
           aria-label={t("registry.openSteps")}
           className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg bg-sidebar py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 lg:hidden"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="3" y1="12" x2="15" y2="12" />
-            <polyline points="9 6 15 12 9 18" />
-          </svg>
+          <ChevronRight size={18} strokeWidth={2.5} aria-hidden="true" />
         </button>
       )}
 
@@ -71,21 +65,21 @@ export default function Stepper({
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
           lg:sticky lg:top-20 lg:z-auto lg:h-[calc(100vh-5rem)] lg:translate-x-0 lg:self-start lg:shadow-none`}
       >
+        {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
+        <div className="h-1.5 w-full shrink-0 bg-gold" aria-hidden="true" />
+
         {/* Header badge + close (close is mobile-only). */}
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-200/50">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("registry.stepsLabel")}
           </p>
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label={t("registry.closeSteps")}
-            className="-mr-1 rounded-md p-1 text-blue-200/60 transition hover:bg-sidebar-hover hover:text-white lg:hidden"
+            className="-mr-1 rounded-md p-1 text-white/60 transition hover:bg-sidebar-hover hover:text-white lg:hidden"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={18} strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
 
@@ -106,7 +100,7 @@ export default function Stepper({
                   disabled={locked}
                   className={`flex w-full gap-3 rounded-lg px-3 py-2.5 text-left transition ${
                     active
-                      ? "bg-sidebar-active text-white shadow-sm"
+                      ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
                         ? "cursor-not-allowed opacity-40"
                         : "hover:bg-sidebar-hover"
@@ -118,8 +112,8 @@ export default function Stepper({
                         done
                           ? "bg-success text-white"
                           : active
-                            ? "bg-white/20 text-white"
-                            : "border border-blue-200/20 text-blue-200/60"
+                            ? "bg-icrcs-navy/15 text-icrcs-navy"
+                            : "border border-white/20 text-white/60"
                       }`}
                     >
                       {done ? <CheckIcon /> : n}
@@ -132,17 +126,17 @@ export default function Stepper({
                     <span
                       className={`block text-sm font-semibold ${
                         active
-                          ? "text-white"
+                          ? "text-icrcs-navy"
                           : done
-                            ? "text-blue-100/90"
-                            : "text-blue-200/70"
+                            ? "text-white/90"
+                            : "text-white/70"
                       }`}
                     >
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
                       className={`mt-0.5 block text-xs leading-snug ${
-                        active ? "text-blue-100/70" : "text-blue-200/40"
+                        active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >
                       {t(`registry.s${n}Desc`)}
@@ -161,7 +155,7 @@ export default function Stepper({
               onSaveExit();
               setOpen(false);
             }}
-            className="w-full rounded-lg border border-white/15 py-2.5 text-sm font-semibold text-blue-200/70 transition hover:bg-sidebar-hover hover:text-white"
+            className="w-full rounded-lg border border-white/15 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
           >
             {t("registry.saveExit")}
           </button>

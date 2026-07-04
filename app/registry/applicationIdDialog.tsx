@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useI18n } from "../i18n/localeProvider";
+import { Send } from "lucide-react";
 
 export default function ApplicationIdDialog({
   open,
@@ -41,10 +42,7 @@ export default function ApplicationIdDialog({
 
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-line bg-card p-8 text-center shadow-2xl">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M22 2 11 13" />
-            <path d="M22 2 15 22l-4-9-9-4Z" />
-          </svg>
+          <Send size={32} aria-hidden="true" />
         </span>
 
         <h2 className="mt-5 font-display text-xl font-bold text-navy-700">

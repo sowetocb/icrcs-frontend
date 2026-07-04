@@ -1,0 +1,87 @@
+/**
+ * lib/validation/rules.ts
+ *
+ * SINGLE SOURCE OF TRUTH for every numeric/pattern limit that mirrors the
+ * Spring Boot backend contract (ErrorCode.java). Values here are the BACKEND
+ * limits — verify each against the backend via Postman (see
+ * icrcs-form-validation-plan.md, Part C) before trusting it.
+ *
+ * IMPORTANT — frontend divergences (kept intentionally until Postman Phase 0):
+ *   • Name inputs currently cap at maxLength=15 in the wizard (see
+ *     app/registry/steps/stepPersonal.tsx) — STRICTER than the backend's 100.
+ *   • The Stage-1 email input caps at maxLength=20 — STRICTER than 255.
+ *   • File uploads enforce 300KB in the UI (profileView / stepPersonal /
+ *     stepAttachments) — STRICTER than the backend's 500KB.
+ *   • lib/countries.ts stores ISO-3166-1 alpha-2 codes; the backend contract
+ *     below (and the country schemas) use alpha-3. Reconcile via the live
+ *     getCountries() lookup before wiring ISO3_SHAPE anywhere.
+ * These are annotated inline as FRONTEND-DIVERGES so a later wiring pass knows
+ * not to silently overwrite a deliberate UI choice.
+ */
+
+export const RULES = {
+  // ---- Names (REGISTRATION_*_NAME_REQUIRED / *_TOO_LONG / NAME_INVALID_CHARACTERS) ----
+  NAME_MIN: 1,
+  NAME_MAX: 100, // FRONTEND-DIVERGES: UI inputs cap at 15 pending Postman R-03
+  NAME_PATTERN: /^[\p{L}][\p{L}'\- ]*$/u, // letters, spaces, hyphens, apostrophes
+
+  // ---- Email (REGISTRATION_EMAIL_REQUIRED / _INVALID / _TOO_LONG, PROFILE_EMAIL_EXISTS) ----
+  EMAIL_MAX: 255, // FRONTEND-DIVERGES: Stage-1 email input caps at 20
+
+  // ---- Phone (REGISTRATION_PHONE_REQUIRED / _INVALID / _TOO_SHORT, PROFILE_PHONE_*) ----
+  // Accepts 07XXXXXXXX or +2557XXXXXXXX (Tanzania mobile, network prefixes 6/7).
+  TZ_PHONE_LOCAL: /^0[67]\d{8}$/,
+  TZ_PHONE_INTL: /^\+255[67]\d{8}$/,
+
+  // ---- Country / nationality codes (ISO-3166-1 alpha-3) ----
+  ISO3_SHAPE: /^[A-Z]{3}$/, // shape check -> *_INVALID codes
+  // NOTE: shape-valid but non-existent codes (e.g. "ZZZ") are rejected server-side
+  // with REGISTRATION_COUNTRY_CODE_UNKNOWN. Validate against the live
+  // getCountries() lookup, not just this regex. FRONTEND-DIVERGES: lib/countries.ts
+  // is alpha-2 today.
+  TANZANIA_ISO3: 'TZA',
+
+  // ---- Password (Reset Password UI Requirements checklist) ----
+  PASSWORD_MIN: 8,
+  PASSWORD_HAS_CAPITAL: /[A-Z]/,
+  PASSWORD_HAS_SPECIAL: /[^A-Za-z0-9]/,
+
+  // ---- OTP ----
+  OTP_LENGTH: 6,
+  OTP_PATTERN: /^\d{6}$/,
+
+  // ---- Dates (VALIDATION_DOB_FUTURE, REGISTRATION_DOB_TOO_OLD, REGISTRATION_INVALID_DATE) ----
+  MAX_AGE_YEARS: 130,
+  MIN_APPLICANT_AGE_FOR_DECLARING_CHILDREN: 16, // REGISTRATION_MINOR_CANNOT_HAVE_CHILDREN
+  PARENT_MIN_AGE_GAP_YEARS: 16, // REGISTRATION_PARENT_AGE_INVALID
+  SPOUSE_MIN_AGE: 16, // REGISTRATION_SPOUSE_UNDERAGE
+  CONTACT_MIN_AGE: 18, // REGISTRATION_CONTACT_UNDERAGE
+  CLAIM_MIN_AGE: 18, // REGISTRATION_CLAIM_AGE_REQUIRED
+  EDU_YEAR_MIN: 1900, // REGISTRATION_EDUCATION_YEAR_INVALID
+
+  // ---- Files (FILE_EMPTY / FILE_TOO_LARGE / FILE_TYPE_NOT_ALLOWED) ----
+  FILE_MAX_BYTES: 500 * 1024, // 500KB. FRONTEND-DIVERGES: UI enforces 300KB
+  FILE_ALLOWED_MIME: ['image/jpeg', 'image/png', 'application/pdf'] as const,
+  // Photo-only fields (passport photo, profile picture) intentionally accept
+  // images only (no PDF) — do not wire those to FILE_ALLOWED_MIME.
+
+  // ---- Collection sizes ----
+  ATTACHMENTS_MAX: 20, // REGISTRATION_ATTACHMENT_LIMIT_EXCEEDED
+  EMERGENCY_CONTACTS_MIN: 1, // REGISTRATION_EMERGENCY_CONTACTS_REQUIRED
+  EMERGENCY_CONTACTS_MAX: 10, // REGISTRATION_CONTACT_LIMIT_EXCEEDED
+  RELATIVES_MIN: 2, // REGISTRATION_RELATIVE_COUNT_INVALID
+  RELATIVES_MAX: 20, // REGISTRATION_RELATIVES_LIMIT_EXCEEDED
+  SPOUSES_MAX: 4, // REGISTRATION_SPOUSES_LIMIT_EXCEEDED
+  CHILDREN_MAX: 30, // REGISTRATION_CHILDREN_LIMIT_EXCEEDED
+  REGISTRATIONS_PER_PROFILE_MAX: 10, // REGISTRATION_LIMIT_REACHED
+
+  // ---- Enumerated lookup IDs (confirm exact values with the live lookup API) ----
+  // NOTE: the app fetches these live (getGenders / getCitizenshipTypes /
+  // getEducationLevels / getAttachmentTypes). Prefer the lookup over hardcoding;
+  // these are fallbacks / contract references only.
+  SEX: { FEMALE: 1, MALE: 2 } as const, // REGISTRATION_SEX_INVALID
+  CITIZENSHIP_TYPE: { BIRTH: 1, DESCENT: 2, NATURALIZATION: 3 } as const, // REGISTRATION_CITIZENSHIP_TYPE_INVALID
+} as const;
+
+export type SexId = (typeof RULES.SEX)[keyof typeof RULES.SEX];
+export type CitizenshipTypeId = (typeof RULES.CITIZENSHIP_TYPE)[keyof typeof RULES.CITIZENSHIP_TYPE];

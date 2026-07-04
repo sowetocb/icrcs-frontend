@@ -8,45 +8,14 @@ import { logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
-
-type IconProps = { className?: string };
-
-function DashboardIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-      <path d="M22 12A10 10 0 0 0 12 2v10z" />
-    </svg>
-  );
-}
-function PeopleIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-function RegistryIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
-      <path d="M3 12a9 3 0 0 0 18 0" />
-    </svg>
-  );
-}
-function LogoutIcon({ className }: IconProps) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
-}
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Users,
+  LogOut,
+  ChevronRight,
+  X,
+} from "lucide-react";
 
 export default function CitizenSidebar() {
   const { t } = useI18n();
@@ -57,9 +26,9 @@ export default function CitizenSidebar() {
   const [open, setOpen] = useState(false);
 
   const items = [
-    { key: "dashboard", href: "/dashboard", Icon: DashboardIcon },
-    { key: "registry", href: "/registry", Icon: RegistryIcon },
-    { key: "people", href: "/registry/people", Icon: PeopleIcon },
+    { key: "dashboard", href: "/dashboard", Icon: LayoutDashboard },
+    { key: "registry", href: "/registry", Icon: ClipboardList },
+    { key: "people", href: "/registry/people", Icon: Users },
   ] as const;
 
   async function handleLogout() {
@@ -90,10 +59,7 @@ export default function CitizenSidebar() {
           aria-label={t("nav.openMenu")}
           className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg bg-sidebar py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 lg:hidden"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="3" y1="12" x2="15" y2="12" />
-            <polyline points="9 6 15 12 9 18" />
-          </svg>
+          <ChevronRight size={18} strokeWidth={2.5} aria-hidden="true" />
         </button>
       )}
 
@@ -112,21 +78,21 @@ export default function CitizenSidebar() {
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
           lg:sticky lg:top-20 lg:z-auto lg:h-[calc(100vh-5rem)] lg:translate-x-0`}
       >
+        {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
+        <div className="h-1.5 w-full shrink-0 bg-gold" aria-hidden="true" />
+
         {/* Navigation label + close (close is mobile-only). */}
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-200/50">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("nav.dashboard")}
           </p>
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label={t("nav.closeMenu")}
-            className="-mr-1 rounded-md p-1 text-blue-200/60 transition hover:bg-sidebar-hover hover:text-white lg:hidden"
+            className="-mr-1 rounded-md p-1 text-white/60 transition hover:bg-sidebar-hover hover:text-white lg:hidden"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={18} strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
 
@@ -142,11 +108,11 @@ export default function CitizenSidebar() {
                 aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? "bg-sidebar-active text-white shadow-sm"
-                    : "text-blue-200/70 hover:bg-sidebar-hover hover:text-white"
+                    ? "bg-sidebar-active text-icrcs-navy font-semibold shadow-sm"
+                    : "text-white/70 hover:bg-sidebar-hover hover:text-white"
                 }`}
               >
-                <Icon className={active ? "text-white" : "text-blue-200/50"} />
+                <Icon size={18} className={active ? "text-icrcs-navy" : "text-white/50"} />
                 {t(`nav.${key}`)}
               </Link>
             );
@@ -158,9 +124,9 @@ export default function CitizenSidebar() {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-200/70 transition hover:bg-sidebar-hover hover:text-red-400"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition hover:bg-sidebar-hover hover:text-red-400"
           >
-            <LogoutIcon />
+            <LogOut size={18} />
             {t("nav.logout")}
           </button>
         </div>

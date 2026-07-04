@@ -6,6 +6,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import { travelDocumentOptions } from "@/components/registry/blocks";
 import { useI18n } from "../i18n/localeProvider";
 import { fetchForeignerDetails, type ForeignerDetails } from "@/lib/api/registration";
+import { ShieldCheck, ArrowLeft, ArrowRight, LoaderCircle } from "lucide-react";
 
 /**
  * Independent citizenship gate shown before the registration wizard.
@@ -189,10 +190,7 @@ export default function CitizenshipGate({
                 {/* Verified permit + immigration status */}
                 <div className="rounded-xl border border-success/30 bg-success/10 p-5">
                   <div className="flex items-center gap-2">
-                    <svg className="text-success" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-                      <path d="m9 12 2 2 4-4" />
-                    </svg>
+                    <ShieldCheck className="text-success" size={18} strokeWidth={2.5} aria-hidden="true" />
                     <p className="text-sm font-bold text-navy-700">{t("gate.foundTitle")}</p>
                   </div>
                   <p className="mt-1 text-sm text-muted">{t("gate.foundBody")}</p>
@@ -274,10 +272,7 @@ export default function CitizenshipGate({
                 onClick={onExit}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 transition hover:text-gold-700"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="19" y1="12" x2="5" y2="12" />
-                  <polyline points="12 19 5 12 12 5" />
-                </svg>
+                <ArrowLeft size={18} aria-hidden="true" />
                 {t("gate.back")}
               </button>
 
@@ -287,17 +282,11 @@ export default function CitizenshipGate({
                 className="inline-flex items-center gap-2 rounded-lg bg-gold px-6 py-3 text-sm font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-navy-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {verifying && (
-                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  </svg>
+                  <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
                 )}
                 {primaryLabel}
                 {(choice === "yes" || (found && hasMinor === "yes")) && (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
+                  <ArrowRight size={18} aria-hidden="true" />
                 )}
               </button>
             </div>

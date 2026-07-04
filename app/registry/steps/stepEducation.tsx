@@ -6,6 +6,7 @@ import { useEmploymentStatusOptions, useOccupationTypeOptions } from "@/componen
 import { useI18n } from "@/app/i18n/localeProvider";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, toOptions, type LookupItem } from "@/lib/api/lookup";
+import { X, Plus, TriangleAlert } from "lucide-react";
 
 const MIN_SCHOOLS = 1;
 
@@ -54,10 +55,7 @@ function SchoolBlock({
             className="flex h-6 w-6 items-center justify-center rounded-full text-danger transition-all duration-200 hover:bg-danger hover:text-white active:scale-95"
             aria-label={t("fields.remove")}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={14} strokeWidth={2.5} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -228,11 +226,7 @@ export default function StepEducation() {
         {!neverAttendedSchool && (
           <div className="space-y-5">
             <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4">
-              <svg className="mt-0.5 shrink-0 text-warning" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 9v4" />
-                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
+              <TriangleAlert className="mt-0.5 shrink-0 text-warning" size={18} aria-hidden="true" />
               <p className="text-sm font-medium text-navy-700">
                 {t("registry.primaryEducationMandatory")}
               </p>
@@ -241,26 +235,38 @@ export default function StepEducation() {
               {t("fields.schoolNote")}
             </p>
 
-            {Array.from({ length: schoolCount }, (_, i) => i + 1).map((n) => (
-              <SchoolBlock
-                key={n}
-                n={n}
-                levelOptions={levelOptions}
-                onRemove={
-                  n === schoolCount && schoolCount > MIN_SCHOOLS ? removeLastSchool : undefined
-                }
-              />
-            ))}
+            {Array.from({ length: schoolCount }, (_, i) => i + 1).map((n) => {
+              // An education level can only be chosen once — hide levels already
+              // picked in the other school blocks, but always keep this block's
+              // own current selection so it still renders/stays selectable.
+              const own = String(data[`edu${n}Level`] ?? "");
+              const takenByOthers = new Set(
+                Array.from({ length: schoolCount }, (_, i) => i + 1)
+                  .filter((m) => m !== n)
+                  .map((m) => String(data[`edu${m}Level`] ?? ""))
+                  .filter(Boolean),
+              );
+              const blockLevelOptions = levelOptions.filter(
+                (o) => String(o.value) === own || !takenByOthers.has(String(o.value)),
+              );
+              return (
+                <SchoolBlock
+                  key={n}
+                  n={n}
+                  levelOptions={blockLevelOptions}
+                  onRemove={
+                    n === schoolCount && schoolCount > MIN_SCHOOLS ? removeLastSchool : undefined
+                  }
+                />
+              );
+            })}
 
             <button
               type="button"
               onClick={addSchool}
               className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
               {t("fields.addSchool")}
             </button>
           </div>

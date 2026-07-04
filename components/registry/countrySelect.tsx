@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, flagEmoji } from "@/lib/countries";
 import CountryMenu from "./countryMenu";
 import { FieldError, useWizard } from "./field";
+import { ChevronDown } from "lucide-react";
 
 export default function CountrySelect({
   name,
@@ -56,9 +57,7 @@ export default function CountrySelect({
         ) : (
           <span className="text-muted/60">{placeholder}</span>
         )}
-        <svg className="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDown className="shrink-0 text-muted" size={16} aria-hidden="true" />
       </button>
 
       {open && (

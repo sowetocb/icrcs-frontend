@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useI18n } from "../../i18n/localeProvider";
 import { type LookupResult } from "./lookup";
 import { type ApplicationStatus } from "../../../lib/api/registry";
+import { Check, ArrowRight } from "lucide-react";
 
 const PROCESS_STAGES = ["stage1", "stage2", "stage3", "stage4", "stage5"] as const;
 const FORM_STEPS = ["s1Title", "s2Title", "s3Title", "s4Title", "s5Title", "s6Title"] as const;
@@ -60,11 +61,7 @@ function getPostSubmissionStageIndex(status: string, currentStage: number): numb
 }
 
 function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
+  return <Check size={14} strokeWidth={3} aria-hidden="true" />;
 }
 
 function Timeline({ labels, current }: { labels: string[]; current: number }) {
@@ -119,12 +116,7 @@ export default function StatusResult({
   const { t } = useI18n();
   const continueClass =
     "inline-flex items-center gap-2 rounded-lg bg-gold px-5 py-2.5 text-sm font-bold text-navy-900 transition hover:bg-gold-400";
-  const continueArrow = (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="5" y1="12" x2="19" y2="12" />
-      <polyline points="12 5 19 12 12 19" />
-    </svg>
-  );
+  const continueArrow = <ArrowRight size={16} aria-hidden="true" />;
 
   const isBackendStatus = !("kind" in result);
 

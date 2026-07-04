@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { loadSession } from "@/lib/auth/session";
 
+// Remembers, for the lifetime of the tab, that we've already confirmed a live
+// session. Because /dashboard, /registry, /registry/people, … are separate
+// route segments, AuthGuard remounts on every client navigation; without this
+// flag each remount would start unauthorized and flash the full-screen
+// "Verifying session…" spinner. Once verified, later navigations render the
+// protected content immediately (no flash).
+let sessionVerified = false;
+
 /**
  * Client-side route guard. Wraps protected page content and redirects
  * unauthenticated users to /login. Renders nothing (null) while checking
@@ -12,17 +20,18 @@ import { loadSession } from "@/lib/auth/session";
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState(sessionVerified);
 
   useEffect(() => {
     const session = loadSession();
     if (!session) {
       // Not logged in — redirect to login
+      sessionVerified = false;
+      setAuthorized(false);
       router.replace("/login");
     } else {
-      Promise.resolve().then(() => {
-        setAuthorized(true);
-      });
+      sessionVerified = true;
+      setAuthorized(true);
     }
   }, [pathname, router]);
 
@@ -30,6 +39,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     function onStorageChange(e: StorageEvent) {
       if (e.key === "icrcs-session" && !e.newValue) {
+        sessionVerified = false;
+        setAuthorized(false);
         router.replace("/login");
       }
     }

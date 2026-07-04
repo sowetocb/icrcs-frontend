@@ -10,6 +10,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
 import WardCascade from "@/components/registry/wardCascade";
 import CountrySelect from "@/components/registry/countrySelect";
+import { Camera, X, Plus } from "lucide-react";
 
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
  * it survives reloads and is rebuilt into the `photo` part on submission. */
@@ -58,20 +59,7 @@ function PhotoUpload() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="" className="h-full w-full object-cover" />
           ) : (
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
-              <circle cx="12" cy="13" r="3.5" />
-            </svg>
+            <Camera size={28} strokeWidth={1.8} aria-hidden="true" />
           )}
         </span>
         <div className="min-w-0">
@@ -273,10 +261,7 @@ export default function StepPersonal() {
                     className="flex h-6 w-6 items-center justify-center rounded-full text-danger transition-all duration-200 hover:bg-danger hover:text-white active:scale-95"
                     aria-label={t("fields.remove")}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
+                    <X size={14} strokeWidth={2.5} aria-hidden="true" />
                   </button>
                 </div>
               )}
@@ -305,10 +290,7 @@ export default function StepPersonal() {
             onClick={addIdDoc}
             className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
             {t("fields.addDocument")}
           </button>
         )}

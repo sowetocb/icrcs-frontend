@@ -538,7 +538,7 @@ const en = {
   profile: {
     title: "My Profile",
     subtitle: "View and update your account details and photo.",
-    changePhoto: "Change photo",
+    changePhoto: "Change Profile Photo",
     removePhoto: "Remove photo",
     uploading: "Uploading…",
     removing: "Removing…",
@@ -1389,7 +1389,7 @@ const sw: typeof en = {
   profile: {
     title: "Wasifu Wangu",
     subtitle: "Angalia na sasisha taarifa za akaunti yako na picha.",
-    changePhoto: "Badilisha picha",
+    changePhoto: "Badilisha Picha ya Wasifu",
     removePhoto: "Ondoa picha",
     uploading: "Inapakia…",
     removing: "Inaondoa…",

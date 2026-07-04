@@ -4,6 +4,7 @@ import { useState, type ChangeEvent } from "react";
 import { useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
+import { Check } from "lucide-react";
 import { loadProfile } from "@/lib/auth/profile";
 import { uploadAttachment, ATTACHMENT_ACCEPT } from "@/lib/api/files";
 import { getErrorMessage } from "@/lib/api/client";
@@ -79,9 +80,7 @@ export default function DocumentUpload({ prefix }: { prefix: string }) {
 
         {status === "done" && (
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-success">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <Check size={16} strokeWidth={2.5} aria-hidden="true" />
             {t("fields.uploaded")}
           </span>
         )}
