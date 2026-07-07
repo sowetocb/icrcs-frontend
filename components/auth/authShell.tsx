@@ -333,7 +333,7 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-10 w-10 shrink-0 object-contain sm:h-14 sm:w-14"
+            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
           />
 
           {/* Center — three titles + national flag strip */}
@@ -363,7 +363,7 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-10 w-10 shrink-0 object-contain sm:h-14 sm:w-14"
+            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
           />
         </div>
       </header>
@@ -392,7 +392,7 @@ export default function AuthShell({
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-20 object-contain"
+                  className="h-auto w-28 object-contain"
                 />
               </div>
               {/* <div className="mt-5 text-center">

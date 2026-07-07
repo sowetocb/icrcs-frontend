@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TextInput, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { localizeOccupation } from "@/lib/i18n/occupations";
 import { RULES } from "@/lib/validation/rules";
 import { useLookup } from "@/components/lookup/useLookup";
 import {
@@ -135,8 +136,18 @@ export const useCitizenshipTypeOptions = () =>
   useLocalizedOptions(getCitizenshipTypes, citizenshipTypeIdOptions, "id");
 export const useRelationshipTypeOptions = () =>
   useLocalizedOptions(getRelationships, relationshipTypeOptions, "id");
-export const useOccupationTypeOptions = () =>
-  useLocalizedOptions(getOccupations, occupationTypeOptions, "id");
+// Occupations come from the backend as English names (no stable id→label map),
+// so we localize by name: the option value stays the backend occupation id and
+// the label is the Swahili term when the locale is `sw` (English name otherwise).
+export const useOccupationTypeOptions = (): Opt[] => {
+  const { t, locale } = useI18n();
+  const { options: items } = useLookup(getOccupations, []);
+  if (!items.length) return occupationTypeOptions(t);
+  return items.map((i) => ({
+    value: String(i.id),
+    label: localizeOccupation(i.name, locale),
+  }));
+};
 // Employment status: value is the status name (used to gate occupation/employer
 // and resolved to the lookup id in the Stage 4 payload).
 export const useEmploymentStatusOptions = () =>

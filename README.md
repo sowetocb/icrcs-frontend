@@ -83,7 +83,7 @@ A registration flow synced with the backend's **9 stages** (`/v1/registration/{s
 | **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, and contact. Mandatory **passport photo** captured here (carried into Stage 8 uploads). Dynamic **identification documents repeater** (NIDA, Voter ID, TIN, Driving Licence — pick type + number, add more as needed). Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
 | **2** | **Address** | Permanent + Current address (Country → Region → District → Ward cascade), house number, postal code, with a "same as" checkbox that copies and disables the second address. |
 | **3** | **Parents** | Father & Mother sub-forms: full name, DOB, phone, nationality, place of birth, residence, and optional ID document (Type/Number + file upload → `attachmentTypeId=12`, bound to `documentFileUrl`). When a foreigner registers a minor as a **Guardian**, a *"Do you know parents information?"* toggle switches between the parents' details (Yes) and a **single Guardian** sub-form (No). |
-| **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.) — a "Primary education is mandatory" notice shows when the applicant attended school. Employment status (lookup-driven); occupation & employer apply only when **Employed**. |
+| **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.) with per-entry delete and level de-duplication — a "Primary education is mandatory" notice shows when the applicant attended school. Employment status (lookup-driven); **Employed and Self-Employed** show an occupation dropdown (curated list + all newer lookup occupations, id ≥ 22), a free-text field when **Other** is chosen, and **Employer** only when Employed. Changing the employment status clears its dependent fields (occupation / other-occupation / employer). |
 | **5** | **Emergency Contacts** | Two contacts, each a full person sub-form with optional ID document upload. |
 | **6** | **Family** | "Have children?" / "Married?" toggles; **Spouses repeater** (≥1 if married) and **Relatives repeater** (≥2), each with optional document uploads. |
 | ~~**7**~~ | ~~**Referees**~~ (**removed from the UI**) | Accepted no user input, so it's no longer shown. Its GET-only backend stage (`GET /stage7`) is still traversed on the way to Uploads; referees remain a print-only section of the compiled form. |
@@ -147,10 +147,10 @@ A registration flow synced with the backend's **9 stages** (`/v1/registration/{s
 
 ---
 
-### Settings & Themes
+### Theme
 
-* **System-Aware Dark Mode** — Integrates with system settings and manual toggle in the top bar.
-* **No-Flash Script** — Custom blocking script prevents white flashes on dark-mode page loads.
+* **Institutional navy + gold** — A single light theme built on Tailwind 4 `@theme` design tokens (ICRCS navy `#0B1D3A` + gold `#D4AF37`), with a gold accent bar on the sidebar/topbar and a gold active-nav state. Icons are `lucide-react` throughout.
+* **Light-only, no-flash** — The app renders light-only; the `ThemeProvider` (plus a render-blocking script) strips any persisted `dark` class before first paint, so there is no white flash and no dark-mode toggle.
 
 ---
 
@@ -309,6 +309,7 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 
 ## Recent Changes
 
+* **Employment fields reset on status change; wider occupation list** — Changing the employment status clears its dependent fields (occupation, other-occupation, employer); the Employed/Self-Employed occupation dropdown now includes all newer lookup occupations (id ≥ 22).
 * **Nationality-driven registration routing** — Nationality is captured at **Create Profile** (country dropdown → sent as ISO alpha-3 `nationalityCode`, stored on the profile). Tanzanian nationals skip the gate straight to Stage 1; foreign nationals get a reworked gate ("**Fill the following information**", nationality bound + locked) that, after a verified permit lookup, offers to **register a Tanzanian-origin minor** — choosing **Guardian** or **Parent** in a dialog. A **Guardian** who doesn't know the parents fills a single **Guardian** sub-form at Stage 3.
 * **Referees step removed from the UI** — The input-less Referees step is hidden and skipped in navigation (its GET-only backend stage is still traversed); the stepper shows 8 contiguously-numbered steps.
 * **Refresh retains the current step** — The registry wizard and the auth flows (forgot-password, create-profile OTP) persist their view/step per tab, so a page refresh resumes where you were instead of resetting. OTP codes and passwords are never persisted.

@@ -129,15 +129,16 @@ export default function StepEducation() {
   const jobStatus = normOcc(String(data.jobStatus));
   const isEmployed = jobStatus === "employed";
   const isSelfEmployed = jobStatus === "selfemployed";
-  // Both Employed and Self-employed render the same narrowed occupation set.
+  // Both Employed and Self-employed render the same occupation set: the curated
+  // short list PLUS every newer occupation (lookup id >= 22).
   const occupationOptions = occupations.filter((o) => {
     const n = normOcc(o.label);
-    if (!ALLOWED_OCCUPATION_SET.has(n)) return false;
     // Two lookup rows can resolve to the label "Other": the genuine Lookup
     // "Other" (id OCCUPATION_OTHER_ID, which reveals the free-text field) and a
     // stale static-mapping artifact on another id. Keep only the genuine one.
     if (n === "other") return String(o.value) === OCCUPATION_OTHER_ID;
-    return true;
+    const id = Number(o.value);
+    return ALLOWED_OCCUPATION_SET.has(n) || (Number.isFinite(id) && id >= 22);
   });
   const { options: eduLevels } = useLookup(getEducationLevels, []);
   const levelOptions = toOptions(eduLevels as LookupItem[], "id");
@@ -289,7 +290,18 @@ export default function StepEducation() {
             <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label={t("fields.employmentStatus")} required>
-                <Select name="jobStatus" placeholder={t("fields.phSelectStatus")} options={jobStatuses} />
+                <Select
+                  name="jobStatus"
+                  placeholder={t("fields.phSelectStatus")}
+                  options={jobStatuses}
+                  onValueChange={() => {
+                    // Changing the employment status invalidates the previous
+                    // choice's dependent fields — clear them for a clean slate.
+                    set("occupation", "");
+                    set("otherOccupation", "");
+                    set("employer", "");
+                  }}
+                />
               </Field>
               {/* Occupation dropdown — Employed AND Self-Employed pick from the same narrowed list */}
               {(isEmployed || isSelfEmployed) && (
