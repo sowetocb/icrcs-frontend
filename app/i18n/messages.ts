@@ -296,6 +296,7 @@ const en = {
     submitError: "Could not submit this step. Please try again.",
     attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
     attachTooLarge: "File must be 300KB or smaller.",
+    attachFileEmpty: "File is empty — please choose a valid file.",
     attachChoose: "Choose file",
     attachPhotoRequired: "Please upload the required Passport Size Photo before continuing.",
     attachMandatoryRequired:
@@ -312,6 +313,9 @@ const en = {
     eduGapError: "There must be at least {gap} years between {from} and {to}.",
     ecAgeError: "Emergency contacts must be at least 18 years old.",
     spouseAgeError: "Spouse must be at least 16 years old.",
+    spouseGenderMismatch: "Spouse must be of the opposite gender.",
+    childDobInvalid: "Child must be born after you turned 16.",
+    primaryEducationRequired: "At least one education entry must be Primary level.",
     spouseRequired: "Please provide details for at least one spouse.",
     nameInvalid: "Only letters, spaces, hyphens and apostrophes are allowed.",
     nameTooShort: "Must be at least 2 characters.",
@@ -691,6 +695,7 @@ const en = {
     addRelative: "Add Relative", // REVIEW
     addSpouse: "Add Spouse", // REVIEW
     addChild: "Add Child",
+    maxReached: "Maximum of {n} reached",
     addSchool: "Add School", // REVIEW
     addDocument: "Add Document",
     documentN: "Document {n}",
@@ -1159,6 +1164,7 @@ const sw: typeof en = {
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
     attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
     attachTooLarge: "Faili lazima liwe 300KB au chini.",
+    attachFileEmpty: "Faili ni tupu — tafadhali chagua faili sahihi.",
     attachChoose: "Chagua faili",
     attachPhotoRequired: "Tafadhali pakia Picha ya Pasipoti inayohitajika kabla ya kuendelea.",
     attachMandatoryRequired:
@@ -1175,6 +1181,9 @@ const sw: typeof en = {
     eduGapError: "Lazima kuwe na angalau miaka {gap} kati ya {from} na {to}.",
     ecAgeError: "Mawasiliano ya dharura lazima wawe na umri wa angalau miaka 18.",
     spouseAgeError: "Mwenzi wa ndoa lazima awe na umri wa angalau miaka 16.",
+    spouseGenderMismatch: "Mwenzi wa ndoa lazima awe wa jinsia tofauti.",
+    childDobInvalid: "Mtoto lazima azaliwe baada ya wewe kutimiza miaka 16.",
+    primaryEducationRequired: "Angalau elimu moja lazima iwe ya ngazi ya Msingi.",
     spouseRequired: "Tafadhali toa taarifa za angalau mwenzi mmoja wa ndoa.",
     nameInvalid: "Tumia herufi, nafasi, kistari au nukta peke yake.",
     nameTooShort: "Lazima iwe na herufi angalau 2.",
@@ -1553,6 +1562,7 @@ const sw: typeof en = {
     addRelative: "Ongeza Ndugu", // REVIEW
     addSpouse: "Ongeza Mwenzi", // REVIEW
     addChild: "Ongeza Mtoto",
+    maxReached: "Kiwango cha juu cha {n} kimefikiwa",
     addSchool: "Ongeza Shule", // REVIEW
     addDocument: "Ongeza Hati",
     documentN: "Hati {n}",

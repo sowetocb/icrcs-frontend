@@ -110,7 +110,7 @@ Parent name `TOO_LONG` → ⚪ (UI cap 30).
 
 ## STAGE 5 — Documents → partial
 `ATTACHMENT_TYPE/URL_REQUIRED/_INVALID`, `MANDATORY_MISSING` → 🟢/🟡 (mandatory passport photo enforced; full mandatory-set logic partial).
-`ATTACHMENT_LIMIT_EXCEEDED` (>20) → 🟡 **Gap** (no client max). `DUPLICATE_ATTACHMENT_TYPE` → 🟢 (UI prevents re-selecting a type). `ATTACHMENT_URL_INVALID` → 🔵 (server file-server origin).
+`ATTACHMENT_LIMIT_EXCEEDED` (>20) → 🟢 (uploads map to 7 fixed `ATTACHMENT_TYPES` slots — structurally ≤20). `DUPLICATE_ATTACHMENT_TYPE` → 🟢 (UI prevents re-selecting a type). `ATTACHMENT_URL_INVALID` → 🔵 (server file-server origin).
 
 ## STAGE 6 — Family → 🟢 (with gaps)
 `MARITAL_STATUS_REQUIRED/_INVALID`, `EMERGENCY_CONTACTS_REQUIRED` (min 1), `CONTACT_*_REQUIRED`, `RELATIVE_*_REQUIRED`, `SPOUSE_*_REQUIRED`, `CHILD_*_REQUIRED`, residence fields → 🟢 (`REQUIRED_FIELDS[4/5]`, conditional).
@@ -119,7 +119,7 @@ Parent name `TOO_LONG` → ⚪ (UI cap 30).
 **Gaps:**
 - `REGISTRATION_SPOUSE_GENDER_MISMATCH` (spouse must be opposite gender) → 🟡
 - `REGISTRATION_SPOUSE_GENDER_REQUIRED` → 🟢 (gender required in spouse block)
-- `CONTACT_LIMIT_EXCEEDED` (≤10), `RELATIVES_LIMIT_EXCEEDED` (≤20), `SPOUSES_LIMIT_EXCEEDED` (≤4), `CHILDREN_LIMIT_EXCEEDED` (≤30) → 🟡 **Gaps** (no client max — this is next-step #3)
+- `CONTACT_LIMIT_EXCEEDED` (≤10) → 🟢 (Stage 5 renders a fixed 2 contacts). `RELATIVES_LIMIT_EXCEEDED` (≤20), `SPOUSES_LIMIT_EXCEEDED` (≤4), `CHILDREN_LIMIT_EXCEEDED` (≤30) → 🟢 (the group's "Add" button is hidden at `RULES.*_MAX`, showing a "maximum reached" hint).
 `SEX_INVALID / GENDER_INVALID / RELATIONSHIP_TYPE_INVALID` → 🔵 (lookup id).
 
 ## NATURALIZATION / ADMIN / SYSTEM
@@ -128,15 +128,15 @@ Parent name `TOO_LONG` → ⚪ (UI cap 30).
 ---
 
 ## §Gaps — the client-checkable rules not yet enforced (~13)
-1. `REGISTRATION_SPOUSE_GENDER_MISMATCH` — spouse opposite-gender check.
-2. `REGISTRATION_CHILD_DOB_INVALID` — child born after applicant turned 16.
-3. `REGISTRATION_PRIMARY_EDUCATION_REQUIRED` — at least one Primary entry.
-4. `REGISTRATION_CONTACT_LIMIT_EXCEEDED` (≤10)
-5. `REGISTRATION_RELATIVES_LIMIT_EXCEEDED` (≤20)
-6. `REGISTRATION_SPOUSES_LIMIT_EXCEEDED` (≤4)
-7. `REGISTRATION_CHILDREN_LIMIT_EXCEEDED` (≤30)
-8. `REGISTRATION_ATTACHMENT_LIMIT_EXCEEDED` (≤20)
-9. `FILE_EMPTY` — 0-byte guard.
+1. ~~`REGISTRATION_SPOUSE_GENDER_MISMATCH` — spouse opposite-gender check.~~ → 🟢 **Closed** — Stage 6 submit rejects a spouse whose gender isn't the opposite of the applicant's (only when the applicant's own gender is a definite M/F). Pinned to `sp{i}Gender`.
+2. ~~`REGISTRATION_CHILD_DOB_INVALID` — child born after applicant turned 16.~~ → 🟢 **Closed** — Stage 6 submit rejects any child whose DOB is before the applicant's 16th birthday (`RULES.MIN_APPLICANT_AGE_FOR_DECLARING_CHILDREN`). Pinned to `ch{i}Dob`.
+3. ~~`REGISTRATION_PRIMARY_EDUCATION_REQUIRED` — at least one Primary entry.~~ → 🟢 **Closed** — Stage 4 submit requires at least one filled education entry to resolve to Primary level (skipped only if the level lookup is unavailable). Pinned to `edu1Level`.
+4. ~~`REGISTRATION_CONTACT_LIMIT_EXCEEDED` (≤10)~~ → 🟢 **Closed** — structurally satisfied: Stage 5 renders exactly 2 fixed emergency-contact blocks (no "Add"), so the count can never exceed 10.
+5. ~~`REGISTRATION_RELATIVES_LIMIT_EXCEEDED` (≤20)~~ → 🟢 **Closed** — the Relatives "Add" button (Stage 6) is hidden once `relativeCount` reaches `RULES.RELATIVES_MAX`.
+6. ~~`REGISTRATION_SPOUSES_LIMIT_EXCEEDED` (≤4)~~ → 🟢 **Closed** — the Spouse "Add" button is hidden once `spouseCount` reaches `RULES.SPOUSES_MAX`.
+7. ~~`REGISTRATION_CHILDREN_LIMIT_EXCEEDED` (≤30)~~ → 🟢 **Closed** — the Child "Add" button is hidden once `childCount` reaches `RULES.CHILDREN_MAX`.
+8. ~~`REGISTRATION_ATTACHMENT_LIMIT_EXCEEDED` (≤20)~~ → 🟢 **Closed** — structurally satisfied: uploads map to 7 fixed `ATTACHMENT_TYPES` slots (no free "Add"), so the count can never exceed 20.
+9. ~~`FILE_EMPTY` — 0-byte guard.~~ → 🟢 **Closed** — the attachment upload handler rejects a 0-byte file before any upload, showing an inline "file is empty" error on that row.
 10. `REGISTRATION_BIRTH_OR_AFFIDAVIT_REQUIRED` / `DOCUMENTS_REQUIRED` — "at least one of" mandatory-doc logic (partial).
 11. `REGISTRATION_DOCUMENT_NUMBER_INVALID` — per-doc-type formats beyond NIDA (needs backend rules, report D5).
 

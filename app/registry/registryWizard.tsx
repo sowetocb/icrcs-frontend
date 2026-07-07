@@ -41,6 +41,7 @@ import { localizeBackendMessage } from "@/lib/api/errorMessagesSw";
 import { useToast } from "@/components/ui/toast";
 import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type PersonGroup } from "@/lib/api/lookup";
 import { isPhoneComplete } from "@/lib/phoneLengths";
+import { RULES } from "@/lib/validation/rules";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
@@ -1620,6 +1621,49 @@ export default function RegistryWizard({
       }
     }
 
+    // Stage 6 — cross-field checks the backend enforces (each pinned to its own
+    // field, no banner):
+    if (step === 6) {
+      // A spouse must be the opposite gender of the applicant (REGISTRATION_
+      // SPOUSE_GENDER_MISMATCH). Only checked when the applicant's own gender is
+      // a definite M/F — an "O"/unknown value can't determine an opposite.
+      const appGender = String(data.gender ?? "").trim().toUpperCase();
+      if (data.isMarried === true && (appGender === "M" || appGender === "F")) {
+        const opposite = appGender === "M" ? "F" : "M";
+        const spCount = Math.max(1, Number(data.spouseCount) || 1);
+        for (let i = 1; i <= spCount; i++) {
+          const g = String(data[`sp${i}Gender`] ?? "").trim().toUpperCase();
+          if (g && g !== opposite) {
+            const field = `sp${i}Gender`;
+            setErrors([field]);
+            setFieldErrors({ [field]: t("registry.spouseGenderMismatch") });
+            setFormError("");
+            return;
+          }
+        }
+      }
+
+      // A declared child must be born on/after the applicant's 16th birthday
+      // (REGISTRATION_CHILD_DOB_INVALID — a minor can't have declared children).
+      const dobStr = typeof data.dob === "string" ? data.dob.trim() : "";
+      if (data.hasChildren === true && dobStr) {
+        const sixteenth = new Date(dobStr);
+        sixteenth.setFullYear(sixteenth.getFullYear() + RULES.MIN_APPLICANT_AGE_FOR_DECLARING_CHILDREN);
+        const chCount = Math.max(1, Number(data.childCount) || 1);
+        for (let i = 1; i <= chCount; i++) {
+          const cStr = String(data[`ch${i}Dob`] ?? "").trim();
+          if (!cStr) continue;
+          if (new Date(cStr) < sixteenth) {
+            const field = `ch${i}Dob`;
+            setErrors([field]);
+            setFieldErrors({ [field]: t("registry.childDobInvalid") });
+            setFormError("");
+            return;
+          }
+        }
+      }
+    }
+
     // Stage 4: if the user said they attended school, at least the primary
     // education (first school) must be filled in.
     if (step === 4 && data.neverAttendedSchool !== true) {
@@ -1659,6 +1703,43 @@ export default function RegistryWizard({
         return;
       }
 
+      // Resolve each filled school's education-level rank from the lookup
+      // (Primary=0, Ordinary=1, Advanced=2, Undergraduate=3; -1 = unknown).
+      // Shared by the Primary-required check and the level-gap check below.
+      const RANK_LABELS = ["Primary", "Ordinary Level", "Advanced Level", "Undergraduate"];
+      let eduLevels: { id: number; name: string }[] = [];
+      try { eduLevels = await getEducationLevels(); } catch { /* ignore */ }
+      const levelRank = (levelId: string): number => {
+        const item = eduLevels.find((l) => String(l.id) === levelId);
+        if (!item) return -1;
+        const n = item.name.toLowerCase();
+        if (n.includes("primary") || n.includes("msingi")) return 0;
+        if (n.includes("ordinary") || n.includes("o level") || n.includes("sekondari")) return 1;
+        if (n.includes("advanced") || n.includes("a level")) return 2;
+        if (n.includes("undergraduate") || n.includes("shahada ya kwanza") || n.includes("degree")) return 3;
+        return -1;
+      };
+
+      // At least one education entry must be Primary level (backend rejects a
+      // history with no Primary — REGISTRATION_PRIMARY_EDUCATION_REQUIRED). Only
+      // enforced when the level lookup resolved, so an unknown lookup never
+      // false-blocks. Pinned to the first school's level field.
+      if (eduLevels.length > 0) {
+        let hasPrimary = false;
+        for (let i = 1; i <= count; i++) {
+          const p = `edu${i}`;
+          if (!filled(`${p}Level`)) continue;
+          if (i > 1 && !filled(`${p}School`)) continue;
+          if (levelRank(String(data[`${p}Level`])) === 0) { hasPrimary = true; break; }
+        }
+        if (!hasPrimary) {
+          setErrors(["edu1Level"]);
+          setFieldErrors({ edu1Level: t("registry.primaryEducationRequired") });
+          setFormError("");
+          return;
+        }
+      }
+
       // Education level gap validation: the gap between completion years of
       // successive levels must meet the minimum:
       //   Primary → Ordinary: 4 years
@@ -1678,19 +1759,7 @@ export default function RegistryWizard({
           { from: 1, to: 3, gap: 6 },  // Ordinary → Undergraduate (3+3)
           { from: 0, to: 3, gap: 10 }, // Primary → Undergraduate (4+3+3)
         ];
-        const RANK_LABELS = ["Primary", "Ordinary Level", "Advanced Level", "Undergraduate"];
-        let eduLevels: { id: number; name: string }[] = [];
-        try { eduLevels = await getEducationLevels(); } catch { /* ignore */ }
-        function levelRank(levelId: string): number {
-          const item = eduLevels.find((l) => String(l.id) === levelId);
-          if (!item) return -1;
-          const n = item.name.toLowerCase();
-          if (n.includes("primary") || n.includes("msingi")) return 0;
-          if (n.includes("ordinary") || n.includes("o level") || n.includes("sekondari")) return 1;
-          if (n.includes("advanced") || n.includes("a level")) return 2;
-          if (n.includes("undergraduate") || n.includes("shahada ya kwanza") || n.includes("degree")) return 3;
-          return -1;
-        }
+        // RANK_LABELS, eduLevels and levelRank are resolved once above.
         const entries: EduEntry[] = [];
         for (let i = 1; i <= count; i++) {
           const p = `edu${i}`;

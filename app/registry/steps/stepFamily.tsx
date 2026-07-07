@@ -24,6 +24,11 @@ import { X, Plus } from "lucide-react";
 const MIN_RELATIVES = RULES.RELATIVES_MIN;
 const MIN_SPOUSES = 1;
 const MIN_CHILDREN = 1;
+// Backend collection caps — the "Add" button is disabled once a group hits its
+// limit so the user can't build a set the backend will reject with a 400.
+const MAX_RELATIVES = RULES.RELATIVES_MAX;
+const MAX_SPOUSES = RULES.SPOUSES_MAX;
+const MAX_CHILDREN = RULES.CHILDREN_MAX;
 
 // Shared person field suffixes — used to clear a removed block.
 // Place of birth is NOT in RelatedPersonRequest or ChildItemRequest DTOs,
@@ -305,14 +310,20 @@ export default function StepFamily() {
               />
             ))}
 
-            <button
-              type="button"
-              onClick={addChild}
-              className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
-            >
-              <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-              {t("fields.addChild")}
-            </button>
+            {childCount < MAX_CHILDREN ? (
+              <button
+                type="button"
+                onClick={addChild}
+                className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+              >
+                <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+                {t("fields.addChild")}
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-muted">
+                {t("fields.maxReached").replace("{n}", String(MAX_CHILDREN))}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -378,14 +389,20 @@ export default function StepFamily() {
               />
             ))}
 
-            <button
-              type="button"
-              onClick={addSpouse}
-              className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
-            >
-              <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-              {t("fields.addSpouse")}
-            </button>
+            {spouseCount < MAX_SPOUSES ? (
+              <button
+                type="button"
+                onClick={addSpouse}
+                className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+              >
+                <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+                {t("fields.addSpouse")}
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-muted">
+                {t("fields.maxReached").replace("{n}", String(MAX_SPOUSES))}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -411,14 +428,20 @@ export default function StepFamily() {
           />
         ))}
 
-        <button
-          type="button"
-          onClick={addRelative}
-          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
-        >
-          <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-          {t("fields.addRelative")}
-        </button>
+        {relativeCount < MAX_RELATIVES ? (
+          <button
+            type="button"
+            onClick={addRelative}
+            className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+          >
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+            {t("fields.addRelative")}
+          </button>
+        ) : (
+          <p className="text-sm font-medium text-muted">
+            {t("fields.maxReached").replace("{n}", String(MAX_RELATIVES))}
+          </p>
+        )}
       </div>
     </div>
   );

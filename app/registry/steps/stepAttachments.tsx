@@ -104,6 +104,16 @@ export default function StepAttachments() {
   async function handleFile(typeId: number, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reject a 0-byte file up front — the backend rejects empty uploads
+    // (FILE_EMPTY), and uploading one just wastes a round-trip.
+    if (file.size === 0) {
+      setRows((r) => ({
+        ...r,
+        [typeId]: { status: "error", name: file.name, error: t("registry.attachFileEmpty") },
+      }));
+      e.target.value = "";
+      return;
+    }
     // Cap uploads at 300KB — reject larger files before any upload attempt.
     if (file.size > MAX_ATTACHMENT_BYTES) {
       setRows((r) => ({
