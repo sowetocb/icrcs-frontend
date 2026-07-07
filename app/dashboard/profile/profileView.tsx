@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/ui/toast";
+import { RULES } from "@/lib/validation/rules";
 import { LoaderCircle, X } from "lucide-react";
 import { useGenderOptions } from "@/components/registry/blocks";
 import {
@@ -26,7 +27,7 @@ import {
 } from "@/lib/auth/profile";
 
 const MAX_PHOTO = 300 * 1024; // 300KB
-const PHOTO_TYPES = ["image/jpeg", "image/png"];
+const PHOTO_TYPES: readonly string[] = RULES.PHOTO_ALLOWED_MIME;
 
 /** Normalise a phone value to the Tanzanian format: "+255" followed by at most
  * 9 national digits (drops a duplicate leading 255 from a pasted full number).
@@ -313,7 +314,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png"
+            accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
             onChange={handlePhoto}
             className="hidden"
           />
@@ -329,7 +330,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="firstName"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.firstName}
               onChange={(e) => setField("firstName", e.target.value)}
               className={inputClass}
@@ -341,7 +342,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="middleName"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.middleName}
               onChange={(e) => setField("middleName", e.target.value)}
               className={inputClass}
@@ -353,7 +354,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             </label>
             <input
               id="lastName"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.lastName}
               onChange={(e) => setField("lastName", e.target.value)}
               className={inputClass}

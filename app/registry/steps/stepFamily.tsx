@@ -13,6 +13,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 import { X, Plus } from "lucide-react";
 
 /**
@@ -20,7 +21,7 @@ import { X, Plus } from "lucide-react";
  * At least two relatives are required; if married, at least one spouse.
  */
 
-const MIN_RELATIVES = 2;
+const MIN_RELATIVES = RULES.RELATIVES_MIN;
 const MIN_SPOUSES = 1;
 const MIN_CHILDREN = 1;
 
@@ -65,13 +66,13 @@ function PersonFields({
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
       </div>
 
@@ -106,7 +107,7 @@ function PersonFields({
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={RULES.UI_CITY_MAX} />
             </Field>
           )}
         </div>

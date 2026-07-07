@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import StepDetails, { RegistrationDetails } from "./stepDetails";
 import StepOtp from "./stepOtp";
@@ -16,18 +16,69 @@ const emptyDetails: RegistrationDetails = {
   middleName: "",
   lastName: "",
   gender: "",
+  nationality: "",
   phoneNumber: "",
   email: "",
   password: "",
 };
 
+// Persist just enough of the create-profile flow (per-tab) so a page refresh
+// returns to the OTP step instead of the details step. The PASSWORD is never
+// persisted; only the OTP step needs the pre-auth token + non-secret details.
+const CREATE_PROFILE_STATE_KEY = "icrcs-create-profile-state";
+let createProfileMountedInSession = false;
+
+function readRestorableCreateProfile(): { details: RegistrationDetails; preAuthToken: string } | null {
+  if (typeof window === "undefined" || createProfileMountedInSession) return null;
+  try {
+    const raw = sessionStorage.getItem(CREATE_PROFILE_STATE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as { step?: number; details?: Partial<RegistrationDetails>; preAuthToken?: string };
+    // Only step 2 (OTP) is resumable, and it needs the pre-auth token.
+    if (s.step === 2 && typeof s.preAuthToken === "string" && s.preAuthToken) {
+      return {
+        details: { ...emptyDetails, ...(s.details ?? {}), password: "" },
+        preAuthToken: s.preAuthToken,
+      };
+    }
+  } catch {
+    // ignore malformed state
+  }
+  return null;
+}
+
 export default function CreateProfileFlow() {
   const router = useRouter();
   const { t } = useI18n();
   const { notify } = useToast();
-  const [step, setStep] = useState<Step>(1);
-  const [details, setDetails] = useState<RegistrationDetails>(emptyDetails);
-  const [preAuthToken, setPreAuthToken] = useState("");
+  const [step, setStep] = useState<Step>(() => (readRestorableCreateProfile() ? 2 : 1));
+  const [details, setDetails] = useState<RegistrationDetails>(() => readRestorableCreateProfile()?.details ?? emptyDetails);
+  const [preAuthToken, setPreAuthToken] = useState(() => readRestorableCreateProfile()?.preAuthToken ?? "");
+
+  // After the first mount, any later mount is a client-side navigation (start
+  // clean); only a fresh document load (refresh) resumes the OTP step.
+  useEffect(() => {
+    createProfileMountedInSession = true;
+  }, []);
+
+  // Persist the resumable OTP step so a refresh returns to it. The password is
+  // stripped; step 1 clears the saved state.
+  useEffect(() => {
+    try {
+      if (step === 2) {
+        const { password: _password, ...safeDetails } = details;
+        void _password;
+        sessionStorage.setItem(
+          CREATE_PROFILE_STATE_KEY,
+          JSON.stringify({ step, details: safeDetails, preAuthToken }),
+        );
+      } else {
+        sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
+      }
+    } catch {
+      // ignore — sessionStorage unavailable
+    }
+  }, [step, details, preAuthToken]);
 
   // Step 1: collect profile + password, POST /v1/auth/register (triggers email OTP).
   async function handleRegister(data: RegistrationDetails) {
@@ -39,6 +90,7 @@ export default function CreateProfileFlow() {
       middleName: normalized.middleName,
       lastName: normalized.lastName,
       gender: normalized.gender,
+      nationality: normalized.nationality,
       phoneNumber: normalized.phoneNumber,
       email: normalized.email,
       password: normalized.password,
@@ -51,12 +103,19 @@ export default function CreateProfileFlow() {
   // Step 2: verify the OTP; on success we redirect to login page.
   async function handleVerify(otpCode: string) {
     await verifyOtp(otpCode, preAuthToken);
+    // Flow complete — drop the resumable state before leaving.
+    try {
+      sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
+    } catch {
+      // ignore
+    }
     // Persist the account holder's details so their registration auto-fills.
     saveProfile({
       firstName: details.firstName,
       middleName: details.middleName,
       lastName: details.lastName,
       gender: details.gender,
+      nationality: details.nationality,
       phoneNumber: details.phoneNumber,
       email: details.email,
     });
@@ -74,7 +133,7 @@ export default function CreateProfileFlow() {
   return (
     <div className="w-full">
       {/* Step progress */}
-      <div className="mb-6 flex items-center gap-2" aria-hidden="true">
+      <div className="mb-4 flex items-center gap-2" aria-hidden="true">
         {[1, 2].map((n) => (
           <span
             key={n}

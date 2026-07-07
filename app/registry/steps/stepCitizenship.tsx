@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Field, TextInput, useWizard } from "@/components/registry/field";
 import WardCascade from "@/components/registry/wardCascade";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 
 const ADDR_SUFFIXES = [
   "Country",
@@ -82,7 +83,7 @@ export default function StepAddress() {
             </div>
           ) : permIsForeign ? (
             <Field label={t("fields.phCity")}>
-              <TextInput name="permCity" placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
+              <TextInput name="permCity" placeholder={t("fields.phCity")} lettersOnly maxLength={RULES.UI_CITY_MAX} />
             </Field>
           ) : null}
         </div>
@@ -113,7 +114,7 @@ export default function StepAddress() {
               </div>
             ) : curIsForeign ? (
               <Field label={t("fields.phCity")}>
-                <TextInput name="curCity" placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
+                <TextInput name="curCity" placeholder={t("fields.phCity")} lettersOnly maxLength={RULES.UI_CITY_MAX} />
               </Field>
             ) : null}
           </div>

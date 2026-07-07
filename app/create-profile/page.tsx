@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function CreateProfilePage() {
   return (
-    <AuthShell>
+    <AuthShell wide>
       <CreateProfileFlow />
     </AuthShell>
   );

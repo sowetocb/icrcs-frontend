@@ -8,6 +8,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 import { X, Plus } from "lucide-react";
 
 // Identification document type suffixes cleared when removing the last entry.
@@ -58,13 +59,13 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       {/* Name */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={100} />
+          <TextInput name={`${prefix}Last`} placeholder={t("fields.phLast")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
       </div>
 
@@ -150,7 +151,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
           <WardCascade prefix={`${prefix}Res`} showStreet />
           {resIsForeign && (
             <Field label={t("fields.phCity")}>
-              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={30} />
+              <TextInput name={`${prefix}ResCity`} placeholder={t("fields.phCity")} lettersOnly maxLength={RULES.UI_CITY_MAX} />
             </Field>
           )}
         </div>
@@ -160,21 +161,59 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
 }
 
 export default function StepGuardian() {
-  const { data, setQuiet } = useWizard();
+  const { data, set, setQuiet } = useWizard();
   const { t } = useI18n();
 
-  // Pre-fill gender: father → Male, mother → Female (only if not already set).
+  // When a foreigner registers a minor as a GUARDIAN, they're first asked whether
+  // they know the minor's parents. Default "yes" → show the parents' details; "no"
+  // → collect a single guardian's details instead. (For a "parent" registrant, or
+  // a normal registration, the parents are always collected.)
+  const isGuardian = data.minorRelationship === "guardian";
+  const knowsParents = (typeof data.knowsParents === "string" ? data.knowsParents : "yes") !== "no";
+  const showParents = !isGuardian || knowsParents;
+
   useEffect(() => {
     if (!data.fatherGender) setQuiet("fatherGender", "M");
     if (!data.motherGender) setQuiet("motherGender", "F");
+    if (isGuardian && data.knowsParents === undefined) setQuiet("knowsParents", "yes");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isGuardian]);
 
   return (
     <div className="space-y-8">
-      <ParentBlock prefix="father" label={t("fields.fatherInfo")} />
-      <hr className="border-line" />
-      <ParentBlock prefix="mother" label={t("fields.motherInfo")} />
+      {isGuardian && (
+        <div className="rounded-lg border border-line bg-card p-4">
+          <p className="mb-3 text-sm font-medium text-ink">
+            {t("registry.knowsParentsQuestion")}
+          </p>
+          <div className="flex gap-6">
+            {(["yes", "no"] as const).map((v) => (
+              <label key={v} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="knowsParents"
+                  checked={(typeof data.knowsParents === "string" ? data.knowsParents : "yes") === v}
+                  onChange={() => set("knowsParents", v)}
+                  className="h-4 w-4 shrink-0 accent-navy-700"
+                />
+                <span className="text-sm font-medium text-ink">
+                  {t(v === "yes" ? "registry.radioYes" : "registry.radioNo")}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showParents ? (
+        <>
+          <ParentBlock prefix="father" label={t("fields.fatherInfo")} />
+          <hr className="border-line" />
+          <ParentBlock prefix="mother" label={t("fields.motherInfo")} />
+        </>
+      ) : (
+        <ParentBlock prefix="guardian" label={t("fields.guardianInfo")} />
+      )}
     </div>
   );
 }

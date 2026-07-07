@@ -490,8 +490,6 @@ export default function StepPreviewDeclaration() {
           ))}
       </PreviewSection>
 
-      {/* ─── Step 7: Referees (informational) ─── */}
-
       {/* ─── Official Clause ─── */}
       <div className="rounded-xl border border-line bg-surface/60 p-6">
         <h3 className="font-display text-base font-bold text-navy-700">

@@ -70,6 +70,8 @@ const en = {
     lastName: "Last name",
     gender: "Gender",
     genderSelect: "Select gender",
+    nationality: "Nationality",
+    nationalitySelect: "Select country of nationality",
     genderMale: "Male",
     genderFemale: "Female",
     genderOther: "Other",
@@ -333,6 +335,7 @@ const en = {
     sameAsPerm: "My current address is the same as my permanent address",
     neverAttendedSchool: "I have never attended school",
     haveAttendedSchool: "Have you attended school?",
+    knowsParentsQuestion: "Do you know parents information of this minor?",
     primaryEducationMandatory: "Primary education is mandatory. Please provide at least your primary school details below.",
     radioYes: "Yes",
     radioNo: "No",
@@ -343,7 +346,7 @@ const en = {
     back5: "Back to Education",
     back6: "Back to Emergency Contacts",
     back7: "Back to Family",
-    back8: "Back to Referees",
+    back8: "Back to Family",
     back9: "Back to Uploads",
     s1Title: "Personal Information",
     s1Desc: "Name, date of birth, citizenship and contact details",
@@ -391,11 +394,11 @@ const en = {
     s7Heading: "Referees",
     s7Intro:
       "Referees are individuals who can vouch for your identity and character. This section is for print purposes only.",
-    s8Tag: "Step 08 - Uploads",
+    s8Tag: "Step 07 - Uploads",
     s8Heading: "Document Uploads",
     s8Intro:
       "Upload supporting documents such as your birth certificate or national ID copy. You can preview and remove documents before submitting.",
-    s9Tag: "Step 09 - Preview & Declaration",
+    s9Tag: "Step 08 - Preview & Declaration",
     s9Heading: "Preview and Declaration",
     s9Intro:
       "Review all the information you provided. You can go back to any step to correct a mistake, then confirm the declaration to submit. Providing false information is a criminal offense under Tanzanian law.",
@@ -671,6 +674,7 @@ const en = {
     employerOpt: "Employer", // REVIEW
     fatherInfo: "Father's Information", // REVIEW
     motherInfo: "Mother's Information", // REVIEW
+    guardianInfo: "Guardian's Information",
     haveChildren: "Do you have children?", // REVIEW
     childrenNote: "Add each child registered under your profile.", // REVIEW
     relativesTitle: "Relatives", // REVIEW
@@ -800,6 +804,14 @@ const en = {
     registerMinor: "Register the minor",
     noMinorNote: "Thank you. No further action is required at this time.",
     done: "Done",
+    fillInfoTitle: "Fill the following information:",
+    canRegisterMinor: "You can register a minor with a Tanzanian origin.",
+    noMinorBtn: "I do not have a minor",
+    continueRegistration: "Continue Registration",
+    relationshipQuestion: "What is your relationship to the minor?",
+    relationshipGuardian: "Guardian",
+    relationshipParent: "Parent",
+    relationshipContinue: "Continue",
   },
   preview: {
     fullName: "Full Name", // REVIEW
@@ -921,6 +933,8 @@ const sw: typeof en = {
     lastName: "Jina la ukoo",
     gender: "Jinsia",
     genderSelect: "Chagua jinsia",
+    nationality: "Uraia",
+    nationalitySelect: "Chagua nchi ya uraia",
     genderMale: "Mwanaume",
     genderFemale: "Mwanamke",
     genderOther: "Nyingine",
@@ -1184,6 +1198,7 @@ const sw: typeof en = {
     sameAsPerm: "Anwani yangu ya sasa ni sawa na anwani yangu ya kudumu",
     neverAttendedSchool: "Sijawahi kwenda shule",
     haveAttendedSchool: "Je, umewahi kwenda shule?",
+    knowsParentsQuestion: "Je, unazifahamu taarifa za wazazi wa mtoto huyu?",
     primaryEducationMandatory: "Elimu ya msingi ni lazima. Tafadhali toa angalau taarifa za shule yako ya msingi hapa chini.",
     radioYes: "Ndiyo",
     radioNo: "Hapana",
@@ -1194,7 +1209,7 @@ const sw: typeof en = {
     back5: "Rudi kwenye Elimu",
     back6: "Rudi kwenye Watu wa Dharura",
     back7: "Rudi kwenye Familia",
-    back8: "Rudi kwenye Wadhamini",
+    back8: "Rudi kwenye Familia",
     back9: "Rudi kwenye Viambatisho",
     s1Title: "Taarifa Binafsi",
     s1Desc: "Jina, tarehe ya kuzaliwa, uraia na mawasiliano",
@@ -1242,11 +1257,11 @@ const sw: typeof en = {
     s7Heading: "Wadhamini",
     s7Intro:
       "Wadhamini ni watu wanaoweza kuthibitisha utambulisho na tabia yako. Sehemu hii ni kwa madhumuni ya uchapishaji tu.",
-    s8Tag: "Hatua 08 - Viambatisho",
+    s8Tag: "Hatua 07 - Viambatisho",
     s8Heading: "Viambatisho",
     s8Intro:
       "Pakia nyaraka za ushahidi kama vile cheti chako cha kuzaliwa au nakala ya kitambulisho. Unaweza kuangalia na kuondoa nyaraka kabla ya kuwasilisha.",
-    s9Tag: "Hatua 09 - Hakiki na Tamko",
+    s9Tag: "Hatua 08 - Hakiki na Tamko",
     s9Heading: "Hakiki na Tamko",
     s9Intro:
       "Hakiki taarifa zote ulizotoa. Unaweza kurudi kwenye hatua yoyote kurekebisha kosa, kisha uthibitishe tamko ili kuwasilisha. Kutoa taarifa za uongo ni kosa la jinai chini ya sheria za Tanzania.",
@@ -1521,6 +1536,7 @@ const sw: typeof en = {
     employerOpt: "Mwajiri", // REVIEW
     fatherInfo: "Taarifa za Baba", // REVIEW
     motherInfo: "Taarifa za Mama", // REVIEW
+    guardianInfo: "Taarifa za Mlezi",
     haveChildren: "Je, una watoto?", // REVIEW
     childrenNote: "Ongeza kila mtoto aliyesajiliwa chini ya wasifu wako.", // REVIEW
     relativesTitle: "Ndugu", // REVIEW
@@ -1649,6 +1665,14 @@ const sw: typeof en = {
     registerMinor: "Msajili mtoto",
     noMinorNote: "Asante. Hakuna hatua zaidi zinazohitajika kwa sasa.",
     done: "Maliza",
+    fillInfoTitle: "Jaza taarifa zifuatazo:",
+    canRegisterMinor: "Unaweza kusajili mtoto mwenye asili ya Kitanzania.",
+    noMinorBtn: "Sina mtoto",
+    continueRegistration: "Endelea na Usajili",
+    relationshipQuestion: "Uhusiano wako na mtoto ni upi?",
+    relationshipGuardian: "Mlezi",
+    relationshipParent: "Mzazi",
+    relationshipContinue: "Endelea",
   },
   preview: {
     fullName: "Jina Kamili", // REVIEW

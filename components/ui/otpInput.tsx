@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { RULES } from "@/lib/validation/rules";
 
 type OtpInputProps = {
   value: string;
@@ -12,7 +13,7 @@ type OtpInputProps = {
 export default function OtpInput({
   value,
   onChange,
-  length = 6,
+  length = RULES.OTP_LENGTH,
   invalid = false,
 }: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);

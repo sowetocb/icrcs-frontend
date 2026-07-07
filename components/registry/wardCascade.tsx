@@ -187,7 +187,7 @@ export default function WardCascade({
   /** When true, Tanzania is excluded from the country dropdown. */
   excludeTanzania?: boolean;
 }) {
-  const { data, set, blur, errors } = useWizard();
+  const { data, set, errors } = useWizard();
   const { t } = useI18n();
 
   // The Tanzania cascade is rooted at Territory (Mainland / Zanzibar), which
@@ -271,7 +271,6 @@ export default function WardCascade({
             invalid={errors.includes(`${prefix}Country`)}
             lookupCountries={countries}
             excludeTanzania={excludeTanzania}
-            onBlur={() => blur(`${prefix}Country`, countryName)}
             onChange={(lookupItem, country) => {
               set(`${prefix}CountryId`, lookupItem ? String(lookupItem.id) : "");
               set(`${prefix}Country`, country?.name ?? "");

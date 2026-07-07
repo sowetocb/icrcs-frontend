@@ -324,7 +324,7 @@ export function Select({
   disabled?: boolean;
   onValueChange?: (value: string) => void;
 }) {
-  const { data, set, blur, errors, locked } = useWizard();
+  const { data, set, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
@@ -338,7 +338,6 @@ export function Select({
             set(name, e.target.value);
             onValueChange?.(e.target.value);
           }}
-          onBlur={() => blur(name, value)}
           aria-label={placeholder}
           disabled={isLocked}
           className={`${inputCls(invalid)} appearance-none pr-9 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}

@@ -5,6 +5,11 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { Check, ChevronRight, X } from "lucide-react";
 
 const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+// The Referees stage (7) accepts no user input, so it is removed from the wizard
+// flow and not shown here. Internal step numbers are unchanged (kept 1:1 with the
+// backend stages); only the visible badge numbering stays contiguous (1..8).
+const REFEREE_STEP = 7;
+const VISIBLE_STEPS = STEPS.filter((n) => n !== REFEREE_STEP);
 
 function CheckIcon() {
   return <Check size={14} strokeWidth={3} aria-hidden="true" />;
@@ -84,7 +89,7 @@ export default function Stepper({
         </div>
 
         <ol className="flex-1 space-y-0.5 px-3 pb-4">
-          {STEPS.map((n) => {
+          {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
             // step being edited shows as active rather than done.
@@ -116,9 +121,9 @@ export default function Stepper({
                             : "border border-white/20 text-white/60"
                       }`}
                     >
-                      {done ? <CheckIcon /> : n}
+                      {done ? <CheckIcon /> : idx + 1}
                     </span>
-                    {n < STEPS.length && (
+                    {idx < VISIBLE_STEPS.length - 1 && (
                       <span className="mt-1 w-px flex-1 bg-white/10" />
                     )}
                   </span>

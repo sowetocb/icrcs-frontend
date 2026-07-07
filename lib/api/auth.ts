@@ -2,6 +2,15 @@ import { apiPost, apiGet, apiPut, apiDelete, apiUpload, ApiError } from "./clien
 import { resolveGenderId, resolveGenderCode } from "./lookup";
 import { loadSession, saveSession, clearSession } from "@/lib/auth/session";
 import { loadProfile, toProxyUrl, type Profile } from "@/lib/auth/profile";
+import { COUNTRIES } from "@/lib/countries";
+import { alpha2ToAlpha3 } from "@/lib/iso3";
+
+/** Resolve a country NAME (e.g. "Tanzania") to its ISO-3166-1 alpha-3 code
+ *  ("TZA") for the backend; "" when it can't be resolved. */
+function toNationalityCode(name: string): string {
+  const match = COUNTRIES.find((c) => c.name === name);
+  return match ? alpha2ToAlpha3(match.code) ?? "" : "";
+}
 
 /** Thrown when the session is invalid/expired and can't be refreshed — the UI
  * should send the user back to sign in. */
@@ -19,6 +28,9 @@ export type RegisterPayload = {
   middleName: string;
   lastName: string;
   gender: string;
+  /** Country of nationality as a country NAME (e.g. "Tanzania"). Sent to the
+   *  backend as the ISO-3166-1 alpha-3 code (nationalityCode). */
+  nationality: string;
   phoneNumber: string;
   email: string;
   password: string;
@@ -76,7 +88,12 @@ export async function register(
   // The backend expects the gender lookup ID (e.g. 1), not the M/F/O code the
   // form collects. Resolve it; keep the original value if the lookup is down.
   const genderId = await resolveGenderId(payload.gender);
-  const body = { ...payload, gender: genderId ?? payload.gender };
+  const { nationality, ...rest } = payload;
+  const body = {
+    ...rest,
+    gender: genderId ?? payload.gender,
+    nationalityCode: toNationalityCode(nationality),
+  };
   const raw = (await apiPost("/v1/auth/register", body)) as Record<string, unknown>;
   const data = (raw?.data ?? raw ?? {}) as Record<string, unknown>;
   return { preAuthToken: String(data.preAuthToken ?? "") };
@@ -265,6 +282,27 @@ function rawGender(d: Record<string, unknown>): string {
   return String(g);
 }
 
+/** Reverse of toNationalityCode: an alpha-3 code ("TZA") back to a country
+ *  NAME ("Tanzania"), or "" when unknown. */
+function nationalityNameFromCode(code: string): string {
+  const up = code.toUpperCase();
+  const match = COUNTRIES.find((c) => alpha2ToAlpha3(c.code) === up);
+  return match?.name ?? "";
+}
+
+// Pull the nationality out of the backend envelope (accepts an alpha-3 code or a
+// name, string or {code/name} object) and normalise to a country NAME.
+function rawNationality(d: Record<string, unknown>): string {
+  const raw = d.nationality ?? d.nationalityCode ?? d.nationalityName ?? d.countryCode;
+  if (raw == null) return "";
+  const s =
+    typeof raw === "object"
+      ? String((raw as Record<string, unknown>).name ?? (raw as Record<string, unknown>).code ?? "")
+      : String(raw);
+  if (!s) return "";
+  return /^[A-Za-z]{3}$/.test(s) ? nationalityNameFromCode(s) || s : s;
+}
+
 // Maps the backend profile envelope ({ data: {...} } or a bare object) to Profile.
 function mapProfile(raw: unknown): Profile {
   const r = (raw ?? {}) as Record<string, unknown>;
@@ -275,6 +313,9 @@ function mapProfile(raw: unknown): Profile {
     middleName: String(d.middleName ?? ""),
     lastName: String(d.lastName ?? ""),
     gender: rawGender(d),
+    // Fall back to the value captured at create-profile if the backend omits it,
+    // so the registry can still classify Tanzanian vs foreign.
+    nationality: rawNationality(d) || loadProfile()?.nationality || undefined,
     phoneNumber: String(d.phoneNumber ?? d.phone ?? ""),
     email: String(d.email ?? ""),
     profilePictureUrl: String(d.profilePictureUrl ?? d.profilePicture ?? ""),
@@ -287,6 +328,7 @@ const MOCK_PROFILE: Profile = {
   middleName: "Gastone",
   lastName: "Mahwaya",
   gender: "M",
+  nationality: "Tanzania",
   phoneNumber: "+255624839009",
   email: "john.mahwaya@immigration.go.tz",
   profilePictureUrl: "",

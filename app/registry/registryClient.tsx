@@ -18,18 +18,43 @@ import { useI18n } from "@/app/i18n/localeProvider";
 
 type Mode = "landing" | "gate" | "wizard" | "success";
 
+// Persisted per-tab (sessionStorage) so a page refresh returns to the same view.
+const REGISTRY_MODE_KEY = "icrcs-registry-mode";
+// False only on a fresh document load (a hard refresh or first navigation to the
+// app); stays true across client-side navigations. This is how we let a refresh
+// restore the view the user was on, while a sidebar click still opens landing —
+// without relying on the unreliable `performance` navigation type.
+let hasMountedInSession = false;
+
 export default function RegistryClient() {
-  // Opening the Citizen Registry always shows the landing page — the user picks
-  // "Resume Registration" to continue an in-progress draft. (The navigation
-  // type from `performance` is unreliable here: it reflects the original
-  // document load, so a sidebar click after a refresh wrongly looked like a
-  // reload and auto-resumed the wizard.)
   const { notify } = useToast();
   const { t } = useI18n();
-  const [mode, setMode] = useState<Mode>("landing");
+  // On a hard refresh, restore the view the user was on; on a client-side
+  // navigation (e.g. a sidebar click), always open the landing page. "wizard"
+  // is only restored when an in-progress draft still exists.
+  const [mode, setMode] = useState<Mode>(() => {
+    if (typeof window === "undefined" || hasMountedInSession) return "landing";
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
+    } catch {
+      // sessionStorage unavailable — fall back to landing
+    }
+    if (saved === "wizard") {
+      const ownerId = loadProfile()?.profileId ?? "";
+      const draft = loadRegistrationFor(ownerId);
+      if (draft && !draft.completed) return "wizard";
+    } else if (saved === "gate") {
+      return "gate";
+    }
+    return "landing";
+  });
   // True when a verified non-citizen (foreign) profile is registering a
   // Tanzanian-origin minor rather than themselves.
   const [registeringMinor, setRegisteringMinor] = useState(false);
+  // The foreign registrant's relationship to the minor ("guardian" | "parent"),
+  // chosen in the gate dialog and used to branch Stage 3 (Parents).
+  const [minorRelationship, setMinorRelationship] = useState<"guardian" | "parent" | "">("");
   const [submission, setSubmission] = useState<{
     id: string;
     date: string;
@@ -49,6 +74,22 @@ export default function RegistryClient() {
     const draft = loadRegistrationFor(ownerId);
     return !!draft && !draft.completed;
   });
+  // Persist the current view so a page refresh can restore it (see the mode
+  // initializer above).
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(REGISTRY_MODE_KEY, mode);
+    } catch {
+      // ignore — sessionStorage unavailable
+    }
+  }, [mode]);
+
+  // After the first mount, any later mount of this component is a client-side
+  // navigation, which should open landing rather than restore the saved view.
+  useEffect(() => {
+    hasMountedInSession = true;
+  }, []);
+
   useEffect(() => {
     // Only this account holder's own draft counts as "in progress".
     const ownerId = loadProfile()?.profileId ?? "";
@@ -199,8 +240,13 @@ export default function RegistryClient() {
     if (hasIncomplete) return;
     clearRegistration();
     setRegisteringMinor(false);
-    // Citizenship is verified on an independent gate before the wizard.
-    setMode("gate");
+    // A Tanzanian national registers themselves and goes straight to Stage 1.
+    // A foreign national first passes the gate (travel-document lookup, and the
+    // option to register a Tanzanian-origin minor). An unknown/empty nationality
+    // (legacy profile) is treated as Tanzanian since the gate binds a foreign one.
+    const nationality = loadProfile()?.nationality ?? "";
+    const isForeign = !!nationality && nationality !== "Tanzania";
+    setMode(isForeign ? "gate" : "wizard");
   }
 
   return (
@@ -224,13 +270,10 @@ export default function RegistryClient() {
           <div className="flex flex-1">
             <CitizenSidebar />
             <CitizenshipGate
-              isDependent={selfDone}
-              onCitizen={() => {
-                setRegisteringMinor(false);
-                setMode("wizard");
-              }}
-              onRegisterMinor={() => {
+              nationality={loadProfile()?.nationality ?? ""}
+              onRegisterMinor={(relationship) => {
                 setRegisteringMinor(true);
+                setMinorRelationship(relationship);
                 setMode("wizard");
               }}
               onExit={() => setMode("landing")}
@@ -242,6 +285,7 @@ export default function RegistryClient() {
           <RegistryWizard
             selfDone={selfDone}
             registeringMinor={registeringMinor}
+            minorRelationship={minorRelationship}
             onExit={() => setMode("landing")}
             onComplete={handleComplete}
           />

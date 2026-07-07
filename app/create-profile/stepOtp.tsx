@@ -6,6 +6,7 @@ import OtpInput from "@/components/ui/otpInput";
 import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
+import { RULES } from "@/lib/validation/rules";
 import { LoaderCircle } from "lucide-react";
 
 const OTP_TTL = 180; // 3:00
@@ -44,7 +45,7 @@ export default function StepOtp({
 
   async function handleNext(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (code.length < 6) {
+    if (code.length < RULES.OTP_LENGTH) {
       setInvalid(true);
       return;
     }
@@ -131,7 +132,7 @@ export default function StepOtp({
 
         <button
           type="submit"
-          disabled={code.length < 6 || expired || submitting}
+          disabled={code.length < RULES.OTP_LENGTH || expired || submitting}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-60"
         >
           {submitting && (

@@ -188,8 +188,16 @@ export default function StepEducation() {
     set("eduCount", String(schoolCount + 1));
   }
 
-  function removeLastSchool() {
+  /** Remove a specific school, shifting later ones up into its slot (so any
+   *  entry can be deleted, not just the last — matches the Stage 1 documents
+   *  repeater's removeIdDoc). */
+  function removeSchool(target: number) {
     if (schoolCount <= MIN_SCHOOLS) return;
+    for (let n = target; n < schoolCount; n++) {
+      for (const s of SCHOOL_SUFFIXES) {
+        set(`edu${n}${s}`, data[`edu${n + 1}${s}`] ?? "");
+      }
+    }
     clearSchool(schoolCount);
     set("eduCount", String(schoolCount - 1));
   }
@@ -255,7 +263,7 @@ export default function StepEducation() {
                   n={n}
                   levelOptions={blockLevelOptions}
                   onRemove={
-                    n === schoolCount && schoolCount > MIN_SCHOOLS ? removeLastSchool : undefined
+                    schoolCount > MIN_SCHOOLS ? () => removeSchool(n) : undefined
                   }
                 />
               );

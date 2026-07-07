@@ -66,14 +66,6 @@ export default function DashboardHome() {
               >
                 {t("dashboard.startRegistration")}
               </Link>
-              <button
-                type="button"
-                onClick={() => setShowRequirements(true)}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white"
-              >
-                <FileText size={18} aria-hidden="true" />
-                {t("dashboard.viewRequirements")}
-              </button>
             </div>
           </div>
 

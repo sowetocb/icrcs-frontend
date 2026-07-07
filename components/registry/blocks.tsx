@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TextInput, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 import { useLookup } from "@/components/lookup/useLookup";
 import {
   getGenders,
@@ -169,13 +170,13 @@ export function NameRow({ prefix }: { prefix: string }) {
       {/* Each input is wrapped so its inline error renders directly below it
           (the TextInput fragment would otherwise spill into the next grid cell). */}
       <div>
-        <TextInput name={`${prefix}First`} placeholder={t("fields.phFirstName")} lettersOnly maxLength={15} />
+        <TextInput name={`${prefix}First`} placeholder={t("fields.phFirstName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
       </div>
       <div>
-        <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddleName")} lettersOnly maxLength={15} />
+        <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddleName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
       </div>
       <div>
-        <TextInput name={`${prefix}Last`} placeholder={t("fields.phLastName")} lettersOnly maxLength={15} />
+        <TextInput name={`${prefix}Last`} placeholder={t("fields.phLastName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { saveSession } from "@/lib/auth/session";
 import { saveProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
+import { RULES } from "@/lib/validation/rules";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 
 // Practical email format: a local part of letters/digits/._%+- , an @, a
@@ -128,7 +129,7 @@ export default function LoginForm() {
             type="email"
             autoComplete="email"
             required
-            maxLength={30}
+            maxLength={RULES.UI_EMAIL_MAX}
             value={email}
             onChange={(e) => {
               // Strip any character that can't appear in an email so the user

@@ -6,6 +6,7 @@ import OtpInput from "@/components/ui/otpInput";
 import { useI18n } from "../i18n/localeProvider";
 import { forgotPassword, verifyResetOtp, resetPassword } from "@/lib/api/auth";
 import { getErrorMessage, ApiError } from "@/lib/api/client";
+import { RULES } from "@/lib/validation/rules";
 import { Eye, EyeOff, LoaderCircle, CircleCheck } from "lucide-react";
 
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
@@ -36,11 +37,41 @@ function Requirement({ met, label }: { met: boolean; label: string }) {
   );
 }
 
+// Persist just enough of the reset flow (per-tab) so a page refresh returns to
+// the same step instead of dropping back to "request OTP". Only step/identifier/
+// profileId are kept — never the OTP code or the new password.
+const FORGOT_STATE_KEY = "icrcs-forgot-state";
+// False only on a fresh document load (a hard refresh); stays true across
+// client-side navigations, so arriving at /forgot from the login link starts
+// clean while a refresh mid-flow resumes.
+let forgotMountedInSession = false;
+
+function readRestorableForgot(): { step: 2 | 3; identifier: string; profileId: string } | null {
+  if (typeof window === "undefined" || forgotMountedInSession) return null;
+  try {
+    const raw = sessionStorage.getItem(FORGOT_STATE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as { step?: number; identifier?: string; profileId?: string };
+    // Only steps 2 (verify OTP) and 3 (new password) are resumable, and both
+    // need a profileId to talk to the backend.
+    if ((s.step === 2 || s.step === 3) && typeof s.profileId === "string" && s.profileId) {
+      return {
+        step: s.step,
+        identifier: typeof s.identifier === "string" ? s.identifier : "",
+        profileId: s.profileId,
+      };
+    }
+  } catch {
+    // ignore malformed state
+  }
+  return null;
+}
+
 export default function ForgotFlow() {
   const { t } = useI18n();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [identifier, setIdentifier] = useState("");
-  const [profileId, setProfileId] = useState("");
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(() => readRestorableForgot()?.step ?? 1);
+  const [identifier, setIdentifier] = useState(() => readRestorableForgot()?.identifier ?? "");
+  const [profileId, setProfileId] = useState(() => readRestorableForgot()?.profileId ?? "");
   const [code, setCode] = useState("");
   const [otpInvalid, setOtpInvalid] = useState(false);
   const [password, setPassword] = useState("");
@@ -54,6 +85,29 @@ export default function ForgotFlow() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
+  // After the first mount, any later mount is a client-side navigation (which
+  // should start the flow clean); only a fresh document load (refresh) resumes.
+  useEffect(() => {
+    forgotMountedInSession = true;
+  }, []);
+
+  // Persist the resumable part of the flow so a refresh returns to the same step.
+  // Steps 1 (identifier) and 4 (success) are not resumable, so clear there.
+  useEffect(() => {
+    try {
+      if (step === 2 || step === 3) {
+        sessionStorage.setItem(
+          FORGOT_STATE_KEY,
+          JSON.stringify({ step, identifier, profileId }),
+        );
+      } else {
+        sessionStorage.removeItem(FORGOT_STATE_KEY);
+      }
+    } catch {
+      // ignore — sessionStorage unavailable
+    }
+  }, [step, identifier, profileId]);
+
   // Tick the resend cooldown down to zero.
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -62,9 +116,9 @@ export default function ForgotFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resendIn > 0]);
 
-  const hasMin = password.length >= 8;
-  const hasCapital = /[A-Z]/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const hasMin = password.length >= RULES.PASSWORD_MIN;
+  const hasCapital = RULES.PASSWORD_HAS_CAPITAL.test(password);
+  const hasSpecial = RULES.PASSWORD_HAS_SPECIAL.test(password);
   const allMet = hasMin && hasCapital && hasSpecial;
   const matches = password === confirm && confirm.length > 0;
 
@@ -108,7 +162,7 @@ export default function ForgotFlow() {
 
   async function handleVerify(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (code.length < 6) {
+    if (code.length < RULES.OTP_LENGTH) {
       setOtpInvalid(true);
       setError(t("forgot.otpIncomplete"));
       return;
@@ -175,7 +229,7 @@ export default function ForgotFlow() {
             <input
               id="identifier"
               value={identifier}
-              maxLength={30}
+              maxLength={RULES.UI_EMAIL_MAX}
               onChange={(e) => { setIdentifier(e.target.value); if (error) setError(""); }}
               onBlur={() => {
                 const v = identifier.trim();
@@ -224,7 +278,7 @@ export default function ForgotFlow() {
           )}
           <button
             type="submit"
-            disabled={code.length < 6 || submitting}
+            disabled={code.length < RULES.OTP_LENGTH || submitting}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:opacity-60"
           >
             {submitting && <Spinner />}

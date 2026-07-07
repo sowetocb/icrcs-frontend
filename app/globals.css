@@ -179,6 +179,20 @@ body {
   font-weight: 500;
 }
 
+/* ─── Native <select> dropdown options ───────────────────────────────────
+   A <select> showing its placeholder is styled muted/grey, and native
+   <option> elements inherit that colour — making the open list hard to read.
+   Force every option to the dark ink colour on a solid surface so items are
+   clearly visible; keep only the disabled placeholder option muted. */
+option {
+  color: var(--color-ink);
+  background-color: var(--color-card);
+  font-weight: 500;
+}
+option:disabled {
+  color: var(--color-muted);
+}
+
 /* ─── Tanzania flag-inspired login background ────────────────────────── */
 .tz-flag-bg {
   background: linear-gradient(

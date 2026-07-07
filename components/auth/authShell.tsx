@@ -149,11 +149,15 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
 export default function AuthShell({
   children,
   showStatusCheck = false,
+  wide = false,
 }: {
   children: React.ReactNode;
   /** Render the "Security: Status Check" widget in the left panel. Shown on the
    *  login screen only; hidden on create-profile / forgot flows. */
   showStatusCheck?: boolean;
+  /** Widen the card + give the form more of the split, so a longer form (e.g.
+   *  Create Profile) fits without vertical scrolling. */
+  wide?: boolean;
 }) {
   const { t } = useI18n();
   const [statusId, setStatusId] = useState("");
@@ -371,12 +375,12 @@ export default function AuthShell({
       </div>
 
       {/* Main — centered split card */}
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6">
+      <main className={`relative z-10 flex flex-1 flex-col items-center px-4 sm:px-6 ${wide ? "justify-start py-4 sm:py-6" : "justify-center py-10"}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About ICRCS" are rendered below the form instead. */}
-        <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
-          <div className="hidden w-[42%] flex-col items-center justify-start gap-5 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-6 py-8 md:flex">
+          <div className={`hidden flex-col items-center justify-start gap-5 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-6 py-8 md:flex ${wide ? "md:w-[34%]" : "w-[42%]"}`}>
             {/* Immigration emblem + branding — on top. The emblem sits on a light
                 pad so its blue ribbons and gold lettering stay legible against
                 the deep-blue panel. */}
@@ -408,7 +412,7 @@ export default function AuthShell({
           </div>
 
           {/* Right panel — form only */}
-          <div className="flex w-full flex-col justify-center px-8 py-8 sm:px-12 md:w-[58%]">
+          <div className={`flex w-full flex-col justify-center px-8 sm:px-12 ${wide ? "py-6 md:w-[64%] sm:px-10" : "py-8 md:w-[58%]"}`}>
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 

@@ -19,6 +19,9 @@ export type Profile = {
   middleName: string;
   lastName: string;
   gender: string;
+  /** Country of nationality, stored as the country NAME (e.g. "Tanzania").
+   *  Used to classify Tanzanian vs foreign at the registry. */
+  nationality?: string;
   phoneNumber: string;
   email: string;
   /** Backend-relative path, e.g. "uploads/PROFILE-.../x.jpg". */

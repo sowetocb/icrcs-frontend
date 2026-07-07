@@ -10,6 +10,7 @@ import {
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
+import { RULES } from "@/lib/validation/rules";
 import { LOGO_EMBLEM } from "@/lib/assets";
 
 type Data = Record<string, string | boolean>;
@@ -148,7 +149,7 @@ export default function PrintableForm({
   // Family
   const hasChildren = data.hasChildren === true;
   const isMarried = data.isMarried === true;
-  const relativeCount = Math.max(2, Number(data.relativeCount) || 2);
+  const relativeCount = Math.max(RULES.RELATIVES_MIN, Number(data.relativeCount) || RULES.RELATIVES_MIN);
   const spouseCount = Math.max(1, Number(data.spouseCount) || 1);
   const childCount = Math.max(1, Number(data.childCount) || 1);
 

@@ -6,7 +6,9 @@ import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getGenders, type LookupItem } from "@/lib/api/lookup";
+import { COUNTRIES, TANZANIA } from "@/lib/countries";
 import ProfilePhoneInput from "./profilePhoneInput";
+import { RULES } from "@/lib/validation/rules";
 import { Eye, EyeOff, LoaderCircle, CircleX } from "lucide-react";
 
 export type Gender = "" | "M" | "F" | "O";
@@ -32,10 +34,21 @@ export type RegistrationDetails = {
   middleName: string;
   lastName: string;
   gender: Gender;
+  /** Country of nationality, stored as the country NAME (e.g. "Tanzania") so it
+   *  can be bound straight into the registry gate and classified downstream. */
+  nationality: string;
   phoneNumber: string;
   email: string;
   password: string;
 };
+
+// Nationality dropdown options — Tanzania pinned first, then the rest A→Z.
+const NATIONALITY_OPTIONS = [
+  TANZANIA,
+  ...COUNTRIES.filter((c) => c.name !== TANZANIA.name).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  ),
+];
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
@@ -107,9 +120,9 @@ export default function StepDetails({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const hasMin = form.password.length >= 8;
-  const hasCapital = /[A-Z]/.test(form.password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(form.password);
+  const hasMin = form.password.length >= RULES.PASSWORD_MIN;
+  const hasCapital = RULES.PASSWORD_HAS_CAPITAL.test(form.password);
+  const hasSpecial = RULES.PASSWORD_HAS_SPECIAL.test(form.password);
   const allMet = hasMin && hasCapital && hasSpecial;
   const matches = form.password === confirm && confirm.length > 0;
   const confirmInvalid = touchedConfirm && confirm.length > 0 && !matches;
@@ -118,6 +131,7 @@ export default function StepDetails({
   const middleNameInvalid = Boolean(errors.middleName);
   const lastNameInvalid = Boolean(errors.lastName);
   const genderInvalid = Boolean(errors.gender);
+  const nationalityInvalid = Boolean(errors.nationality);
   const phoneInvalid = Boolean(errors.phoneNumber);
   const emailInvalid = Boolean(errors.email);
   const passwordInvalid = Boolean(errors.password);
@@ -159,6 +173,7 @@ export default function StepDetails({
       middleName: !form.middleName.trim(),
       lastName: !form.lastName.trim(),
       gender: !form.gender,
+      nationality: !form.nationality,
       phoneNumber: phoneBad,
       email: !EMAIL_RE.test(form.email.trim()),
       password: !allMet,
@@ -187,23 +202,23 @@ export default function StepDetails({
 
   return (
     <>
-      <div className="mb-6">
+      <div className="mb-4">
         <h2 className="font-display text-2xl font-bold text-navy-700">
           {t("register.title")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("register.subtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+        <div className="grid grid-cols-1 gap-x-2.5 gap-y-2 sm:grid-cols-3">
+          <div className="space-y-1">
             <label htmlFor="firstName" className={labelClass}>
               {t("register.firstName")}
             </label>
             <input
               id="firstName"
               autoComplete="given-name"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.firstName}
               onChange={(e) => update("firstName", e.target.value)}
               onBlur={() => { if (!form.firstName.trim()) setErrors((e) => ({ ...e, firstName: true })); }}
@@ -216,14 +231,14 @@ export default function StepDetails({
               <FieldError id="firstName-error" message={req(t("register.firstName"))} />
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label htmlFor="middleName" className={labelClass}>
               {t("register.middleName")}
             </label>
             <input
               id="middleName"
               autoComplete="additional-name"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.middleName}
               onChange={(e) => update("middleName", e.target.value)}
               onBlur={() => { if (!form.middleName.trim()) setErrors((e) => ({ ...e, middleName: true })); }}
@@ -236,14 +251,14 @@ export default function StepDetails({
               <FieldError id="middleName-error" message={req(t("register.middleName"))} />
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label htmlFor="lastName" className={labelClass}>
               {t("register.lastName")}
             </label>
             <input
               id="lastName"
               autoComplete="family-name"
-              maxLength={15}
+              maxLength={RULES.UI_NAME_MAX}
               value={form.lastName}
               onChange={(e) => update("lastName", e.target.value)}
               onBlur={() => { if (!form.lastName.trim()) setErrors((e) => ({ ...e, lastName: true })); }}
@@ -258,8 +273,8 @@ export default function StepDetails({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5 sm:col-span-1">
+        <div className="grid grid-cols-1 gap-x-2.5 gap-y-2 sm:grid-cols-3">
+          <div className="space-y-1 sm:col-span-1">
             <label htmlFor="gender" className={labelClass}>
               {t("register.gender")}
             </label>
@@ -285,7 +300,7 @@ export default function StepDetails({
               <FieldError id="gender-error" message={req(t("register.gender"))} />
             )}
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="space-y-1 sm:col-span-2">
             <label htmlFor="email" className={labelClass}>
               {t("form.email")}
             </label>
@@ -293,7 +308,7 @@ export default function StepDetails({
               id="email"
               type="email"
               autoComplete="email"
-              maxLength={30}
+              maxLength={RULES.UI_EMAIL_MAX}
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
               onBlur={() => { if (!EMAIL_RE.test(form.email.trim())) setErrors((e) => ({ ...e, email: true })); }}
@@ -310,7 +325,34 @@ export default function StepDetails({
             )}
           </div>
         </div>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-1 gap-x-2.5 gap-y-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label htmlFor="nationality" className={labelClass}>
+            {t("register.nationality")}
+          </label>
+          <select
+            id="nationality"
+            value={form.nationality}
+            onChange={(e) => update("nationality", e.target.value)}
+            onBlur={() => { if (!form.nationality) setErrors((e) => ({ ...e, nationality: true })); }}
+            aria-invalid={nationalityInvalid}
+            aria-describedby={errors.nationality ? "nationality-error" : undefined}
+            className={`${inputClass} appearance-none ${form.nationality ? "text-ink" : "text-muted/70"} ${errors.nationality ? errorRing : ""}`}
+          >
+            <option value="" disabled>
+              {t("register.nationalitySelect")}
+            </option>
+            {NATIONALITY_OPTIONS.map((c) => (
+              <option key={c.code} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {errors.nationality && (
+            <FieldError id="nationality-error" message={req(t("register.nationality"))} />
+          )}
+        </div>
+        <div className="space-y-1">
             <label htmlFor="phoneNumber" className={labelClass}>
               {t("register.phone")}
             </label>
@@ -336,9 +378,12 @@ export default function StepDetails({
               <FieldError id="phoneNumber-error" message={phoneFormatError ? t("register.phoneInvalid") : req(t("register.phone"))} />
             )}
           </div>
+        </div>
 
+        {/* Password + Confirm — side by side to keep the form short (no scroll). */}
+        <div className="grid grid-cols-1 gap-x-2.5 gap-y-2 sm:grid-cols-2 sm:items-start">
         {/* Password */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label htmlFor="password" className={labelClass}>
             {t("password.password")}
           </label>
@@ -375,7 +420,7 @@ export default function StepDetails({
         </div>
 
         {/* Confirm password */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label htmlFor="confirmPassword" className={labelClass}>
             {t("password.confirm")}
           </label>
@@ -405,6 +450,7 @@ export default function StepDetails({
             <FieldError id="confirm-error" message={t("password.mismatch")} />
           ) : null}
         </div>
+        </div>
 
         {submitError && (
           <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
@@ -415,14 +461,14 @@ export default function StepDetails({
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70"
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70"
         >
           {submitting && <Spinner />}
           {submitting ? t("register.submitting") : t("register.next")}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-3 text-center text-sm text-muted">
         {t("register.haveAccount")}{" "}
         <Link href="/login" className="font-semibold text-gold-700 hover:text-gold">
           {t("register.signIn")}

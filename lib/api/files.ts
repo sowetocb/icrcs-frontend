@@ -4,6 +4,7 @@
 
 import { apiUpload } from "./client";
 import { loadSession } from "@/lib/auth/session";
+import { RULES } from "@/lib/validation/rules";
 
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -39,8 +40,9 @@ export const MANDATORY_ATTACHMENT_TYPE_IDS = ATTACHMENT_TYPES.filter((a) => a.ma
   (a) => a.id,
 );
 
-/** Accepted upload formats (jpg/png/pdf). */
-export const ATTACHMENT_ACCEPT = "image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf";
+/** Accepted upload formats (jpg/png/pdf) — MIME types from the shared RULES,
+ *  plus the matching file extensions for the native picker. */
+export const ATTACHMENT_ACCEPT = `${RULES.FILE_ALLOWED_MIME.join(",")},.jpg,.jpeg,.png,.pdf`;
 
 /** Metadata returned by an attachment upload — everything Stage 8 needs to
  * register the file against the application. */

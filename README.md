@@ -53,28 +53,40 @@ Registered users can:
 
 ### Citizenship Gate (pre-registration)
 
-An independent gate runs before the wizard to branch by citizenship:
+The registrant's **nationality is captured at Create Profile** and stored on the
+profile, so the registry can route "Start Registration" by nationality:
 
-* **Tanzanian citizens** continue straight into the registration wizard.
-* **Non-citizens** supply Nationality + Travel Document Type + Document Number, then their permit is looked up:
-  * **Verified** → a card shows their **immigration status** (permit type, number, validity), then asks whether they have a **Tanzanian-origin minor** to register. Choosing *Yes* enters the wizard as a **minor registration** (the foreign account holder's identity is not bound to it).
+* **Tanzanian nationals** skip the gate entirely and go **straight to Stage 1**.
+* **Foreign nationals** land on the gate ("**Fill the following information**").
+  Their nationality is **bound and locked** from their profile; they add Travel
+  Document Type + Document Number and their permit is looked up:
+  * **Verified** → a card shows their **immigration status** (permit type, number,
+    validity), followed by *"You can register a minor with a Tanzanian origin"*
+    and two actions: **I do not have a minor** (exits) or **Continue Registration**.
+    Continue opens a dialog — **"What is your relationship to the minor?"**
+    (**Guardian** / **Parent**) — then enters the wizard as a **minor registration**
+    (the foreign account holder's identity is not bound to the subject).
   * **Not found** → guidance to visit the nearest immigration office.
+
+The chosen **relationship drives Stage 3**: a **Guardian** is asked *"Do you know
+parents information of this minor?"* — **Yes** shows the parents' details, **No**
+collects a single **Guardian's** details instead.
 
 ---
 
 ### Citizen Registration Wizard
 
-A comprehensive **9-stage** registration flow synced with the backend (`/v1/registration/{subjectId}/stageN`). Each stage POSTs to create and PUTs to edit:
+A registration flow synced with the backend's **9 stages** (`/v1/registration/{subjectId}/stageN`); each stage POSTs to create and PUTs to edit. The **Referees step (7) is removed from the UI** — it accepts no user input, so navigation skips it (its GET-only backend stage is still traversed silently), leaving **8 visible steps** with contiguous numbering:
 
 | Stage | Section | Details |
 | :--- | :--- | :--- |
 | **1** | **Personal Information** | Names, gender, DOB (18+ primary / under-18 dependents), citizenship, nationality, place of birth, marital status, and contact. Mandatory **passport photo** captured here (carried into Stage 8 uploads). Dynamic **identification documents repeater** (NIDA, Voter ID, TIN, Driving Licence — pick type + number, add more as needed). Non-Tanzania birthplace hides Region/District/Ward and shows free-text City/Village. |
 | **2** | **Address** | Permanent + Current address (Country → Region → District → Ward cascade), house number, postal code, with a "same as" checkbox that copies and disables the second address. |
-| **3** | **Parents** | Father & Mother sub-forms: full name, DOB, phone, nationality, place of birth, residence, and optional ID document (Type/Number + file upload → `attachmentTypeId=12`, bound to `documentFileUrl`). |
+| **3** | **Parents** | Father & Mother sub-forms: full name, DOB, phone, nationality, place of birth, residence, and optional ID document (Type/Number + file upload → `attachmentTypeId=12`, bound to `documentFileUrl`). When a foreigner registers a minor as a **Guardian**, a *"Do you know parents information?"* toggle switches between the parents' details (Yes) and a **single Guardian** sub-form (No). |
 | **4** | **Education & Employment** | Dynamic **school repeater** (Education Level, Year, School Name, District, Index No.) — a "Primary education is mandatory" notice shows when the applicant attended school. Employment status (lookup-driven); occupation & employer apply only when **Employed**. |
 | **5** | **Emergency Contacts** | Two contacts, each a full person sub-form with optional ID document upload. |
 | **6** | **Family** | "Have children?" / "Married?" toggles; **Spouses repeater** (≥1 if married) and **Relatives repeater** (≥2), each with optional document uploads. |
-| **7** | **Referees** (print-only) | No data submitted — "Download and Print Referees Form" fetches the compiled form from `GET /stage7`; the signed scan is uploaded in Stage 8. |
+| ~~**7**~~ | ~~**Referees**~~ (**removed from the UI**) | Accepted no user input, so it's no longer shown. Its GET-only backend stage (`GET /stage7`) is still traversed on the way to Uploads; referees remain a print-only section of the compiled form. |
 | **8** | **Uploads** | Structured attachment grid; each file uploaded to `/v1/files/upload?attachmentTypeId=N`, then the collection finalised. **All document uploads are restricted to this stage** — the applicant's and parent's birth certificates are mandatory (gated). Stage 8 is also gated on the passport photo — a network failure at Stage 1 is **retried here** without data loss. |
 | **9** | **Preview & Declaration** | Server-compiled summary via `GET /v1/registration/{subjectId}/review`; confirmation checkbox enables final `POST /stage9?confirmed=true`. |
 
@@ -149,8 +161,10 @@ A comprehensive **9-stage** registration flow synced with the backend (`/v1/regi
 | **Framework** | Next.js 16.2 (App Router) |
 | **UI Library** | React 19.2 |
 | **Language** | TypeScript 5.x |
-| **Styling** | Tailwind CSS 4 (with custom `@theme` design tokens) |
-| **Fonts** | Google Fonts (Montserrat, JetBrains Mono) |
+| **Styling** | Tailwind CSS 4 (with custom `@theme` design tokens; navy + gold institutional theme) |
+| **Fonts** | Self-hosted variable fonts — Ubuntu Sans + JetBrains Mono (offline-safe build) |
+| **Icons** | `lucide-react` |
+| **Validation** | Zod schemas mirroring the backend `ErrorCode` contract (`lib/validation/`, driven by a single `rules.ts` limits source) |
 | **HTTP Client** | Native `fetch` API wrapped in custom client handler |
 | **Session Storage** | LocalStorage, Cookie-based session validation |
 | **Internationalization** | Custom locale provider with typed key validation |
@@ -295,6 +309,14 @@ The admin deploys the pushed image and exposes the browser-facing port. The back
 
 ## Recent Changes
 
+* **Nationality-driven registration routing** — Nationality is captured at **Create Profile** (country dropdown → sent as ISO alpha-3 `nationalityCode`, stored on the profile). Tanzanian nationals skip the gate straight to Stage 1; foreign nationals get a reworked gate ("**Fill the following information**", nationality bound + locked) that, after a verified permit lookup, offers to **register a Tanzanian-origin minor** — choosing **Guardian** or **Parent** in a dialog. A **Guardian** who doesn't know the parents fills a single **Guardian** sub-form at Stage 3.
+* **Referees step removed from the UI** — The input-less Referees step is hidden and skipped in navigation (its GET-only backend stage is still traversed); the stepper shows 8 contiguously-numbered steps.
+* **Refresh retains the current step** — The registry wizard and the auth flows (forgot-password, create-profile OTP) persist their view/step per tab, so a page refresh resumes where you were instead of resetting. OTP codes and passwords are never persisted.
+* **Idle auto-logout without a popup** — The idle-timeout warning dialog was removed; the session simply signs out and redirects to login at the inactivity limit.
+* **Institutional navy + gold theme & Lucide icons** — Sidebar/topbar retoned to the ICRCS navy with a gold accent bar and gold active state; every inline SVG replaced with `lucide-react`; native dropdown option text darkened for contrast.
+* **Zod validation library** — `lib/validation/` mirrors the backend `ErrorCode` contract (auth + stage schemas, `errorCodeMap`, ISO-3166 list), all driven by a single `rules.ts` limits source that also powers the UI input caps (names ≤ 30, email ≤ 50, city ≤ 50). See `docs/backend-validation-coverage.md` and `docs/backend-validation-discrepancies.md`.
+* **Country dropdowns validate on submit, not on open** — Selecting a country/gender no longer raises a premature "required" error just from opening the dropdown.
+* **Create-profile form widened** — The form uses a wider card and 2-column rows so it fits without scrolling.
 * **Inline field validation errors** — Every invalid field now renders a specific error message directly beneath it (not just a red border). Backend field errors (Spring violations, `{ field, message }` arrays, flat maps) are auto-mapped to their exact form field via `lib/registry/errorFields.ts`. Missing fields read "Last name is required." rather than a generic notice.
 * **Per-stage re-hydration from backend** — Navigating to an already-submitted stage fetches the server record (`GET /stage{n}`) and maps it back to the wizard via `lib/registry/stageToForm.ts`. Resolves lookup IDs → codes, ISO alpha-3 → country names, and street IDs → the full Territory→Street cascade using the reverse-hierarchy lookup API.
 * **Identification documents repeater** — Stage 1 now offers a dynamic list of ID document types (NIDA, Voter ID, TIN, Driving Licence): pick a type, enter its number, and add more as needed. NIDA entries enforce exactly 20 digits (numeric-only input).
@@ -530,23 +552,23 @@ On successful login: `saveSession(tokens)` → `saveProfile(profile)` → cross-
 
 ```
 step: 1 | 2        — Details → OTP
-details             — form data carried between steps
+details             — form data (incl. nationality) carried between steps
 preAuthToken        — backend pre-auth token for OTP verification
 ```
 
-Two-step flow (Details → OTP) with state lifted to the parent so Step 2 can reference the email from Step 1.
+Two-step flow (Details → OTP) with state lifted to the parent so Step 2 can reference the email from Step 1. **Nationality** is collected in Step 1, sent in the register payload as an ISO alpha-3 code, and saved to the profile. The step + non-secret context (never the password/OTP) are persisted to `sessionStorage` so a **refresh resumes the OTP step**.
 
 #### Citizenship Gate — `CitizenshipGate`
 
 ```
-choice: "yes" | "no" | ""    — citizen or foreigner
-data                          — foreigner verification fields (via WizardProvider)
+data                          — travel-document fields (nationality bound + locked)
 status: "idle" | "verifying" | "notfound" | "found"
 details: ForeignerDetails | null
-hasMinor: "yes" | "no" | ""
+showRelationship: boolean     — relationship dialog open
+relationship: "guardian" | "parent" | ""
 ```
 
-Manages the foreigner permit-verification flow with its own mini-state machine.
+Shown only to **foreign** nationals (Tanzanians skip straight to Stage 1). Runs the permit-verification mini-state machine, then — on a verified permit — offers to register a Tanzanian-origin minor, capturing the **Guardian/Parent** relationship (passed to the wizard to branch Stage 3).
 
 ---
 

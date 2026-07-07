@@ -10,6 +10,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
 import WardCascade from "@/components/registry/wardCascade";
 import CountrySelect from "@/components/registry/countrySelect";
+import { RULES } from "@/lib/validation/rules";
 import { Camera, X, Plus } from "lucide-react";
 
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
@@ -29,7 +30,7 @@ function PhotoUpload() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
+    if (!(RULES.PHOTO_ALLOWED_MIME as readonly string[]).includes(file.type)) {
       setErrorKey("photoTypeError");
       return;
     }
@@ -67,7 +68,7 @@ function PhotoUpload() {
             {preview ? t("fields.changePhoto") : t("fields.uploadPhoto")}
             <input
               type="file"
-              accept="image/jpeg,image/png"
+              accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
               onChange={handle}
               className="sr-only"
             />
@@ -184,13 +185,13 @@ export default function StepPersonal() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t("fields.firstName")} required>
-          <TextInput name="applicantFirst" placeholder={t("fields.phFirstName")} lettersOnly maxLength={15} />
+          <TextInput name="applicantFirst" placeholder={t("fields.phFirstName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.middleName")} required>
-          <TextInput name="applicantMiddle" placeholder={t("fields.phMiddleName")} lettersOnly maxLength={15} />
+          <TextInput name="applicantMiddle" placeholder={t("fields.phMiddleName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
-          <TextInput name="applicantLast" placeholder={t("fields.phLastName")} lettersOnly maxLength={15} />
+          <TextInput name="applicantLast" placeholder={t("fields.phLastName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
       </div>
 
@@ -310,7 +311,7 @@ export default function StepPersonal() {
                 name="pobCityVillage"
                 placeholder={t("fields.phCityVillageBirth")}
                 lettersOnly
-                maxLength={30}
+                maxLength={RULES.UI_CITY_MAX}
               />
             </Field>
           )}
@@ -321,7 +322,7 @@ export default function StepPersonal() {
           <PhoneInput name="phone" />
         </Field>
         <Field label={t("fields.email")} required>
-          <TextInput name="email" type="email" placeholder="test@test.com" maxLength={20} />
+          <TextInput name="email" type="email" placeholder="test@test.com" maxLength={RULES.UI_EMAIL_MAX} />
         </Field>
       </div>
     </div>

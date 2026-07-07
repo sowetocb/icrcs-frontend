@@ -20,13 +20,22 @@
  */
 
 export const RULES = {
+  // ---- Frontend input caps (UI maxLength) — the single place every name/email/
+  // city input reads its maxLength from, so they never drift apart again.
+  // These are deliberately STRICTER than the backend *_MAX limits below (a UX
+  // choice); the backend still enforces the real limit. Change here => changes
+  // everywhere. ----
+  UI_NAME_MAX: 30,
+  UI_EMAIL_MAX: 50,
+  UI_CITY_MAX: 50,
+
   // ---- Names (REGISTRATION_*_NAME_REQUIRED / *_TOO_LONG / NAME_INVALID_CHARACTERS) ----
   NAME_MIN: 1,
-  NAME_MAX: 100, // FRONTEND-DIVERGES: UI inputs cap at 15 pending Postman R-03
+  NAME_MAX: 100, // backend contract; UI enforces UI_NAME_MAX (30)
   NAME_PATTERN: /^[\p{L}][\p{L}'\- ]*$/u, // letters, spaces, hyphens, apostrophes
 
   // ---- Email (REGISTRATION_EMAIL_REQUIRED / _INVALID / _TOO_LONG, PROFILE_EMAIL_EXISTS) ----
-  EMAIL_MAX: 255, // FRONTEND-DIVERGES: Stage-1 email input caps at 20
+  EMAIL_MAX: 255, // backend contract; UI enforces UI_EMAIL_MAX (50)
 
   // ---- Phone (REGISTRATION_PHONE_REQUIRED / _INVALID / _TOO_SHORT, PROFILE_PHONE_*) ----
   // Accepts 07XXXXXXXX or +2557XXXXXXXX (Tanzania mobile, network prefixes 6/7).
@@ -63,7 +72,8 @@ export const RULES = {
   FILE_MAX_BYTES: 500 * 1024, // 500KB. FRONTEND-DIVERGES: UI enforces 300KB
   FILE_ALLOWED_MIME: ['image/jpeg', 'image/png', 'application/pdf'] as const,
   // Photo-only fields (passport photo, profile picture) intentionally accept
-  // images only (no PDF) — do not wire those to FILE_ALLOWED_MIME.
+  // images only (no PDF) — use this, not FILE_ALLOWED_MIME.
+  PHOTO_ALLOWED_MIME: ['image/jpeg', 'image/png'] as const,
 
   // ---- Collection sizes ----
   ATTACHMENTS_MAX: 20, // REGISTRATION_ATTACHMENT_LIMIT_EXCEEDED

@@ -63,6 +63,12 @@ import {
 } from "@/lib/api/files";
 
 const TOTAL = 9;
+// The Referees stage (step 7) is GET-only and accepts no user input, so it is
+// removed from the wizard flow: navigation skips it and the stepper hides it.
+// Internal step numbers stay 1:1 with the backend stages (submit/resume/sync are
+// untouched); the stage-7 GET is still traversed silently for backend sequencing.
+const REFEREE_STEP = 7;
+const skipReferee = (n: number): number => (n === REFEREE_STEP ? REFEREE_STEP + 1 : n);
 
 const STEP_COMPONENTS = [
   StepPersonal,       // 1
@@ -215,6 +221,7 @@ function profileToPersonal(p: Profile): Record<string, string | boolean> {
 export default function RegistryWizard({
   selfDone,
   registeringMinor = false,
+  minorRelationship = "",
   onExit,
   onComplete,
 }: {
@@ -223,6 +230,9 @@ export default function RegistryWizard({
    * account holder is NOT the subject, so their personal details are neither
    * prefilled nor locked, and the subject is validated as a minor. */
   registeringMinor?: boolean;
+  /** When registering a minor, the registrant's relationship to them, chosen at
+   * the gate ("guardian" | "parent"). Drives Stage 3 (Parents vs Guardian). */
+  minorRelationship?: "guardian" | "parent" | "";
   onExit: () => void;
   onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
 }) {
@@ -251,7 +261,7 @@ export default function RegistryWizard({
   const [draft] = useState(() => loadRegistrationFor(ownerId) ?? loadRegistration());
   const resumable = draft && !draft.completed ? draft : null;
 
-  const [step, setStep] = useState(() => resumable?.step ?? 1);
+  const [step, setStep] = useState(() => skipReferee(resumable?.step ?? 1));
   const [data, setData] = useState<Record<string, string | boolean>>(() => {
     const prof = loadProfile();
     const base: Record<string, string | boolean> = prof
@@ -520,6 +530,15 @@ export default function RegistryWizard({
   const setQuiet = (name: string, value: string | boolean) => {
     setData((d) => (d[name] === value ? d : { ...d, [name]: value }));
   };
+
+  // Persist the gate-chosen relationship into the form data so Stage 3 can
+  // branch (Parents vs Guardian) and it survives a refresh.
+  useEffect(() => {
+    if (registeringMinor && minorRelationship && data.minorRelationship !== minorRelationship) {
+      setQuiet("minorRelationship", minorRelationship);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registeringMinor, minorRelationship]);
 
   // Real-time blur validation. Runs when the user leaves any field.
   // Empty fields → required check. Non-empty fields → type-specific format rules.
@@ -950,8 +969,22 @@ export default function RegistryWizard({
 
     // Step 3: Parents' residence is mandatory — Tanzania needs Ward + Street;
     // abroad needs the country + free-text city. No country = require it.
+    // When a GUARDIAN says they don't know the parents, only a single guardian's
+    // details are collected instead of father + mother.
     if (step === 3) {
-      for (const p of ["father", "mother"]) {
+      const guardianOnly = data.minorRelationship === "guardian" && data.knowsParents === "no";
+      const persons = guardianOnly ? ["guardian"] : ["father", "mother"];
+      if (guardianOnly) {
+        required = [
+          "guardianFirst",
+          "guardianMiddle",
+          "guardianLast",
+          "guardianDob",
+          "guardianNatCountry",
+          "guardianResCountry",
+        ];
+      }
+      for (const p of persons) {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
         if (resCountry === "Tanzania") {
           required = [...required, ...cascadeRequired(`${p}Res`, true)];
@@ -1027,7 +1060,9 @@ export default function RegistryWizard({
     });
   }
 
-  function goTo(n: number) {
+  function goTo(target: number) {
+    // The Referees step is removed from the flow; never land on it.
+    const n = skipReferee(target);
     // Allow navigation to any stage already reached (not just earlier ones), so
     // editing an earlier stage doesn't lock the user out of later completed ones.
     if (n >= 1 && n <= maxStep && n !== step) {
@@ -1931,10 +1966,20 @@ export default function RegistryWizard({
 
     // If the user jumped back to edit an earlier stage, return them to where
     // they were; otherwise advance sequentially.
-    const next = returnStep && returnStep > step
+    let next = returnStep && returnStep > step
       ? Math.min(returnStep, TOTAL)
       : Math.min(step + 1, TOTAL);
     setReturnStep(null);
+    // Skip the removed Referees step. Traverse its GET-only backend stage first
+    // (for sequencing) then land on Uploads; the GET is non-fatal if it fails.
+    if (next === REFEREE_STEP) {
+      try {
+        if (sid) await submitStage7(sid);
+      } catch {
+        // Referees stage is GET-only and informational — never block progress.
+      }
+      next = REFEREE_STEP + 1;
+    }
 
     // After Personal Information: display the Application ID
     const isNewAppId = step === 1 && !applicationId;
@@ -1981,7 +2026,8 @@ export default function RegistryWizard({
       onExit();
       return;
     }
-    setStep((s) => s - 1);
+    // Going back from Uploads (8) skips the removed Referees step (7) to Family (6).
+    setStep((s) => (s - 1 === REFEREE_STEP ? REFEREE_STEP - 1 : s - 1));
   }
 
   return (
