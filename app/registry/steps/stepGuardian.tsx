@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import { usePersonDocumentTypeOptions } from "@/components/registry/blocks";
-import type { PersonGroup } from "@/lib/api/lookup";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
@@ -34,7 +33,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const idDocCount = Math.max(1, Number(data[idDocCountKey]) || 1);
 
   // Options come from the lookup for this parent; the value is the documentTypeId.
-  const idDocTypeOptions = usePersonDocumentTypeOptions(prefix as PersonGroup);
+  const idDocTypeOptions = usePersonDocumentTypeOptions(prefix);
 
   function addIdDoc() {
     set(idDocCountKey, String(idDocCount + 1));

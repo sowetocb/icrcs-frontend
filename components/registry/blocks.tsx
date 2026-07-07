@@ -146,13 +146,18 @@ export const useEmploymentStatusOptions = () =>
  * / mother), fetched from /lookup/person-document-types. The option VALUE is the
  * backend documentTypeId — so picking e.g. NIDA stores its exact id, which is
  * sent straight through in documents[].documentTypeId. */
-export function usePersonDocumentTypeOptions(group: PersonGroup): Opt[] {
+export function usePersonDocumentTypeOptions(group: PersonGroup | string): Opt[] {
   const [options, setOptions] = useState<Opt[]>([]);
   useEffect(() => {
     let active = true;
     getPersonDocumentTypes()
       .then((d) => {
-        if (active) setOptions(d[group].map((i) => ({ value: String(i.id), label: i.name })));
+        if (!active) return;
+        // Use the requested group's documents when available; fall back to the
+        // father group for unrecognised groups (e.g. "guardian") so the dropdown
+        // still renders the full set of document types.
+        const items = d[group as PersonGroup] ?? d.father ?? [];
+        setOptions(items.map((i) => ({ value: String(i.id), label: i.name })));
       })
       .catch(() => {});
     return () => {

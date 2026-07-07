@@ -88,7 +88,7 @@ export default function Stepper({
           </button>
         </div>
 
-        <ol className="flex-1 space-y-0 px-2 pb-2">
+        <ol className="flex-1 space-y-0 px-2.5 pb-2">
           {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
@@ -103,7 +103,7 @@ export default function Stepper({
                   type="button"
                   onClick={() => go(n)}
                   disabled={locked}
-                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition ${
+                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
                     active
                       ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
@@ -113,7 +113,7 @@ export default function Stepper({
                 >
                   <span className="flex flex-col items-center self-stretch">
                     <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                         done
                           ? "bg-success text-white"
                           : active
@@ -127,9 +127,9 @@ export default function Stepper({
                       <span className="mt-1 w-px flex-1 bg-white/10" />
                     )}
                   </span>
-                  <span className="pb-1">
+                  <span className="pb-2">
                     <span
-                      className={`block text-[13px] leading-tight font-semibold ${
+                      className={`block text-sm font-semibold ${
                         active
                           ? "text-icrcs-navy"
                           : done
@@ -140,7 +140,7 @@ export default function Stepper({
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
-                      className={`mt-0.5 block text-[11px] leading-snug ${
+                      className={`mt-0.5 block text-xs leading-snug ${
                         active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >
