@@ -324,8 +324,8 @@ export default function AuthShell({
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
-        <div className="h-1.5 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-5 px-6 py-5 sm:gap-8">
+        <div className="h-1 w-full bg-gold" aria-hidden="true" />
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-2.5 sm:gap-6">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -333,21 +333,21 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-10 w-10 shrink-0 object-contain sm:h-14 sm:w-14"
           />
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-base">
+            <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
               {t("brand.country")}
             </p>
-            <p className="font-display text-base font-bold text-white sm:text-xl">
+            <p className="font-display text-sm font-bold text-white sm:text-base">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-lg font-black uppercase tracking-tight text-white sm:text-2xl">
+            <p className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
               {t("brand.servicesDepartment")}
             </p>
-            <span className="mt-2 flex h-2 w-76 max-w-full overflow-hidden rounded-full sm:w-72">
+            <span className="mt-1.5 flex h-1.5 w-56 max-w-full overflow-hidden rounded-full sm:w-56">
               <span className="flex-1 bg-[#1eb53a]" />
               <span className="flex-1 bg-[#fcd116]" />
               <span className="flex-1 bg-black" />
@@ -363,36 +363,36 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-10 w-10 shrink-0 object-contain sm:h-14 sm:w-14"
           />
         </div>
       </header>
 
       {/* Language switcher — floats below the header, right-aligned, with no
           visible background bar. */}
-      <div className="relative z-20 flex items-center justify-end px-6 py-2">
+      <div className="relative z-20 flex items-center justify-end px-6 py-1">
         <LanguageSwitcher variant="onLight" />
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center px-4 sm:px-6 ${wide ? "justify-start py-4 sm:py-6" : "justify-center py-10"}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center px-4 sm:px-6 ${wide ? "justify-start py-2 sm:py-3" : "justify-center py-4"}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About ICRCS" are rendered below the form instead. */}
         <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
-          <div className={`hidden flex-col items-center justify-start gap-5 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-6 py-8 md:flex ${wide ? "md:w-[34%]" : "w-[42%]"}`}>
+          <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-5 py-5 md:flex ${wide ? "md:w-[34%]" : "w-[42%]"}`}>
             {/* Immigration emblem + branding — on top. The emblem sits on a light
                 pad so its blue ribbons and gold lettering stay legible against
                 the deep-blue panel. */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-white/95 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+              <div className="rounded-full bg-white/95 p-3 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={LOGO_EMBLEM}
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-32 object-contain"
+                  className="h-auto w-20 object-contain"
                 />
               </div>
               {/* <div className="mt-5 text-center">
@@ -412,7 +412,7 @@ export default function AuthShell({
           </div>
 
           {/* Right panel — form only */}
-          <div className={`flex w-full flex-col justify-center px-8 sm:px-12 ${wide ? "py-6 md:w-[64%] sm:px-10" : "py-8 md:w-[58%]"}`}>
+          <div className={`flex w-full flex-col justify-center px-6 sm:px-8 ${wide ? "py-4 md:w-[66%] sm:px-8" : "py-5 md:w-[58%]"}`}>
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
@@ -426,7 +426,7 @@ export default function AuthShell({
             </div>
 
             {/* Footer — text and version kept together on a single line */}
-            <p className="mt-4 flex items-baseline justify-center gap-2 whitespace-nowrap text-center text-[14px] text-muted">
+            <p className="mt-3 flex items-baseline justify-center gap-2 whitespace-nowrap text-center text-[13px] text-muted">
               {t("footer")}
               {APP_VERSION && <span className="text-xs text-muted/70">v{APP_VERSION}</span>}
             </p>
