@@ -335,6 +335,27 @@ export default function RegistryWizard({
     setMaxStep((m) => Math.max(m, step));
   }, [step]);
 
+  // Persist the currently-viewed step on every step change so a hard refresh
+  // restores the exact stage the user is on — including after they navigate back
+  // to edit an earlier stage. Without this, the draft's saved step lags at the
+  // furthest-reached stage (only written on save/exit), so refreshing an earlier
+  // stage would snap the user forward. `maxStep` is stored separately, so the
+  // sidebar frontier (and access to later completed stages) is never lost.
+  useEffect(() => {
+    saveRegistration({
+      step,
+      maxStep: Math.max(maxStep, step),
+      completed: false,
+      ownerId: ownerId || undefined,
+      applicationId: applicationId || undefined,
+      subjectId: subjectId || undefined,
+      submittedStages: [...submittedStages],
+      data,
+    });
+    // Runs on step change only; captures the latest data/identity from this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   // Re-hydrate an already-submitted stage from the backend when the user returns
   // to it (e.g. resuming on a fresh browser, or going back to edit). The API is
   // the source of truth for a submitted stage, so every field it returns
