@@ -61,7 +61,7 @@ export default function LanguageSwitcher({
         <ul
           role="listbox"
           aria-label={current.label}
-          className="absolute left-0 z-50 mt-2 min-w-[7rem] overflow-hidden rounded-lg border border-line bg-card py-1 text-sm shadow-xl shadow-black/20"
+          className="absolute right-0 z-50 mt-2 overflow-hidden rounded-lg border border-line bg-card py-1 text-sm shadow-xl shadow-black/20"
         >
           {LOCALES.map(({ code, label }) => {
             const active = locale === code;
@@ -73,7 +73,7 @@ export default function LanguageSwitcher({
                     setLocale(code);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center px-4 py-2 text-left transition ${
+                  className={`flex w-full items-center px-3 py-2 text-left transition ${
                     active
                       ? "bg-navy-700/10 font-semibold text-navy-700"
                       : "text-ink hover:bg-surface"
