@@ -43,9 +43,9 @@ import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type Per
 import { isPhoneComplete } from "@/lib/phoneLengths";
 import { RULES } from "@/lib/validation/rules";
 import { SessionExpiredError } from "@/lib/api/auth";
+import { setSignoutNotice } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/api/client";
 import ApplicationIdDialog from "./applicationIdDialog";
-import SessionExpiredDialog from "@/components/auth/sessionExpiredDialog";
 import StepPersonal from "./steps/stepPersonal";
 import StepAddress from "./steps/stepCitizenship";
 import StepGuardian from "./steps/stepGuardian";
@@ -311,7 +311,6 @@ export default function RegistryWizard({
   const [showIdDialog, setShowIdDialog] = useState(false);
   // When a backend call fails because the session expired, show a blocking
   // dialog that signs the user out (the session is already cleared).
-  const [sessionExpired, setSessionExpired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [subjectId, setSubjectId] = useState(() => resumable?.subjectId ?? "");
   const [submittedStages, setSubmittedStages] = useState<Set<number>>(
@@ -1119,9 +1118,11 @@ export default function RegistryWizard({
   }
 
   // Session expired mid-flow: keep the draft (so it can be resumed after
-  // re-login) and send the user to the login screen.
+  // re-login), then automatically sign the user out to the login screen — no
+  // blocking dialog. The login screen shows a notice explaining why.
   function signOutToLogin() {
     persistDraft();
+    setSignoutNotice("expired");
     router.push("/login");
   }
 
@@ -1131,13 +1132,13 @@ export default function RegistryWizard({
     router.push("/dashboard");
   }
 
-  // Surface a submit failure: an expired session opens the blocking dialog
-  // (sign out & back to login); anything else shows the inline form error AND,
-  // when the backend pinpoints offending fields, the message inline at exactly
-  // those fields.
+  // Surface a submit failure: an expired session automatically signs the user
+  // out and returns them to login (with an explanatory notice); anything else
+  // shows the inline form error AND, when the backend pinpoints offending
+  // fields, the message inline at exactly those fields.
   function reportSubmitError(err: unknown) {
     if (err instanceof SessionExpiredError) {
-      setSessionExpired(true);
+      signOutToLogin();
       return;
     }
     const apiFieldErrors = mapApiFieldErrors(err);
@@ -2154,7 +2155,7 @@ export default function RegistryWizard({
                   locked={locked}
                   isFirstPerson={isFirstPerson}
                   onGoToStep={goTo}
-                  onSessionExpired={() => setSessionExpired(true)}
+                  onSessionExpired={signOutToLogin}
                 >
                   {stageLoading ? <StageSkeleton /> : <StepComponent />}
                 </WizardProvider>
@@ -2212,8 +2213,6 @@ export default function RegistryWizard({
         email={typeof data.email === "string" ? data.email : ""}
         onContinue={() => setShowIdDialog(false)}
       />
-
-      {sessionExpired && <SessionExpiredDialog onSignIn={signOutToLogin} />}
     </div>
   );
 }

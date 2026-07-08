@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import { getMyProfile } from "@/lib/api/auth";
-import { saveSession } from "@/lib/auth/session";
+import { saveSession, takeSignoutNotice } from "@/lib/auth/session";
 import { saveProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
@@ -46,6 +46,17 @@ export default function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Explain an automatic sign-out (idle timeout / expired session) when the user
+  // was dropped here — read once from the one-shot notice set before redirect.
+  const [signoutNotice, setSignoutNotice] = useState("");
+  useEffect(() => {
+    const reason = takeSignoutNotice();
+    if (reason) {
+      setSignoutNotice(t(reason === "idle" ? "session.idleNotice" : "session.expiredNotice"));
+    }
+    // Run once on mount; `t` is stable for the active locale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const emailInvalid = Boolean(errors.email);
   const passwordInvalid = Boolean(errors.password);
@@ -117,6 +128,15 @@ export default function LoginForm() {
         </h2>
         <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>
       </div>
+
+      {signoutNotice && (
+        <p
+          role="status"
+          className="mb-4 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning"
+        >
+          {signoutNotice}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-1.5">

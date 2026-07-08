@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import ProfileView from "@/app/dashboard/profile/profileView";
 import { useI18n } from "@/app/i18n/localeProvider";
-import { refreshMyProfile, fetchProfilePicture } from "@/lib/api/auth";
+import { refreshMyProfile, fetchProfilePicture, logout } from "@/lib/api/auth";
+import { clearSession, loadSession } from "@/lib/auth/session";
+import { clearPeople } from "@/app/registry/peopleStore";
 import { LOGO_EMBLEM } from "@/lib/assets";
+import { UserRound, LogOut } from "lucide-react";
 import {
   loadProfile,
   saveProfile,
+  clearProfile,
   profilePhotoSrc,
   loadPhotoDataUrl,
   savePhotoDataUrl,
@@ -83,12 +88,50 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
 
 export default function DashboardTopbar() {
   const { t } = useI18n();
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [time, setTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const photoUrl = photoFailed ? null : (photo ?? profilePhotoSrc(profile));
+
+  // Close the user menu on an outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    const session = loadSession();
+    if (session?.refreshToken) {
+      try {
+        await logout(session.refreshToken);
+      } catch {
+        // ignore — clear the local session regardless
+      }
+    }
+    clearSession();
+    clearProfile();
+    // Keep the in-progress registration draft so the user can resume it after
+    // signing back in; only clear the dependents list. (Mirrors the sidebar.)
+    clearPeople();
+    router.push("/login");
+  }
 
   useEffect(() => {
     const cached = loadProfile();
@@ -160,35 +203,68 @@ export default function DashboardTopbar() {
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
 
-          {/* User — opens the profile dialog over the dashboard, with a clock */}
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            title={name || "Profile"}
-            className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pl-1 pr-3 transition hover:bg-white/15"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gold text-sm font-bold text-navy-900">
-              {photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoUrl}
-                  alt={name}
-                  onError={() => setPhotoFailed(true)}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                initials(profile)
-              )}
-            </span>
-            <span className="hidden leading-tight lg:block">
-              <span className="block text-base font-medium text-white">
-                {name || "—"}
+          {/* User — a trigger that opens a small menu (View profile / Logout) */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              title={name || "Profile"}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pl-1 pr-3 transition hover:bg-white/15"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gold text-sm font-bold text-navy-900">
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoUrl}
+                    alt={name}
+                    onError={() => setPhotoFailed(true)}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  initials(profile)
+                )}
               </span>
-              <span className="block font-mono text-[11px] text-white/50" suppressHydrationWarning>
-                {time}
+              <span className="hidden leading-tight lg:block">
+                <span className="block text-base font-medium text-white">
+                  {name || "—"}
+                </span>
+                <span className="block font-mono text-[11px] text-white/50" suppressHydrationWarning>
+                  {time}
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-40 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-card py-1 shadow-2xl"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setProfileOpen(true);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-navy-50"
+                >
+                  <UserRound size={18} aria-hidden="true" className="text-navy-700" />
+                  {t("nav.viewProfile")}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
+                >
+                  <LogOut size={18} aria-hidden="true" />
+                  {t("nav.logout")}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

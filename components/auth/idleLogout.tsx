@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { logout } from "@/lib/api/auth";
-import { clearSession, loadSession } from "@/lib/auth/session";
+import { clearSession, loadSession, setSignoutNotice } from "@/lib/auth/session";
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
 
@@ -53,6 +53,8 @@ export default function IdleLogout() {
     // unsubmitted registration survives an idle auto-logout and can be resumed.
     clearPeople();
     window.localStorage.removeItem(ACTIVITY_KEY);
+    // Inform the user WHY they were signed out — the login screen shows a notice.
+    setSignoutNotice("idle");
     router.push("/login");
   }, [router]);
 

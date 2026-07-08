@@ -45,21 +45,21 @@ export default function DashboardHome() {
   ] as const;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl bg-navy-700 p-8 text-white shadow-[0_8px_40px_-12px_rgba(13,31,51,0.4)] sm:p-10">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+      <section className="relative overflow-hidden rounded-2xl bg-navy-700 p-6 text-white shadow-[0_8px_40px_-12px_rgba(13,31,51,0.4)] sm:p-7">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
-            <h1 className="mt-5 font-display text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl">
+            <h1 className="font-display text-3xl font-black leading-[1.08] tracking-tight sm:text-4xl">
               {t("dashboard.title")}
               <span className="text-gold">.</span>
             </h1>
 
-            <p className="mt-5 max-w-xl leading-relaxed text-navy-3 00">
+            <p className="mt-3 max-w-xl leading-relaxed text-navy-300">
               {t("dashboard.welcome").replace("{name}", userName)}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-5 flex flex-wrap items-center gap-4">
               <Link
                 href="/registry"
                 className="rounded-lg bg-gold px-6 py-3 text-sm font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-700"
@@ -69,14 +69,14 @@ export default function DashboardHome() {
             </div>
           </div>
 
-         
+
         </div>
       </section>
 
       {/* Preparation checklist */}
       <section
         id="checklist"
-        className="scroll-mt-24 rounded-2xl border border-line bg-card/60 p-8"
+        className="scroll-mt-24 rounded-2xl border border-line bg-card/60 p-6"
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -96,19 +96,19 @@ export default function DashboardHome() {
           </a>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {checklist.map(({ key, Icon }) => (
             <div
               key={key}
-              className="rounded-xl border border-line bg-card p-5 transition hover:border-gold/40 hover:shadow-sm"
+              className="rounded-xl border border-line bg-card p-4 transition hover:border-gold/40 hover:shadow-sm"
             >
               <span className="text-gold-700">
                 <Icon />
               </span>
-              <h3 className="mt-4 text-base font-bold text-navy-700">
+              <h3 className="mt-3 text-base font-bold text-navy-700">
                 {t(`dashboard.${key}Title`)}
               </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted">
+              <p className="mt-1 text-sm leading-relaxed text-muted">
                 {t(`dashboard.${key}Desc`)}
               </p>
             </div>

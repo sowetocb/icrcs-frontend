@@ -134,6 +134,8 @@ const en = {
     expiredBody:
       "Your session has expired for security reasons. Please sign in again to continue.",
     signIn: "Sign in again",
+    idleNotice: "You were signed out due to inactivity. Please sign in again.",
+    expiredNotice: "Your session expired. Please sign in again to continue.",
   },
   toast: {
     loginSuccess: "Logged in successfully.",
@@ -152,6 +154,7 @@ const en = {
     visa: "Visa Processing",
     security: "Security Audit",
     logout: "Logout",
+    viewProfile: "View profile",
     openMenu: "Show menu",
     closeMenu: "Hide menu",
   },
@@ -1002,6 +1005,8 @@ const sw: typeof en = {
     expiredBody:
       "Muda wa kikao chako umeisha kwa sababu za kiusalama. Tafadhali ingia tena ili kuendelea.",
     signIn: "Ingia tena",
+    idleNotice: "Umetolewa kwa sababu ya kutotumia mfumo. Tafadhali ingia tena.",
+    expiredNotice: "Muda wa kikao chako umeisha. Tafadhali ingia tena ili kuendelea.",
   },
   toast: {
     loginSuccess: "Umeingia kwa mafanikio.",
@@ -1020,6 +1025,7 @@ const sw: typeof en = {
     visa: "Uchakataji wa Viza",
     security: "Ukaguzi wa Usalama",
     logout: "Toka",
+    viewProfile: "Ona wasifu",
     openMenu: "Onyesha menyu",
     closeMenu: "Ficha menyu",
   },

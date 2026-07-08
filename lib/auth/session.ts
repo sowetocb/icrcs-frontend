@@ -47,3 +47,34 @@ export function clearSession(): void {
     // ignore
   }
 }
+
+// A one-shot notice explaining an automatic sign-out, so the login screen can
+// tell the user WHY they were logged out (idle timeout / expired session)
+// instead of silently dropping them there. Written just before redirecting to
+// /login and consumed (read + cleared) once on the login page.
+const SIGNOUT_NOTICE = "icrcs-signout-notice";
+export type SignoutReason = "idle" | "expired";
+
+export function setSignoutNotice(reason: SignoutReason): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(SIGNOUT_NOTICE, reason);
+  } catch {
+    // ignore
+  }
+}
+
+/** Read and clear the pending sign-out notice (returns null when none). */
+export function takeSignoutNotice(): SignoutReason | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.sessionStorage.getItem(SIGNOUT_NOTICE);
+    if (v === "idle" || v === "expired") {
+      window.sessionStorage.removeItem(SIGNOUT_NOTICE);
+      return v;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
