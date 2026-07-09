@@ -66,14 +66,27 @@ export default function PhoneInput({ name }: { name: string }) {
     let trimmed = natDigits.replace(/^0+/, "");
     const dialNumeric = dial.replace(/\D/g, "");
     const { max } = phoneLengthForDial(dial);
-    // When the user pastes a full E.164 number (e.g. "+255738997834" becomes
-    // "255738997834" after digit-only extraction), the dial prefix is already
-    // included in natDigits. Strip it so the country code is not counted against
-    // the national length cap and digits are not lost during truncation.
-    if (dialNumeric && trimmed.length > max && trimmed.startsWith(dialNumeric)) {
+
+    // A pasted full E.164 number (e.g. "+255738997834" → "255738997834" after
+    // digit-only extraction) carries the dial prefix inside natDigits. Only drop
+    // that prefix for a paste into an EMPTY field, and only when the length is
+    // exactly dial + national. A TYPED national number is allowed to begin with
+    // the dial digits (e.g. 255 873 964), so the prefix must never be stripped
+    // while the user is editing — doing so silently ate their leading "255".
+    if (
+      dialNumeric &&
+      national === "" &&
+      trimmed.length === dialNumeric.length + max &&
+      trimmed.startsWith(dialNumeric)
+    ) {
       trimmed = trimmed.slice(dialNumeric.length);
     }
-    trimmed = trimmed.slice(0, max);
+
+    // Hard cap: once `max` national digits are entered, reject any further digit
+    // (the user must delete one first) instead of truncating — truncation is what
+    // made typed digits vanish from the middle/end of the number.
+    if (trimmed.length > max) return;
+
     // Store empty when no national digits so the field still reads as "required".
     set(name, trimmed ? `${dial} ${chunk(trimmed)}` : "");
   }

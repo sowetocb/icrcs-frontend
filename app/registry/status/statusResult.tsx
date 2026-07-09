@@ -6,14 +6,17 @@ import { type LookupResult } from "./lookup";
 import { type ApplicationStatus } from "../../../lib/api/registry";
 import { Check, ArrowRight } from "lucide-react";
 
-const PROCESS_STAGES = ["stage1", "stage2", "stage3", "stage4", "stage5"] as const;
+// The backend's RegistrationStatus enum has exactly four values:
+//   PENDING            — Stage 1 submitted, OTP not verified yet
+//   PENDING_ENROLLMENT — all stages complete, submitted for officer review
+//   APPROVED           — approved by officer
+//   REJECTED           — rejected by officer
+// The first three form the forward progress timeline. REJECTED is a terminal
+// outcome, not a milestone, so it is rendered on its own without a timeline.
+const PROCESS_STAGES = ["stageSubmitted", "stagePendingEnrollment", "stageApproved"] as const;
 const FORM_STEPS = ["s1Title", "s2Title", "s3Title", "s4Title", "s5Title", "s6Title"] as const;
 
 type StatusResultData = LookupResult | ApplicationStatus;
-
-function formatBoolean(value: boolean, t: (key: string) => string) {
-  return value ? t("registry.yes") : t("registry.no");
-}
 
 function getStatusLabel(status: string, t: (key: string) => string) {
   const key = `registry.status_${status}`;
@@ -23,41 +26,25 @@ function getStatusLabel(status: string, t: (key: string) => string) {
 
 function statusColor(status: string) {
   const s = status.toUpperCase();
-  if (s === "APPROVED" || s === "COMPLETED" || s === "ACTIVE")
+  if (s === "APPROVED")
     return { bg: "bg-success/10", text: "text-success", dot: "bg-success" };
-  if (s === "REJECTED" || s === "DENIED" || s === "CANCELLED")
+  if (s === "REJECTED")
     return { bg: "bg-danger/10", text: "text-danger", dot: "bg-danger" };
+  // PENDING and PENDING_ENROLLMENT are both "in progress".
   return { bg: "bg-warning/10", text: "text-warning", dot: "bg-warning" };
 }
 
-function formatDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${date.getFullYear()} ${hh}:${min}`;
-}
-
-// Map a backend status to the 5-stage process timeline (0-based):
-//   0 Submitted · 1 Enrolled · 2 Assessed · 3 Approved · 4 Status Issued
-// A PENDING_<NEXT> status sits on the last completed milestone (e.g.
-// PENDING_ASSESSMENT means the applicant is Enrolled, awaiting assessment).
-function getPostSubmissionStageIndex(status: string, currentStage: number): number {
-  const s = status.toUpperCase();
-  if (s === "ACTIVE" || s === "COMPLETED" || s === "ISSUED" || s === "STATUS_ISSUED")
-    return 4;
-  if (s === "APPROVED" || s === "PENDING_ISSUANCE") return 3;
-  if (s === "ASSESSED" || s === "PENDING_APPROVAL" || s === "IN_REVIEW") return 2;
-  if (s === "ENROLLED" || s === "PENDING_ASSESSMENT" || s === "BIOMETRICS") return 1;
-  if (s === "SUBMITTED" || s === "PENDING_ENROLLMENT") return 0;
-
-  if (currentStage >= 6) {
-    return Math.min(currentStage - 6, PROCESS_STAGES.length - 1);
+/** Position of a status on the 3-milestone timeline (0-based). */
+function getPostSubmissionStageIndex(status: string): number {
+  switch (status.toUpperCase()) {
+    case "APPROVED":
+      return 2;
+    case "PENDING_ENROLLMENT":
+      return 1;
+    case "PENDING":
+    default:
+      return 0;
   }
-  return 0;
 }
 
 function CheckIcon() {
@@ -171,8 +158,9 @@ export default function StatusResult({
       );
     }
 
-    const activeStageIndex = getPostSubmissionStageIndex(result.status, result.currentStage);
     const sc = statusColor(result.status);
+    const isRejected = result.status.toUpperCase() === "REJECTED";
+    const activeStageIndex = getPostSubmissionStageIndex(result.status);
     return (
       <div className="rounded-2xl border border-line bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
@@ -190,40 +178,29 @@ export default function StatusResult({
           </span>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-line/80 bg-navy-50/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t("registry.checkCurrent")}
-            </p>
-            <p className="mt-2 text-sm font-semibold text-navy-700">
-              {t(`registry.${PROCESS_STAGES[activeStageIndex]}`)}
-            </p>
+        {/* REJECTED is terminal — show the outcome, not a progress timeline. */}
+        {isRejected ? (
+          <div className="mt-4 rounded-lg border border-danger/30 bg-danger/10 p-4">
+            <p className="text-sm text-ink">{t("registry.statusRejectedMsg")}</p>
           </div>
-          <div className="rounded-lg border border-line/80 bg-card p-4">
-            <div className="space-y-2 text-sm text-navy-600">
-              <div>
-                <span className="font-semibold text-navy-700">{t("registry.statusEmailVerified")}:</span>{" "}
-                {formatBoolean(result.emailVerified, t)}
-              </div>
-              <div>
-                <span className="font-semibold text-navy-700">{t("registry.statusActive")}:</span>{" "}
-                {formatBoolean(result.isActive, t)}
-              </div>
-              <div>
-                <span className="font-semibold text-navy-700">{t("registry.statusCreatedAt")}:</span>{" "}
-                {formatDate(result.createdAt)}
-              </div>
-              <div>
-                <span className="font-semibold text-navy-700">{t("registry.statusUpdatedAt")}:</span>{" "}
-                {formatDate(result.updatedAt)}
+        ) : (
+          <>
+            <div className="mt-4">
+              <div className="rounded-lg border border-line/80 bg-navy-50/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t("registry.checkCurrent")}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-navy-700">
+                  {t(`registry.${PROCESS_STAGES[activeStageIndex]}`)}
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-6">
-          <Timeline labels={PROCESS_STAGES.map((k) => t(`registry.${k}`))} current={activeStageIndex} />
-        </div>
+            <div className="mt-6">
+              <Timeline labels={PROCESS_STAGES.map((k) => t(`registry.${k}`))} current={activeStageIndex} />
+            </div>
+          </>
+        )}
       </div>
     );
   }

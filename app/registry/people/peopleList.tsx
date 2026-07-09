@@ -53,12 +53,13 @@ function statusColor(status: string): {
   text: string;
   dot: string;
 } {
+  // Backend RegistrationStatus enum: PENDING · PENDING_ENROLLMENT · APPROVED · REJECTED
   const s = status.toUpperCase();
-  if (s === "APPROVED" || s === "COMPLETED" || s === "ACTIVE")
+  if (s === "APPROVED")
     return { bg: "bg-success/10", text: "text-success", dot: "bg-success" };
-  if (s === "REJECTED" || s === "DENIED" || s === "CANCELLED")
+  if (s === "REJECTED")
     return { bg: "bg-danger/10", text: "text-danger", dot: "bg-danger" };
-  // PENDING, PENDING_ASSESSMENT, IN_REVIEW, SUBMITTED, etc.
+  // PENDING and PENDING_ENROLLMENT are both "in progress".
   return { bg: "bg-warning/10", text: "text-warning", dot: "bg-warning" };
 }
 

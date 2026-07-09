@@ -67,7 +67,7 @@ export async function getApplicationStatus(
     await delay(200);
     return {
       subjectId: "mock-subject-id",
-      status: "PENDING_ASSESSMENT",
+      status: "PENDING_ENROLLMENT",
       currentStage: 2,
       emailVerified: true,
       isActive: true,
