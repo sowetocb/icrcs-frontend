@@ -30,14 +30,21 @@ export default function RegistryLanding({
   onResume,
   selfDone,
   hasIncomplete,
+  ownerApproved,
 }: {
   onStart: () => void;
   onResume: () => void;
   selfDone: boolean;
   hasIncomplete: boolean;
+  /** The account holder's own registration has been APPROVED by an officer. */
+  ownerApproved: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
+
+  // Once the account holder is registered, "start" means registering a dependent
+  // — which is only permitted after their own registration is APPROVED.
+  const dependentBlocked = selfDone && !ownerApproved;
 
   const cards = [
     {
@@ -50,8 +57,13 @@ export default function RegistryLanding({
       action: t("registry.startAction"),
       onClick: onStart,
       // Rule 2: can't start a new one while a registration is incomplete.
-      disabled: hasIncomplete,
-      note: hasIncomplete ? t("registry.finishFirstNote") : undefined,
+      // Rule 3: can't register a dependent until the holder is APPROVED.
+      disabled: hasIncomplete || dependentBlocked,
+      note: hasIncomplete
+        ? t("registry.finishFirstNote")
+        : dependentBlocked
+          ? t("registry.approvalRequiredNote")
+          : undefined,
     },
     {
       key: "resume",

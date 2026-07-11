@@ -437,6 +437,8 @@ const en = {
     startDependentDesc:
       "Add a dependent (under 18) under your profile.",
     finishFirstNote: "Finish your in-progress registration before starting a new one.",
+    approvalRequiredNote:
+      "Your own registration must be approved before you can register a dependent.",
     nothingToResume: "No registration in progress.",
     resumeTitle: "Resume Registration",
     resumeDesc:
@@ -1303,6 +1305,8 @@ const sw: typeof en = {
     startDependentDesc:
       "Ongeza mtegemezi (chini ya miaka 18) chini ya wasifu wako.",
     finishFirstNote: "Kamilisha usajili unaoendelea kabla ya kuanza mpya.",
+    approvalRequiredNote:
+      "Usajili wako mwenyewe lazima uidhinishwe kabla ya kusajili mtegemezi.",
     nothingToResume: "Hakuna usajili unaoendelea.",
     resumeTitle: "Endeleza Ombi",
     resumeDesc:

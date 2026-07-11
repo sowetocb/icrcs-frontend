@@ -463,9 +463,14 @@ export type UpdateProfileInput = {
   lastName: string;
   gender: string;
   phoneNumber: string;
+  /** Country of nationality as a NAME (e.g. "Tanzania"). The user cannot change
+   *  it — the profile form sends the existing value back unchanged so the
+   *  backend's required `nationalityCode` is preserved on update. */
+  nationality: string;
 };
 
-/** PUT /v1/profile/update — change name, gender, phone. Returns the new profile. */
+/** PUT /v1/profile/update — change name, gender, phone. Nationality is sent
+ *  unchanged (not user-editable). Returns the new profile. */
 export async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
   if (BYPASS) {
     await delay(400);
@@ -474,7 +479,12 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
   }
   // Send gender as the lookup id; normalise the returned id back to the code.
   const genderId = await resolveGenderId(input.gender);
-  const body = { ...input, gender: genderId ?? input.gender };
+  const { nationality, ...rest } = input;
+  const body = {
+    ...rest,
+    gender: genderId ?? input.gender,
+    nationalityCode: toNationalityCode(nationality),
+  };
   const profile = mapProfile(
     await withFreshAuth((at) => apiPut("/v1/profile/update", body, at)),
   );

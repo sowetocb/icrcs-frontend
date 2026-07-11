@@ -29,12 +29,12 @@ export default function StepDeclaration() {
         </p>
       </div>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-card p-4">
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input-line bg-card p-4">
         <input
           type="checkbox"
           checked={agreed}
           onChange={(e) => set("agree", e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-navy-700"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-input-line accent-navy-700"
         />
         <span className="text-sm font-medium text-ink">{t("registry.agree")}</span>
       </label>

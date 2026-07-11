@@ -56,6 +56,10 @@
   --color-bg: #f8fafc;
   --color-surface: #f8fafc;
   --color-card: #ffffff;
+  /* Form-control outline: distinctly visible, far stronger than the hairline
+     `line` used for dividers and card edges, so an empty field reads clearly
+     against the white card — an accessibility aid for low-vision users. */
+  --color-input-line: #b6c2d2;
   --color-line: #e2e8f0;
   --color-border: #e2e8f0;
   --color-ink: #1e293b;
@@ -139,6 +143,7 @@
   --color-bg: #0b1220;
   --color-surface: #0b1220;
   --color-card: #131c30;
+  --color-input-line: #3d4f6b; /* visible control outline on dark */
   --color-line: #26344c;
   --color-border: #26344c;
   --color-ink: #e7edf6;

@@ -13,7 +13,7 @@ import {
   ClipboardList,
   Users,
   LogOut,
-  ChevronRight,
+  Menu,
   X,
 } from "lucide-react";
 
@@ -57,9 +57,12 @@ export default function CitizenSidebar() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("nav.openMenu")}
-          className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg bg-sidebar py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 lg:hidden"
+          // Translucent bluish fill + defining border + backdrop blur so the
+          // handle always reads as an independent element — even when it scrolls
+          // over the same-navy hero (a solid navy fill would blend in there).
+          className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg border border-white/30 bg-navy-700/55 py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-navy-700/75 lg:hidden"
         >
-          <ChevronRight size={18} strokeWidth={2.5} aria-hidden="true" />
+          <Menu size={20} strokeWidth={2.5} aria-hidden="true" />
         </button>
       )}
 

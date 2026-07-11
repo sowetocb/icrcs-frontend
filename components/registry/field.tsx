@@ -89,9 +89,12 @@ export function FieldError({ name }: { name: string }) {
 
 const lockedCls = "cursor-not-allowed bg-line/30 text-muted";
 
+// Form controls keep the white `card` fill but use the stronger `input-line`
+// outline (rather than the hairline `line` used for dividers) so an empty field
+// is clearly visible — an accessibility aid for low-vision users.
 const baseInput =
   "w-full rounded-lg bg-card px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:ring-2";
-const okBorder = "border border-line focus:border-navy-500 focus:ring-navy-500/15";
+const okBorder = "border border-input-line focus:border-navy-500 focus:ring-navy-500/15";
 const errBorder = "border border-danger focus:border-danger focus:ring-danger/15";
 const inputCls = (invalid: boolean) =>
   `${baseInput} ${invalid ? errBorder : okBorder}`;
@@ -370,10 +373,10 @@ export function FileInput({ name }: { name: string }) {
   return (
     <label
       className={`flex cursor-pointer items-center overflow-hidden rounded-lg border bg-card text-sm ${
-        invalid ? "border-danger" : "border-line"
+        invalid ? "border-danger" : "border-input-line"
       }`}
     >
-      <span className="shrink-0 border-r border-line bg-surface px-4 py-2.5 font-medium text-navy-700">
+      <span className="shrink-0 border-r border-input-line bg-surface px-4 py-2.5 font-medium text-navy-700">
         {t("fields.chooseFile")}
       </span>
       <span className="truncate px-3 text-muted">

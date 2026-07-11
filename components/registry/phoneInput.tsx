@@ -97,14 +97,14 @@ export default function PhoneInput({ name }: { name: string }) {
         className={`flex items-stretch overflow-hidden rounded-lg border bg-card transition focus-within:ring-2 ${
           invalid
             ? "border-danger focus-within:border-danger focus-within:ring-danger/15"
-            : "border-line focus-within:border-navy-500 focus-within:ring-navy-500/15"
+            : "border-input-line focus-within:border-navy-500 focus-within:ring-navy-500/15"
         }`}
       >
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           disabled={isLocked}
-          className="flex shrink-0 items-center gap-1.5 border-r border-line bg-surface px-3 text-sm hover:bg-line/40 disabled:cursor-not-allowed"
+          className="flex shrink-0 items-center gap-1.5 border-r border-input-line bg-surface px-3 text-sm hover:bg-line/40 disabled:cursor-not-allowed"
         >
           <span className="text-base leading-none">{flagEmoji(country.code)}</span>
           <span className="font-mono text-navy-700">{country.dial}</span>

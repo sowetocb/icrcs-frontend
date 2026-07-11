@@ -45,7 +45,7 @@ export default function CountrySelect({
         className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 ${
           invalid
             ? "border-danger focus:border-danger focus:ring-danger/15"
-            : "border-line focus:border-navy-500 focus:ring-navy-500/15"
+            : "border-input-line focus:border-navy-500 focus:ring-navy-500/15"
         } ${isDisabled ? "cursor-not-allowed bg-line/30 text-muted" : ""}`}
       >
         {selected ? (

@@ -54,14 +54,35 @@ function PersonFields({
   prefix,
   showPhone = true,
   phoneRequired = true,
+  lockGenderOpposite = false,
 }: {
   prefix: string;
   showPhone?: boolean;
   phoneRequired?: boolean;
+  /** Force this person's gender to the OPPOSITE of the account holder's (used
+   * for spouses) and make it read-only. Skipped when the holder's gender is not
+   * a definite M/F. */
+  lockGenderOpposite?: boolean;
 }) {
   const { t } = useI18n();
-  const { data } = useWizard();
+  const { data, setQuiet } = useWizard();
   const genders = useGenderOptions();
+
+  // Spouse gender is the opposite of the account holder's (Stage 1) and locked.
+  // Resolve to an actual option value so it matches whatever the lookup returns.
+  const forcedGender = (() => {
+    if (!lockGenderOpposite) return "";
+    const g = String(data.gender ?? "").trim().toUpperCase();
+    const opposite = g === "M" ? "F" : g === "F" ? "M" : "";
+    if (!opposite) return "";
+    return genders.find((o) => o.value.toUpperCase() === opposite)?.value ?? opposite;
+  })();
+  useEffect(() => {
+    if (forcedGender && data[`${prefix}Gender`] !== forcedGender) {
+      setQuiet(`${prefix}Gender`, forcedGender);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forcedGender, prefix, data[`${prefix}Gender`]]);
 
   const resCountry = typeof data[`${prefix}ResCountry`] === "string" ? (data[`${prefix}ResCountry`] as string).trim() : "";
   const resIsTz = resCountry === "Tanzania";
@@ -86,7 +107,12 @@ function PersonFields({
           <DateInput name={`${prefix}Dob`} />
         </Field>
         <Field label={t("fields.gender")} required>
-          <Select name={`${prefix}Gender`} placeholder={t("fields.phSelect")} options={genders} />
+          <Select
+            name={`${prefix}Gender`}
+            placeholder={t("fields.phSelect")}
+            options={genders}
+            disabled={!!forcedGender}
+          />
         </Field>
         {showPhone && (
           phoneRequired ? (
@@ -127,6 +153,7 @@ function PersonBlock({
   withRelationship,
   withOccupation = true,
   withPhone = true,
+  lockGenderOpposite = false,
   onRemove,
 }: {
   prefix: string;
@@ -136,6 +163,8 @@ function PersonBlock({
   withOccupation?: boolean;
   /** Children have no phoneNumber in ChildItemRequest — hide for them. */
   withPhone?: boolean;
+  /** Lock gender to the opposite of the account holder (used for spouses). */
+  lockGenderOpposite?: boolean;
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
@@ -176,7 +205,12 @@ function PersonBlock({
         </div>
       )}
 
-      <PersonFields prefix={prefix} showPhone={showPhone} phoneRequired={phoneRequired} />
+      <PersonFields
+        prefix={prefix}
+        showPhone={showPhone}
+        phoneRequired={phoneRequired}
+        lockGenderOpposite={lockGenderOpposite}
+      />
     </div>
   );
 }
@@ -383,6 +417,7 @@ export default function StepFamily() {
                 prefix={`sp${n}`}
                 label={t("fields.spouseN").replace("{n}", String(n))}
                 withRelationship={false}
+                lockGenderOpposite
                 onRemove={
                   n === spouseCount && spouseCount > MIN_SPOUSES ? removeLastSpouse : undefined
                 }

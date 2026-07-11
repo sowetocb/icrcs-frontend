@@ -18,7 +18,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { ChevronDown } from "lucide-react";
 
 const selectCls =
-  "w-full appearance-none rounded-lg border border-line bg-card px-3.5 py-2.5 pr-9 text-sm outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15 disabled:cursor-not-allowed disabled:bg-line/30 disabled:text-muted";
+  "w-full appearance-none rounded-lg border border-input-line bg-card px-3.5 py-2.5 pr-9 text-sm outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15 disabled:cursor-not-allowed disabled:bg-line/30 disabled:text-muted";
 
 function Chevron() {
   return (
@@ -126,7 +126,7 @@ function CountryPicker({
         className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 ${
           invalid
             ? "border-danger focus:border-danger focus:ring-danger/15"
-            : "border-line focus:border-navy-500 focus:ring-navy-500/15"
+            : "border-input-line focus:border-navy-500 focus:ring-navy-500/15"
         } ${disabled ? "cursor-not-allowed bg-line/30 text-muted" : ""}`}
       >
         {selected ? (

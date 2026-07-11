@@ -74,6 +74,10 @@ export default function RegistryClient() {
     const draft = loadRegistrationFor(ownerId);
     return !!draft && !draft.completed;
   });
+  // A dependent (minor) may only be registered once the ACCOUNT HOLDER's own
+  // registration has been APPROVED by an officer. Defaults to false so the
+  // action stays blocked until the backend confirms approval.
+  const [ownerApproved, setOwnerApproved] = useState(false);
   // Persist the current view so a page refresh can restore it (see the mode
   // initializer above).
   useEffect(() => {
@@ -115,6 +119,14 @@ export default function RegistryClient() {
           if (remoteList.some((p) => !isIncomplete(p))) {
             setSelfDone(true);
           }
+
+          // The account holder's own registration is the first one created under
+          // the profile (dependents are added afterwards). Registering a minor is
+          // gated on that registration being APPROVED.
+          const owner = remoteList
+            .slice()
+            .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))[0];
+          setOwnerApproved(!!owner && owner.status.toUpperCase() === "APPROVED");
 
           // Stale-draft cleanup: if the local draft points to a registration the
           // backend already considers finished (e.g. completed in another
@@ -238,6 +250,12 @@ export default function RegistryClient() {
   function startFresh() {
     // Rule 2: cannot start a new registration while one is incomplete.
     if (hasIncomplete) return;
+    // Rule 3: once the account holder is registered, "start" means registering a
+    // dependent — only allowed when their own registration is APPROVED.
+    if (selfDone && !ownerApproved) {
+      notify(t("registry.approvalRequiredNote"), "error");
+      return;
+    }
     clearRegistration();
     setRegisteringMinor(false);
     // A Tanzanian national registers themselves and goes straight to Stage 1.
@@ -262,6 +280,7 @@ export default function RegistryClient() {
               onResume={() => setMode("wizard")}
               selfDone={selfDone}
               hasIncomplete={hasIncomplete}
+              ownerApproved={ownerApproved}
             />
           </div>
         )}

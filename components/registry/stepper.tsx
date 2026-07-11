@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
-import { Check, ChevronRight, X } from "lucide-react";
+import { Check, Menu, X } from "lucide-react";
 
 const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 // The Referees stage (7) accepts no user input, so it is removed from the wizard
@@ -49,9 +49,12 @@ export default function Stepper({
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("registry.openSteps")}
-          className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg bg-sidebar py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 lg:hidden"
+          // Translucent bluish fill + defining border + backdrop blur so the
+          // handle always reads as an independent element — even when it scrolls
+          // over the same-navy header (a solid navy fill would blend in there).
+          className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg border border-white/30 bg-navy-700/55 py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-navy-700/75 lg:hidden"
         >
-          <ChevronRight size={18} strokeWidth={2.5} aria-hidden="true" />
+          <Menu size={20} strokeWidth={2.5} aria-hidden="true" />
         </button>
       )}
 

@@ -81,6 +81,9 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
     lastName: "",
     gender: "",
     phoneNumber: "",
+    // Nationality is shown read-only (the user can't change it); kept in form
+    // state only so it is sent back unchanged on update.
+    nationality: "",
   });
   // Locally cached photo (data URL) — the backend has no URL that serves the
   // uploaded image, so we render the bytes we kept on upload.
@@ -103,6 +106,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         lastName: p.lastName ?? "",
         gender: p.gender ?? "",
         phoneNumber: toTzPhone(p.phoneNumber ?? ""),
+        nationality: p.nationality ?? "",
       });
 
     const cached = loadProfile();
@@ -195,6 +199,8 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         gender: form.gender,
         // Send the full "+255XXXXXXXXX", or "" when only the prefix remains.
         phoneNumber: national ? `+255${national}` : "",
+        // Not user-editable — sent back unchanged.
+        nationality: form.nationality,
       });
       // Keep any photo we already have if the response omits it.
       const merged: Profile = {
@@ -404,17 +410,32 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="email" className={labelClass}>
-            {t("form.email")}
-          </label>
-          <input
-            id="email"
-            value={profile?.email ?? ""}
-            readOnly
-            disabled
-            className={`${inputClass} cursor-not-allowed bg-line/30 text-muted`}
-          />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="email" className={labelClass}>
+              {t("form.email")}
+            </label>
+            <input
+              id="email"
+              value={profile?.email ?? ""}
+              readOnly
+              disabled
+              className={`${inputClass} cursor-not-allowed bg-line/30 text-muted`}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="nationality" className={labelClass}>
+              {t("register.nationality")}
+            </label>
+            {/* Nationality can't be changed by the user — read-only. */}
+            <input
+              id="nationality"
+              value={form.nationality}
+              readOnly
+              disabled
+              className={`${inputClass} cursor-not-allowed bg-line/30 text-muted`}
+            />
+          </div>
         </div>
 
         <button
