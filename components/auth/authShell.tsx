@@ -325,7 +325,7 @@ export default function AuthShell({
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
         <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-2.5 sm:gap-6">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-2.5 [@media(max-height:820px)]:py-1 sm:gap-6">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -333,7 +333,7 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-16 w-16 shrink-0 object-contain [@media(max-height:820px)]:!h-14 [@media(max-height:820px)]:!w-14 sm:h-24 sm:w-24"
           />
 
           {/* Center — three titles + national flag strip */}
@@ -363,7 +363,7 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-16 w-16 shrink-0 object-contain [@media(max-height:820px)]:!h-14 [@media(max-height:820px)]:!w-14 sm:h-24 sm:w-24"
           />
         </div>
       </header>

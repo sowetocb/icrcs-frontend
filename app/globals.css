@@ -72,22 +72,18 @@
   --font-sans: var(--font-ubuntu-sans), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
 
-  /* Type scale (shared ICRCS). Authored in rem (relative to the fluid root
-     font-size below) so text scales with the viewport instead of staying a
-     fixed pixel size. The rem values equal the old px sizes at the 18px root
-     max, so large screens look identical while smaller/OS-scaled viewports
-     shrink proportionally instead of overflowing. */
-  --text-xs: 0.889rem; /* 16px @ 18 */
+  /* Type scale (shared ICRCS) */
+  --text-xs: 16px;
   --text-xs--line-height: 1.5rem;
-  --text-sm: 0.944rem; /* 17px @ 18 */
+  --text-sm: 17px;
   --text-sm--line-height: 1.55rem;
-  --text-base: 1.056rem; /* 19px @ 18 */
+  --text-base: 19px;
   --text-base--line-height: 1.75rem;
-  --text-lg: 1.278rem; /* 23px @ 18 */
+  --text-lg: 23px;
   --text-lg--line-height: 2rem;
-  --text-xl: 1.556rem; /* 28px @ 18 */
+  --text-xl: 28px;
   --text-xl--line-height: 2.15rem;
-  --text-2xl: 1.778rem; /* 32px @ 18 */
+  --text-2xl: 32px;
   --text-2xl--line-height: 2.4rem;
 
   /* Elevation (shared ICRCS) */
@@ -171,13 +167,9 @@
 html {
   color-scheme: light;
   background: var(--background);
-  /* Fluid root font-size: the whole app (rem-based text + spacing) scales with
-     the viewport. It reaches the old 18px "readability bump" on wide screens
-     (~1900px CSS px, e.g. Ubuntu @ 100% OS scaling) and eases down to ~15px on
-     narrower/OS-scaled viewports (e.g. Windows @ 125%, macOS retina), so login
-     forms and the registration steps fit without scrolling everywhere instead
-     of overflowing only off the developer's machine. */
-  font-size: clamp(15px, 8.8px + 0.5vw, 18px);
+  /* App-wide readability bump: scales every rem-based Tailwind text/spacing
+     utility up from the 16px default for better visibility. */
+  font-size: 18px;
 }
 
 html.dark {

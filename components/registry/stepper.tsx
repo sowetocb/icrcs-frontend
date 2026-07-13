@@ -106,7 +106,7 @@ export default function Stepper({
                   type="button"
                   onClick={() => go(n)}
                   disabled={locked}
-                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-2 text-left transition [@media(max-height:900px)]:py-1 ${
                     active
                       ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
@@ -116,7 +116,7 @@ export default function Stepper({
                 >
                   <span className="flex flex-col items-center self-stretch">
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold [@media(max-height:900px)]:h-6 [@media(max-height:900px)]:w-6 ${
                         done
                           ? "bg-success text-white"
                           : active
@@ -130,7 +130,7 @@ export default function Stepper({
                       <span className="mt-1 w-px flex-1 bg-white/10" />
                     )}
                   </span>
-                  <span className="pb-2">
+                  <span className="pb-2 [@media(max-height:900px)]:pb-0.5">
                     <span
                       className={`block text-sm font-semibold ${
                         active
@@ -143,7 +143,7 @@ export default function Stepper({
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
-                      className={`mt-0.5 block text-xs leading-snug ${
+                      className={`mt-0.5 block text-xs leading-snug [@media(max-height:900px)]:hidden ${
                         active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >

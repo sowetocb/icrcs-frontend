@@ -88,9 +88,9 @@ export default function RegistryLanding({
   ];
 
   return (
-    <main className="flex-1 px-6 py-12 lg:px-10">
+    <main className="flex flex-1 flex-col justify-center px-6 py-8 lg:px-10">
       <div className="mx-auto w-full max-w-6xl">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           {/* Intro */}
           <div>
             <h1 className="font-display text-4xl font-black tracking-tight text-navy-700 sm:text-5xl">
@@ -112,17 +112,17 @@ export default function RegistryLanding({
                 onClick={onClick}
                 disabled={disabled}
                 aria-disabled={disabled}
-                className="group flex flex-col rounded-xl border border-line bg-card p-6 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:border-line disabled:hover:shadow-none"
+                className="group flex flex-col rounded-xl border border-line bg-card p-5 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:border-line disabled:hover:shadow-none"
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
                   <Icon />
                 </span>
-                <h2 className="mt-4 text-lg font-bold text-navy-700">{title}</h2>
+                <h2 className="mt-3 text-lg font-bold text-navy-700">{title}</h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{desc}</p>
                 {note ? (
-                  <span className="mt-4 text-xs font-medium text-warning">{note}</span>
+                  <span className="mt-3 text-xs font-medium text-warning">{note}</span>
                 ) : (
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-700 transition group-hover:gap-2.5">
+                  <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-700 transition group-hover:gap-2.5">
                     {action}
                     <ArrowRight />
                   </span>
