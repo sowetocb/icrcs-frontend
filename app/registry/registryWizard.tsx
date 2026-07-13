@@ -2131,20 +2131,20 @@ export default function RegistryWizard({
         onSaveExit={saveExit}
       />
 
-        <main className="flex-1 px-6 py-8 lg:px-10">
+        <main className="flex-1 px-4 py-5 lg:px-8">
           <div className="mx-auto w-full max-w-6xl">
             <p className="text-sm font-semibold text-success">
               {t(`registry.s${step}Tag`)}
             </p>
-            <h1 className="mt-1 font-display text-4xl font-black tracking-tight text-navy-700">
+            <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700">
               {t(`registry.s${step}Heading`)}
             </h1>
-            <p className="mt-3 max-w-2xl leading-relaxed text-muted">
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
               {t(`registry.s${step}Intro`)}
             </p>
 
-            <form onSubmit={handlePrimary} className="mt-6">
-              <div className="rounded-2xl border border-line bg-card p-6 sm:p-8">
+            <form onSubmit={handlePrimary} className="mt-4">
+              <div className="rounded-2xl border border-line bg-card p-5 sm:p-6">
                 <WizardProvider
                   data={data}
                   set={set}

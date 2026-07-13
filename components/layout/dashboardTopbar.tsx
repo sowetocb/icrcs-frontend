@@ -176,7 +176,7 @@ export default function DashboardTopbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">
-      <div className="flex h-20 items-center justify-between px-6">
+      <div className="flex h-16 items-center justify-between px-6">
         {/* Left — Brand */}
         <div className="flex items-center gap-3">
           {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
@@ -187,7 +187,7 @@ export default function DashboardTopbar() {
             alt={t("brand.country")}
             width={56}
             height={56}
-            className="h-18 w-18 object-contain"
+            className="h-12 w-12 object-contain"
           />
           <div className="hidden leading-tight sm:block">
             <p className="text-xs font-medium uppercase tracking-wider text-icrcs-gold-light/80">

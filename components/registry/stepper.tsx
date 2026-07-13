@@ -69,15 +69,15 @@ export default function Stepper({
 
       <aside
         onMouseLeave={() => setOpen(false)}
-        className={`flex w-72 shrink-0 flex-col overflow-y-auto bg-sidebar transition-transform duration-300 ease-in-out
+        className={`flex w-56 shrink-0 flex-col overflow-y-auto bg-sidebar transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
-          lg:sticky lg:top-20 lg:z-auto lg:h-[calc(100vh-5rem)] lg:translate-x-0 lg:self-start lg:shadow-none`}
+          lg:sticky lg:top-16 lg:z-auto lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:self-start lg:shadow-none`}
       >
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
         <div className="h-1 w-full shrink-0 bg-gold" aria-hidden="true" />
 
         {/* Header badge + close (close is mobile-only). */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <div className="flex items-center justify-between px-3 pt-2 pb-0.5">
           <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("registry.stepsLabel")}
           </p>
@@ -91,7 +91,7 @@ export default function Stepper({
           </button>
         </div>
 
-        <ol className="flex-1 space-y-0 px-2.5 pb-2">
+        <ol className="flex-1 space-y-0 px-2 pb-1">
           {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
@@ -106,7 +106,7 @@ export default function Stepper({
                   type="button"
                   onClick={() => go(n)}
                   disabled={locked}
-                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-2 text-left transition [@media(max-height:900px)]:py-1 ${
+                  className={`flex w-full gap-2 rounded-lg px-2 py-1.5 text-left transition ${
                     active
                       ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
@@ -116,7 +116,7 @@ export default function Stepper({
                 >
                   <span className="flex flex-col items-center self-stretch">
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold [@media(max-height:900px)]:h-6 [@media(max-height:900px)]:w-6 ${
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                         done
                           ? "bg-success text-white"
                           : active
@@ -130,9 +130,9 @@ export default function Stepper({
                       <span className="mt-1 w-px flex-1 bg-white/10" />
                     )}
                   </span>
-                  <span className="pb-2 [@media(max-height:900px)]:pb-0.5">
+                  <span className="pb-1">
                     <span
-                      className={`block text-sm font-semibold ${
+                      className={`block text-[13px] font-semibold ${
                         active
                           ? "text-icrcs-navy"
                           : done
@@ -143,7 +143,7 @@ export default function Stepper({
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
-                      className={`mt-0.5 block text-xs leading-snug [@media(max-height:900px)]:hidden ${
+                      className={`mt-0.5 block text-[11px] leading-snug [@media(max-height:850px)]:hidden ${
                         active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >
@@ -156,14 +156,14 @@ export default function Stepper({
           })}
         </ol>
 
-        <div className="border-t border-white/10 p-2">
+        <div className="border-t border-white/10 p-1.5">
           <button
             type="button"
             onClick={() => {
               onSaveExit();
               setOpen(false);
             }}
-            className="w-full rounded-lg border border-white/15 py-2 text-[13px] font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
+            className="w-full rounded-lg border border-white/15 py-1.5 text-[12px] font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
           >
             {t("registry.saveExit")}
           </button>

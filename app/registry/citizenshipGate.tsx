@@ -79,14 +79,14 @@ export default function CitizenshipGate({
   const found = status === "found";
 
   return (
-    <main className="flex-1 px-6 py-8 lg:px-10">
+    <main className="flex-1 px-4 py-5 lg:px-8">
       <div className="mx-auto w-full max-w-3xl">
         <p className="text-sm font-semibold text-success">{t("gate.title")}</p>
-        <h1 className="mt-1 font-display text-4xl font-black tracking-tight text-navy-700">
+        <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700">
           {t("gate.fillInfoTitle")}
         </h1>
 
-        <div className="mt-6 rounded-2xl border border-line bg-card p-6 sm:p-8">
+        <div className="mt-4 rounded-2xl border border-line bg-card p-5 sm:p-6">
           {!found ? (
             <form onSubmit={handleVerify}>
               <WizardProvider

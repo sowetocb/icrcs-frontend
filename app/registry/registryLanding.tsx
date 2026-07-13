@@ -88,12 +88,12 @@ export default function RegistryLanding({
   ];
 
   return (
-    <main className="flex flex-1 flex-col justify-center px-6 py-8 lg:px-10">
+    <main className="flex flex-1 flex-col justify-center px-4 py-5 lg:px-8">
       <div className="mx-auto w-full max-w-6xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           {/* Intro */}
           <div>
-            <h1 className="font-display text-4xl font-black tracking-tight text-navy-700 sm:text-5xl">
+            <h1 className="font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
               {t("registry.landingTitle")}
               <br />
               <span className="text-gold">{t("registry.landingTitleAccent")}</span>
