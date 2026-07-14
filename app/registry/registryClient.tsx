@@ -5,8 +5,15 @@ import CitizenSidebar from "@/components/layout/citizenSidebar";
 import DashboardTopbar from "@/components/layout/dashboardTopbar";
 import AuthGuard from "@/components/auth/authGuard";
 import RegistryLanding from "./registryLanding";
+import CategoryGate from "./categoryGate";
 import CitizenshipGate from "./citizenshipGate";
 import RegistryWizard from "./registryWizard";
+import {
+  CATEGORY_REGISTRATION_TYPE,
+  isMigrantCategory,
+  type RegistrationCategory,
+} from "@/lib/registry/registrationCategory";
+import type { RegistrationType } from "@/lib/api/registration";
 import RegistrySuccess from "./registrySuccess";
 import { clearRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
 import { addPerson, loadPeople, isSubmitted } from "./peopleStore";
@@ -17,7 +24,7 @@ import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { RULES } from "@/lib/validation/rules";
 
-type Mode = "landing" | "gate" | "wizard" | "success";
+type Mode = "landing" | "category" | "gate" | "wizard" | "success";
 
 // Persisted per-tab (sessionStorage) so a page refresh returns to the same view.
 const REGISTRY_MODE_KEY = "icrcs-registry-mode";
@@ -56,6 +63,10 @@ export default function RegistryClient() {
   // The foreign registrant's relationship to the minor ("guardian" | "parent"),
   // chosen in the gate dialog and used to branch Stage 3 (Parents).
   const [minorRelationship, setMinorRelationship] = useState<"guardian" | "parent" | "">("");
+  // The migrant-track registrationType (MIGRANT / REFUGEE / ASYLUM_SEEKER) chosen
+  // at the category gate; null for the citizen track. Passed to the wizard, which
+  // uses it to hit the /stage1/migrant endpoint + show migrant-only steps.
+  const [registrationType, setRegistrationType] = useState<RegistrationType | null>(null);
   const [submission, setSubmission] = useState<{
     id: string;
     date: string;
@@ -268,13 +279,28 @@ export default function RegistryClient() {
     }
     clearRegistration();
     setRegisteringMinor(false);
-    // A Tanzanian national registers themselves and goes straight to Stage 1.
-    // A foreign national first passes the gate (travel-document lookup, and the
-    // option to register a Tanzanian-origin minor). An unknown/empty nationality
-    // (legacy profile) is treated as Tanzanian since the gate binds a foreign one.
-    const nationality = loadProfile()?.nationality ?? "";
-    const isForeign = !!nationality && nationality !== "Tanzania";
-    setMode(isForeign ? "gate" : "wizard");
+    setRegistrationType(null);
+    // Every fresh registration now starts at the category picker, which routes
+    // Citizen/Foreign into the existing flow and Migrant/Refugee/Asylum into the
+    // migrant track.
+    setMode("category");
+  }
+
+  // Map the chosen category to a flow. Citizen → Stage 1 directly; Foreign →
+  // the travel-document gate (+ minor registration); the migrant-track
+  // categories carry their registrationType into the wizard.
+  function chooseCategory(category: RegistrationCategory) {
+    if (category === "FOREIGN") {
+      setRegistrationType(null);
+      setMode("gate");
+      return;
+    }
+    if (isMigrantCategory(category)) {
+      setRegistrationType(CATEGORY_REGISTRATION_TYPE[category] ?? null);
+    } else {
+      setRegistrationType(null);
+    }
+    setMode("wizard");
   }
 
   return (
@@ -291,6 +317,16 @@ export default function RegistryClient() {
               selfDone={selfDone}
               hasIncomplete={hasIncomplete}
               ownerApproved={ownerApproved}
+            />
+          </div>
+        )}
+
+        {mode === "category" && (
+          <div className="flex flex-1">
+            <CitizenSidebar />
+            <CategoryGate
+              onSelect={chooseCategory}
+              onExit={() => setMode("landing")}
             />
           </div>
         )}
@@ -315,6 +351,7 @@ export default function RegistryClient() {
             selfDone={selfDone}
             registeringMinor={registeringMinor}
             minorRelationship={minorRelationship}
+            registrationType={registrationType ?? undefined}
             onExit={() => setMode("landing")}
             onComplete={handleComplete}
           />

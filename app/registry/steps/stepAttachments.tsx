@@ -55,7 +55,13 @@ function readDataUrl(file: File): Promise<string> {
 
 export default function StepAttachments() {
   const { t } = useI18n();
-  const { data, set, errors, fieldErrors } = useWizard();
+  const { data, set, errors, fieldErrors, isMigrant } = useWizard();
+  // On the migrant track (Migrant / Refugee / Asylum Seeker / Alien /
+  // Undocumented Migrant / Voluntary Returnee) uploads are COMPLETELY optional —
+  // these applicants often hold no civil documents at all. So no type is treated
+  // as mandatory: nothing is pre-ticked, no checkbox is force-locked, and the
+  // "Required" badge is hidden. (The wizard's Stage 8 gate is skipped too.)
+  const isRequiredType = (mandatory: boolean) => mandatory && !isMigrant;
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
@@ -74,7 +80,7 @@ export default function StepAttachments() {
   // Pre-tick the mandatory type and any already-uploaded ones.
   const [ticked, setTicked] = useState<Record<number, boolean>>(() => {
     const init: Record<number, boolean> = {};
-    for (const a of ATTACHMENT_TYPES) if (a.mandatory) init[a.id] = true;
+    for (const a of ATTACHMENT_TYPES) if (isRequiredType(a.mandatory)) init[a.id] = true;
     for (const a of saved) init[a.typeId] = true;
     return init;
   });
@@ -150,7 +156,7 @@ export default function StepAttachments() {
    * mandatory OR was already uploaded in a prior stage (1-6). The user can
    * still replace the file via the upload button, but cannot remove it. */
   function isCheckboxLocked(typeId: number, mandatory: boolean): boolean {
-    return mandatory || lockedTypes.has(typeId) || savedByType.has(typeId);
+    return isRequiredType(mandatory) || lockedTypes.has(typeId) || savedByType.has(typeId);
   }
 
   function toggle(typeId: number, mandatory: boolean) {
@@ -203,7 +209,7 @@ export default function StepAttachments() {
                       const translated = t(key);
                       return translated === key ? type.label : translated;
                     })()}
-                    {type.mandatory && (
+                    {isRequiredType(type.mandatory) && (
                       <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-danger">
                         {t("fields.required")}
                       </span>

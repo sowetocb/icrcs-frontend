@@ -15,6 +15,7 @@ import {
 } from "./files";
 import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
+import { RULES } from "@/lib/validation/rules";
 
 /** Decode a base64 data URL into a Blob (for multipart upload). */
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } | null {
@@ -265,6 +266,8 @@ async function buildStage1Payload(
     // full identification list (all picked types) is sent via `documents`.
     nidaNo: await nidaNumberFromDocs(data),
     documents: idDocuments(data),
+    // Physical characteristics — shared by citizen and migrant Stage 1 (v002).
+    ...physicalCharacteristics(data),
   };
 
   if (bornInTanzania) {
@@ -385,8 +388,8 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
   // house number / postal address); abroad sends an ISO country code + city. ──
   if (currentIsTz) {
     payload.currentStreetId = wardId(data, "curStreetId");
-    payload.currentHouseNo = cap(str(data, "curHouseNumber"), 20);
-    payload.currentPostalAddress = cap(str(data, "curPostalCode"), 50);
+    payload.currentHouseNo = cap(str(data, "curHouseNumber"), RULES.HOUSE_NO_MAX);
+    payload.currentPostalAddress = cap(str(data, "curPostalCode"), RULES.POSTAL_ADDRESS_MAX);
   } else {
     payload.currentCountryCode = await resolveCountryCode(stage2CurrentCountry(data));
     payload.currentCity = str(data, "curCity") || null;
@@ -399,13 +402,21 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
   if (!sameAsCurrent) {
     if (permIsTz) {
       payload.permanentStreetId = wardId(data, "permStreetId");
-      payload.permanentHouseNo = cap(str(data, "permHouseNumber"), 20);
-      payload.permanentPostalAddress = cap(str(data, "permPostalCode"), 50);
+      payload.permanentHouseNo = cap(str(data, "permHouseNumber"), RULES.HOUSE_NO_MAX);
+      payload.permanentPostalAddress = cap(str(data, "permPostalCode"), RULES.POSTAL_ADDRESS_MAX);
     } else {
       payload.permanentCountryCode = await resolveCountryCode(str(data, "permCountry"));
       payload.permanentCity = str(data, "permCity") || null;
     }
   }
+
+  // ── Migrant-only: refugee/settlement camp + dwelling description. Only the
+  // migrant track renders these fields, so for a citizen they are absent and
+  // nothing is sent. ──
+  const campName = cap(str(data, "campName"), RULES.CAMP_NAME_MAX);
+  const properties = cap(str(data, "properties"), RULES.PROPERTIES_MAX);
+  if (campName) payload.campName = campName;
+  if (properties) payload.properties = properties;
 
   return payload;
 }
@@ -414,6 +425,174 @@ async function buildStage2Payload(data: Data): Promise<Record<string, unknown>> 
  * abroad → /foreign. There is no bare /stage2 endpoint. */
 const stage2Suffix = (data: Data) =>
   isTanzania(stage2CurrentCountry(data)) ? "/domestic" : "/foreign";
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Migrant registration (ICRCS API v002)
+//
+// Migrants / refugees / asylum-seekers share stages 2–9 with citizens (same
+// endpoints, keyed by the returned subjectId). Only two calls are specific to
+// this track: Stage 1 (POST /stage1/migrant, carries `registrationType` + the
+// physical-characteristics fields) and an optional Travel-History call. Field
+// REQUIREDNESS comes from the backend ENUM file and is enforced in the Zod
+// schemas, not here — this layer only maps the flat form data to the payloads
+// whose shapes are fixed by the v002 collection.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** `registrationType` sent to /stage1/migrant — the migrant-flow members of the
+ * backend registration-type enum. The citizen flow uses the enum's DOMESTIC /
+ * FOREIGN values instead and keeps /stage1/domestic and /stage1/foreign, so they
+ * are deliberately NOT part of this union (submitStage1Migrant must only ever be
+ * called with a migrant type). */
+export type RegistrationType =
+  | "ASYLUM_SEEKER"
+  | "REFUGEE"
+  | "ALIEN"
+  | "UNDOCUMENTED_MIGRANT"
+  | "VOLUNTARY_RETURNEE";
+
+/** Physical-characteristics + otherNames block, shared by the v002 person model
+ * (present on migrant Stage 1; also added to citizen Stage 1 in v002). Empty
+ * strings collapse to null so optional fields aren't sent as "". */
+function physicalCharacteristics(data: Data): Record<string, unknown> {
+  return {
+    otherNames: str(data, "otherNames") || null,
+    tribe: str(data, "tribe") || null,
+    eyeColor: str(data, "eyeColor") || null,
+    hairColor: str(data, "hairColor") || null,
+    heightCm: intOrNull(data, "heightCm"),
+    specialMark: str(data, "specialMark") || null,
+    languageSpoken: str(data, "languageSpoken") || null,
+  };
+}
+
+/** Migrant Stage 1 payload — the shared base (names, sex, DOB, nationality,
+ * citizenship, place of birth, documents) plus `registrationType` and the
+ * physical-characteristics block. Migrants are foreign-born, so the base's
+ * foreign branch (countryOfBirthCode + cityOfBirth) applies. */
+async function buildMigrantStage1Payload(
+  data: Data,
+  registrationType: RegistrationType,
+): Promise<Record<string, unknown>> {
+  const base = await buildStage1Payload(data, true);
+  // buildStage1Payload already includes the physical-characteristics block.
+  return { ...base, registrationType };
+}
+
+export async function submitStage1Migrant(
+  data: Data,
+  registrationType: RegistrationType,
+  photoDataUrl?: string,
+): Promise<Stage1Response> {
+  const payload = await buildMigrantStage1Payload(data, registrationType);
+  if (BYPASS) {
+    await delay(300);
+    return { subjectId: "mock-migrant-id", applicationId: "MOCK-ALN000000000000", photoUploaded: true };
+  }
+  const response = extractStage1Response(
+    await withFreshAuth((at) => apiPost("/v1/registration/stage1/migrant", payload, at)),
+  );
+  // Passport photo upload mirrors the citizen flow: non-fatal, keyed by subjectId.
+  const photo =
+    photoDataUrl && response.subjectId
+      ? await uploadPassportPhoto(response.subjectId, photoDataUrl)
+      : null;
+  response.photoUploaded = !!photo;
+  response.photoAttachment = photo ?? undefined;
+  return response;
+}
+
+export async function editStage1Migrant(
+  subjectId: string,
+  data: Data,
+  registrationType: RegistrationType,
+): Promise<unknown> {
+  const payload = await buildMigrantStage1Payload(data, registrationType);
+  if (BYPASS) {
+    await delay(300);
+    return { mock: true };
+  }
+  return withFreshAuth((at) =>
+    apiPut(`/v1/registration/${subjectId}/stage1/migrant`, payload, at),
+  );
+}
+
+/** Travel history — one endpoint for both cases (`hasDocument` toggles the
+ * document block). The two country fields are stored as country NAMES by the
+ * form's CountrySelect and resolved to ISO alpha-3 codes for the API. */
+export type TravelHistory = {
+  hasDocument: boolean;
+  firstDateOfEntry?: string | null;
+  pointOfEntry?: string | null;
+  transitCountry?: string | null;
+  documentType?: string | null;
+  documentNo?: string | null;
+  issuedDate?: string | null;
+  expiryDate?: string | null;
+  issueCountryCode?: string | null;
+  issueAuthority?: string | null;
+};
+
+async function buildTravelHistoryPayload(data: Data): Promise<Record<string, unknown>> {
+  const hasDocument = data.hasTravelDoc === true;
+  const base: Record<string, unknown> = {
+    hasDocument,
+    firstDateOfEntry: str(data, "firstDateOfEntry") || null,
+    pointOfEntry: str(data, "pointOfEntry") || null, // free text (e.g. "Namanga Border")
+    transitCountry: (await resolveCountryCode(str(data, "transitCountry"))) || null,
+  };
+  if (hasDocument) {
+    Object.assign(base, {
+      documentType: str(data, "travelDocType") || null, // free text (e.g. "PASSPORT")
+      documentNo: str(data, "travelDocNo") || null,
+      issuedDate: str(data, "travelIssuedDate") || null,
+      expiryDate: str(data, "travelExpiryDate") || null,
+      issueCountryCode: (await resolveCountryCode(str(data, "travelIssueCountry"))) || null,
+      issueAuthority: str(data, "travelIssueAuthority") || null,
+    });
+  }
+  return base;
+}
+
+export async function submitTravelHistory(subjectId: string, data: Data): Promise<unknown> {
+  const payload = await buildTravelHistoryPayload(data);
+  if (BYPASS) {
+    await delay(300);
+    return { mock: true };
+  }
+  return withFreshAuth((at) =>
+    apiPost(`/v1/registration/${subjectId}/travel-history`, payload, at),
+  );
+}
+
+export async function editTravelHistory(subjectId: string, data: Data): Promise<unknown> {
+  const payload = await buildTravelHistoryPayload(data);
+  if (BYPASS) {
+    await delay(300);
+    return { mock: true };
+  }
+  return withFreshAuth((at) =>
+    apiPut(`/v1/registration/${subjectId}/travel-history`, payload, at),
+  );
+}
+
+export async function getTravelHistory(subjectId: string): Promise<TravelHistory | null> {
+  if (BYPASS) {
+    await delay(200);
+    return null;
+  }
+  try {
+    const raw = await withFreshAuth((at) =>
+      apiGet(`/v1/registration/${subjectId}/travel-history`, at),
+    );
+    const d =
+      typeof raw === "object" && raw !== null && "data" in raw
+        ? (raw as { data?: unknown }).data
+        : raw;
+    return (d && typeof d === "object" ? (d as TravelHistory) : null);
+  } catch {
+    return null;
+  }
+}
 
 export async function submitStage2(subjectId: string, data: Data): Promise<unknown> {
   const payload = await buildStage2Payload(data);
@@ -566,7 +745,10 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
       // year; a level still in progress sends null.
       const completed = data[`${p}Completed`] === true;
       educationList.push({
-        educationLevelId: intOrNull(data, `${p}Level`) ?? 1,
+        // No `?? 1` fallback: a missing level is a REQUIRED-field error (now
+        // enforced per item in the wizard), not something to silently persist as
+        // "level 1" — that wrote wrong data into the registry.
+        educationLevelId: intOrNull(data, `${p}Level`),
         // Schools are captured as Tanzanian; the backend expects the ISO code.
         countryCode: "TZA",
         city: str(data, `${p}District`) || null,

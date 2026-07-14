@@ -23,7 +23,7 @@ const ADDR_SUFFIXES = [
 
 export default function StepAddress() {
   const { t } = useI18n();
-  const { data, set } = useWizard();
+  const { data, set, isMigrant } = useWizard();
   const sameAsPerm = data.sameAsPerm === true;
 
   // Address fields: the Tanzania cascade + house/postal fields only render when
@@ -75,10 +75,10 @@ export default function StepAddress() {
           {permIsTz ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t("fields.phHouseStreet")}>
-                <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={15} />
+                <TextInput name="permHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={RULES.HOUSE_NO_MAX} />
               </Field>
               <Field label={t("fields.phPostal")}>
-                <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={15} />
+                <TextInput name="permPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={RULES.POSTAL_ADDRESS_MAX} />
               </Field>
             </div>
           ) : permIsForeign ? (
@@ -106,10 +106,10 @@ export default function StepAddress() {
             {curIsTz ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label={t("fields.phHouseStreet")}>
-                  <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={15} />
+                  <TextInput name="curHouseNumber" placeholder={t("fields.phHouseStreet")} allowChars="A-Za-z0-9 " maxLength={RULES.HOUSE_NO_MAX} />
                 </Field>
                 <Field label={t("fields.phPostal")}>
-                  <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={15} />
+                  <TextInput name="curPostalCode" placeholder={t("fields.phPostal")} allowChars="A-Za-z0-9. " maxLength={RULES.POSTAL_ADDRESS_MAX} />
                 </Field>
               </div>
             ) : curIsForeign ? (
@@ -119,6 +119,25 @@ export default function StepAddress() {
             ) : null}
           </div>
         </Field>
+      )}
+
+      {/* Camp / settlement — migrant track only (Migrant / Refugee / Asylum
+          Seeker). Both fields are optional and are sent with Stage 2. */}
+      {isMigrant && (
+        <div className="space-y-4 rounded-xl border border-line bg-card p-4">
+          <div>
+            <p className="text-sm font-semibold text-navy-700">{t("fields.campSection")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("fields.campHint")}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label={t("fields.campName")} optional>
+              <TextInput name="campName" placeholder={t("fields.phCampName")} maxLength={RULES.CAMP_NAME_MAX} />
+            </Field>
+            <Field label={t("fields.properties")} optional>
+              <TextInput name="properties" placeholder={t("fields.phProperties")} maxLength={RULES.PROPERTIES_MAX} />
+            </Field>
+          </div>
+        </div>
       )}
     </div>
   );

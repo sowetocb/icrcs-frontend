@@ -29,6 +29,9 @@ type WizardContextValue = {
   locked: string[];
   /** True while registering the account holder (the first person). */
   isFirstPerson: boolean;
+  /** True on the migrant track (Migrant / Refugee / Asylum Seeker), so steps can
+   * render migrant-only fields (Stage 1 travel history, Stage 2 camp, …). */
+  isMigrant?: boolean;
   /** Jump to a completed wizard step (used on the preview screen). */
   onGoToStep?: (step: number) => void;
   /** Raise the wizard's session-expired flow (blocking dialog → sign in). */
@@ -46,13 +49,14 @@ export function WizardProvider({
   fieldErrors,
   locked,
   isFirstPerson,
+  isMigrant,
   onGoToStep,
   onSessionExpired,
   children,
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, setQuiet, blur, errors, fieldErrors, locked, isFirstPerson, onGoToStep, onSessionExpired }}
+      value={{ data, set, setQuiet, blur, errors, fieldErrors, locked, isFirstPerson, isMigrant, onGoToStep, onSessionExpired }}
     >
       {children}
     </WizardContext.Provider>

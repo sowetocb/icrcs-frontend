@@ -46,7 +46,14 @@ export default function ProfilePhoneInput({
   describedBy?: string;
   placeholder?: string;
 }) {
-  const [country, setCountry] = useState<Country>(() => detectCountry(value));
+  // The country is DERIVED from the current value's dialing code rather than
+  // frozen in state at mount. A value that arrives AFTER mount — e.g. the
+  // profile dialog loading the number from the API — would otherwise keep the
+  // mount-time default (Tanzania), leaving a foreign number's country code
+  // stranded in the national digits. `picked` covers only the transient case
+  // where the user chooses a country before typing any digits (value is "" then).
+  const [picked, setPicked] = useState<Country | null>(null);
+  const country = value ? detectCountry(value) : (picked ?? TANZANIA);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -123,7 +130,7 @@ export default function ProfilePhoneInput({
           onClose={() => setOpen(false)}
           showDial
           onSelect={(c) => {
-            setCountry(c);
+            setPicked(c);
             // Changing the country code clears any typed number — the old
             // national digits rarely belong to the newly chosen country, so
             // forcing a fresh entry avoids storing a mismatched number.

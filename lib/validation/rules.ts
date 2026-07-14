@@ -85,6 +85,52 @@ export const RULES = {
   CHILDREN_MAX: 30, // REGISTRATION_CHILDREN_LIMIT_EXCEEDED
   REGISTRATIONS_PER_PROFILE_MAX: 10, // REGISTRATION_LIMIT_REACHED
 
+  // ---- Per-field limits from the v002 backend validation reference ----
+  // Every input `maxLength` and every payload cap MUST read from here. Do NOT
+  // hardcode these numbers in a step component: that is exactly how the frontend
+  // silently drifted from the contract (v002 made eyeColor/hairColor/
+  // languageSpoken required and nobody noticed until the backend 400'd).
+  // Grouped by stage so a contract change maps to one obvious place.
+
+  // Stage 1 — physical characteristics (shared by citizen + migrant).
+  OTHER_NAMES_MAX: 30, // NAME
+  TRIBE_MAX: 50, // NAME
+  EYE_COLOR_MAX: 30, // NAME
+  HAIR_COLOR_MAX: 30, // NAME
+  LANGUAGE_SPOKEN_MAX: 30, // NAME
+  SPECIAL_MARK_MAX: 100, // ORG
+  HEIGHT_CM_MIN: 50,
+  HEIGHT_CM_MAX: 280,
+
+  // Identification documents (DocumentItemRequest).
+  DOC_NUMBER_MAX: 50, // DOC_NUM
+  NIDA_EXACT_DIGITS: 20,
+
+  // Naturalization certificate.
+  NATURALIZATION_CERT_NUMBER_MAX: 100, // DOC_NUM
+  NATURALIZATION_ISSUE_PLACE_MAX: 100, // ORG
+
+  // Travel history (migrant track only). All fields optional.
+  POINT_OF_ENTRY_MAX: 50,
+  TRANSIT_COUNTRY_MAX: 50,
+  TRAVEL_DOC_TYPE_MAX: 30,
+  TRAVEL_DOC_NO_MAX: 30,
+  TRAVEL_ISSUE_AUTHORITY_MAX: 100,
+
+  // Stage 2 — address.
+  HOUSE_NO_MAX: 20,
+  POSTAL_ADDRESS_MAX: 50,
+  CAMP_NAME_MAX: 50, // migrant only
+  PROPERTIES_MAX: 200, // migrant only
+
+  // Stage 4 — education & employment.
+  SCHOOL_NAME_MAX: 200, // ORG
+  ORGANIZATION_NAME_MAX: 200, // ORG
+  OTHER_OCCUPATION_MAX: 50,
+
+  // Shared RelatedPersonRequest.
+  PERSON_PHONE_MAX: 30,
+
   // ---- Enumerated lookup IDs (confirm exact values with the live lookup API) ----
   // NOTE: the app fetches these live (getGenders / getCitizenshipTypes /
   // getEducationLevels / getAttachmentTypes). Prefer the lookup over hardcoding;

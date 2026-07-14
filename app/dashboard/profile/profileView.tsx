@@ -25,19 +25,18 @@ import {
   fileToDataUrl,
   type Profile,
 } from "@/lib/auth/profile";
+import ProfilePhoneInput from "@/app/create-profile/profilePhoneInput";
+import { isPhoneComplete } from "@/lib/phoneLengths";
 
 const MAX_PHOTO = 300 * 1024; // 300KB
 const PHOTO_TYPES: readonly string[] = RULES.PHOTO_ALLOWED_MIME;
 
-/** Normalise a phone value to the Tanzanian format: "+255" followed by at most
- * 9 national digits (drops a duplicate leading 255 from a pasted full number).
- * Returns "" for an empty input so the field stays blank when there's no phone. */
-function toTzPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return "";
-  const national = (digits.startsWith("255") ? digits.slice(3) : digits).slice(0, 9);
-  return `+255${national}`;
-}
+// NOTE: this dialog previously forced every phone number into a Tanzanian
+// "+255" + 9-digit shape. That corrupted any foreign number — a stored Burundian
+// "+25773637785" was re-prefixed to "+255257736377" on display AND written back
+// on save. The number is now kept in full international form and the country is
+// inferred from it by ProfilePhoneInput, so non-Tanzanian profiles round-trip
+// correctly.
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
@@ -105,7 +104,7 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         middleName: p.middleName ?? "",
         lastName: p.lastName ?? "",
         gender: p.gender ?? "",
-        phoneNumber: toTzPhone(p.phoneNumber ?? ""),
+        phoneNumber: p.phoneNumber ?? "",
         nationality: p.nationality ?? "",
       });
 
@@ -162,16 +161,12 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
   function setField(name: keyof typeof form, value: string) {
     dirtyRef.current = true;
     let next = value;
-    // Names accept letters only (plus spaces, hyphens, apostrophes). The phone is
-    // a Tanzanian number: force the "+255" country code and allow at most 9
-    // national digits after it (strip a duplicate leading 255 if the user pastes
-    // a full number), so the field can never exceed +255 + 9 digits.
+    // Names accept letters only (plus spaces, hyphens, apostrophes).
     if (name === "firstName" || name === "middleName" || name === "lastName") {
       next = value.replace(/[^\p{L} '-]/gu, "");
-    } else if (name === "phoneNumber") {
-      // Keep the "+255" prefix visible even while the national part is empty.
-      next = toTzPhone(value) || "+255";
     }
+    // phoneNumber arrives from ProfilePhoneInput already as a full international
+    // number ("+<dial><national>") for the country the user picked — no coercion.
     setForm((f) => ({ ...f, [name]: next }));
   }
 
@@ -182,11 +177,11 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
     setNotice("");
     setPhoneError("");
 
-    // Validate phone: a Tanzanian number must be +255 followed by exactly 9
-    // national digits (the country code is enforced live in setField).
-    const phoneDigits = form.phoneNumber.replace(/\D/g, "");
-    const national = phoneDigits.startsWith("255") ? phoneDigits.slice(3) : phoneDigits;
-    if (national.length > 0 && national.length !== 9) {
+    // Validate the phone against the length rules of ITS OWN country (inferred
+    // from the dialing code), not Tanzania's — a Burundian, Kenyan, … number is
+    // perfectly valid here.
+    const phone = form.phoneNumber.trim();
+    if (phone && !isPhoneComplete(phone)) {
       setPhoneError(t("profile.phoneInvalid"));
       setSaving(false);
       return;
@@ -197,8 +192,9 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         middleName: form.middleName.trim(),
         lastName: form.lastName.trim(),
         gender: form.gender,
-        // Send the full "+255XXXXXXXXX", or "" when only the prefix remains.
-        phoneNumber: national ? `+255${national}` : "",
+        // Send the number exactly as entered (full international form), so a
+        // foreign number is never rewritten to a Tanzanian one.
+        phoneNumber: phone,
         // Not user-editable — sent back unchanged.
         nationality: form.nationality,
       });
@@ -391,19 +387,22 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             <label htmlFor="phoneNumber" className={labelClass}>
               {t("register.phone")}
             </label>
-            <input
+            {/* Country-aware phone field (same one used on create-profile): it
+                infers the country from the stored number's dialing code, so a
+                foreign number displays and saves correctly. */}
+            <ProfilePhoneInput
               id="phoneNumber"
-              type="tel"
               value={form.phoneNumber}
-              onChange={(e) => {
-                setField("phoneNumber", e.target.value);
+              onChange={(v) => {
+                setField("phoneNumber", v);
                 if (phoneError) setPhoneError("");
               }}
+              invalid={Boolean(phoneError)}
+              describedBy={phoneError ? "phone-error" : undefined}
               placeholder={t("register.phonePlaceholder")}
-              className={`${inputClass} ${phoneError ? "border-danger focus:border-danger focus:ring-danger/15" : ""}`}
             />
             {phoneError && (
-              <p role="alert" className="mt-1 text-xs text-danger">
+              <p id="phone-error" role="alert" className="mt-1 text-xs text-danger">
                 {phoneError}
               </p>
             )}

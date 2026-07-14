@@ -6,10 +6,11 @@ import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getGenders, type LookupItem } from "@/lib/api/lookup";
-import { COUNTRIES, TANZANIA } from "@/lib/countries";
+import { COUNTRIES, TANZANIA, flagEmoji } from "@/lib/countries";
+import CountryMenu from "@/components/registry/countryMenu";
 import ProfilePhoneInput from "./profilePhoneInput";
 import { RULES } from "@/lib/validation/rules";
-import { Eye, EyeOff, LoaderCircle, CircleX } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, CircleX, ChevronDown } from "lucide-react";
 
 export type Gender = "" | "M" | "F" | "O";
 
@@ -132,6 +133,9 @@ export default function StepDetails({
   const lastNameInvalid = Boolean(errors.lastName);
   const genderInvalid = Boolean(errors.gender);
   const nationalityInvalid = Boolean(errors.nationality);
+  // Nationality is a custom flag dropdown (a native <select> can't render flags).
+  const [natOpen, setNatOpen] = useState(false);
+  const selectedNat = NATIONALITY_OPTIONS.find((c) => c.name === form.nationality) ?? null;
   const phoneInvalid = Boolean(errors.phoneNumber);
   const emailInvalid = Boolean(errors.email);
   const passwordInvalid = Boolean(errors.password);
@@ -330,24 +334,42 @@ export default function StepDetails({
           <label htmlFor="nationality" className={labelClass}>
             {t("register.nationality")}
           </label>
-          <select
-            id="nationality"
-            value={form.nationality}
-            onChange={(e) => update("nationality", e.target.value)}
-            onBlur={() => { if (!form.nationality) setErrors((e) => ({ ...e, nationality: true })); }}
-            aria-invalid={nationalityInvalid}
-            aria-describedby={errors.nationality ? "nationality-error" : undefined}
-            className={`${inputClass} appearance-none ${form.nationality ? "text-ink" : "text-muted/70"} ${errors.nationality ? errorRing : ""}`}
-          >
-            <option value="" disabled>
-              {t("register.nationalitySelect")}
-            </option>
-            {NATIONALITY_OPTIONS.map((c) => (
-              <option key={c.code} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {/* Flag dropdown — a native <select>/<option> cannot render the country
+              flag, so this reuses the same CountryMenu the phone input uses. */}
+          <div className="relative">
+            <button
+              type="button"
+              id="nationality"
+              onClick={() => setNatOpen((o) => !o)}
+              aria-invalid={nationalityInvalid}
+              aria-describedby={errors.nationality ? "nationality-error" : undefined}
+              aria-haspopup="listbox"
+              aria-expanded={natOpen}
+              className={`${inputClass} flex items-center justify-between gap-2 text-left ${
+                selectedNat ? "text-ink" : "text-muted/70"
+              } ${errors.nationality ? errorRing : ""}`}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                {selectedNat && (
+                  <span aria-hidden="true">{flagEmoji(selectedNat.code)}</span>
+                )}
+                <span className="truncate">
+                  {selectedNat ? selectedNat.name : t("register.nationalitySelect")}
+                </span>
+              </span>
+              <ChevronDown size={16} className="shrink-0 text-muted" aria-hidden="true" />
+            </button>
+
+            {natOpen && (
+              <CountryMenu
+                onClose={() => setNatOpen(false)}
+                onSelect={(c) => {
+                  update("nationality", c.name);
+                  setNatOpen(false);
+                }}
+              />
+            )}
+          </div>
           {errors.nationality && (
             <FieldError id="nationality-error" message={req(t("register.nationality"))} />
           )}

@@ -170,7 +170,7 @@ export default function Stepper({
               setOpen(false);
             }}
             className="w-full rounded-lg border border-white/15 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
-          >
+           >
             {t("registry.saveExit")}
           </button>
         </div>

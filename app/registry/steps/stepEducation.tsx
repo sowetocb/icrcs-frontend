@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import { useEmploymentStatusOptions, useOccupationTypeOptions } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, toOptions, type LookupItem } from "@/lib/api/lookup";
 import { X, Plus, TriangleAlert } from "lucide-react";
@@ -103,15 +104,15 @@ function SchoolBlock({
       </div>
 
       <Field label={t("fields.schoolName")} required>
-        <TextInput name={`${p}School`} placeholder="Buguruni Primary School" lettersOnly />
+        <TextInput name={`${p}School`} placeholder="Buguruni Primary School" lettersOnly maxLength={RULES.SCHOOL_NAME_MAX} />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.schoolDistrict")} required>
-          <TextInput name={`${p}District`} placeholder="Ilala" lettersOnly />
+          <TextInput name={`${p}District`} placeholder="Ilala" lettersOnly maxLength={RULES.UI_CITY_MAX} />
         </Field>
         <Field label={t("fields.indexNo")} optional>
-          <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" allowChars="A-Za-z0-9\-" maxLength={20} />
+          <TextInput name={`${p}IndexNo`} placeholder="PS-2001-001" allowChars="A-Za-z0-9\-" maxLength={RULES.DOC_NUMBER_MAX} />
         </Field>
       </div>
     </div>
@@ -313,13 +314,13 @@ export default function StepEducation() {
               {(isEmployed || isSelfEmployed) &&
                 String(data.occupation) === OCCUPATION_OTHER_ID && (
                 <Field label={t("fields.otherOccupation")} required>
-                  <TextInput name="otherOccupation" placeholder={t("fields.phOtherOccupation")} lettersOnly maxLength={50} />
+                  <TextInput name="otherOccupation" placeholder={t("fields.phOtherOccupation")} lettersOnly maxLength={RULES.OTHER_OCCUPATION_MAX} />
                 </Field>
               )}
               {/* Organisation name — only for Employed (Self-employed has none) */}
               {isEmployed && (
                 <Field label={t("fields.employer")} required>
-                  <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={30} />
+                  <TextInput name="employer" placeholder="Tanzania Revenue Authority" lettersOnly maxLength={RULES.ORGANIZATION_NAME_MAX} />
                 </Field>
               )}
             </div>

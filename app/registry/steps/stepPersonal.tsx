@@ -97,7 +97,7 @@ function PhotoUpload() {
 const ID_DOC_SUFFIXES = ["Type", "Number"];
 
 export default function StepPersonal() {
-  const { data, set, setQuiet, isFirstPerson } = useWizard();
+  const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
@@ -108,8 +108,13 @@ export default function StepPersonal() {
   const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
   const idDocTypeOptions = usePersonDocumentTypeOptions("applicant");
 
-  // Only Tanzanians are registered, so nationality is fixed to Tanzania.
+  // Nationality is bound (and locked) from the profile captured at registration.
+  // For the account holder's OWN registration it is their profile nationality
+  // (migrants / refugees / asylum seekers keep their foreign nationality), seeded
+  // by the wizard — leave it as-is. Dependents and Tanzanian-origin minors are
+  // Tanzanian, so force Tanzania only for them.
   useEffect(() => {
+    if (isFirstPerson) return;
     if (data.nationalityCountry !== "Tanzania") setQuiet("nationalityCountry", "Tanzania");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -234,6 +239,43 @@ export default function StepPersonal() {
         </Field>
       </div>
 
+      {/* Physical characteristics — collected for every registration category.
+          v002 requires eye colour, hair colour and language spoken; the rest are
+          optional. Shared across citizen and migrant tracks. */}
+      <div className="space-y-4">
+        <p className="text-sm font-semibold text-navy-700">
+          {t("fields.physicalCharacteristics")}
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t("fields.otherNames")} optional>
+            <TextInput name="otherNames" placeholder={t("fields.phOtherNames")} lettersOnly maxLength={RULES.OTHER_NAMES_MAX} />
+          </Field>
+          <Field label={t("fields.tribe")} optional>
+            <TextInput name="tribe" placeholder={t("fields.phTribe")} lettersOnly maxLength={RULES.TRIBE_MAX} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label={t("fields.eyeColor")} required>
+            <TextInput name="eyeColor" placeholder={t("fields.phEyeColor")} lettersOnly maxLength={RULES.EYE_COLOR_MAX} />
+          </Field>
+          <Field label={t("fields.hairColor")} required>
+            <TextInput name="hairColor" placeholder={t("fields.phHairColor")} lettersOnly maxLength={RULES.HAIR_COLOR_MAX} />
+          </Field>
+          <Field label={t("fields.languageSpoken")} required>
+            <TextInput name="languageSpoken" placeholder={t("fields.phLanguageSpoken")} lettersOnly maxLength={RULES.LANGUAGE_SPOKEN_MAX} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t("fields.heightCm")} optional>
+            {/* Range (50–280) is enforced on blur from RULES.HEIGHT_CM_MIN/MAX. */}
+            <TextInput name="heightCm" placeholder={t("fields.phHeightCm")} numeric maxLength={String(RULES.HEIGHT_CM_MAX).length} />
+          </Field>
+          <Field label={t("fields.specialMark")} optional>
+            <TextInput name="specialMark" placeholder={t("fields.phSpecialMark")} maxLength={RULES.SPECIAL_MARK_MAX} />
+          </Field>
+        </div>
+      </div>
+
       {/* Identification documents — pick a type and enter its number; add more
           than one if needed. */}
       <div className="space-y-3">
@@ -274,9 +316,12 @@ export default function StepPersonal() {
                   <Field label={t("fields.docNumber")} required>
                     {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
                     {isNida ? (
-                      <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
+                      <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={RULES.NIDA_EXACT_DIGITS} />
                     ) : (
-                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={20} />
+                      // Contract allows up to DOC_NUMBER_MAX (50) — this was
+                      // capped at 20, which silently blocked long passport /
+                      // document numbers from being entered at all.
+                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={RULES.DOC_NUMBER_MAX} />
                     )}
                   </Field>
                 )}
@@ -325,6 +370,80 @@ export default function StepPersonal() {
           <TextInput name="email" type="email" placeholder="test@test.com" maxLength={RULES.UI_EMAIL_MAX} />
         </Field>
       </div>
+
+      {/* Travel History — migrant track only (Migrant / Refugee / Asylum Seeker).
+          Submitted with Stage 1 to /travel-history. All fields optional; the
+          document details show only when the person has a travel document. */}
+      {isMigrant && (
+        <div className="space-y-4 rounded-xl border border-line bg-card p-4">
+          <div>
+            <p className="text-sm font-semibold text-navy-700">{t("fields.travelHistory")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("fields.travelHistoryHint")}</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label={t("fields.firstDateOfEntry")} optional>
+              <DateInput name="firstDateOfEntry" />
+            </Field>
+            <Field label={t("fields.pointOfEntry")} optional>
+              <TextInput name="pointOfEntry" placeholder={t("fields.phPointOfEntry")} maxLength={RULES.POINT_OF_ENTRY_MAX} />
+            </Field>
+          </div>
+          <Field label={t("fields.transitCountry")} optional>
+            <CountrySelect name="transitCountry" placeholder={t("fields.phCountryNat")} />
+          </Field>
+
+          <div>
+            <span className="block text-sm font-medium text-ink">{t("fields.hasTravelDoc")}</span>
+            <div className="mt-2 flex gap-6">
+              {[true, false].map((v) => (
+                <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="hasTravelDoc"
+                    checked={data.hasTravelDoc === v}
+                    onChange={() => set("hasTravelDoc", v)}
+                    className="h-4 w-4 accent-navy-700"
+                  />
+                  {t(v ? "fields.yes" : "fields.no")}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {data.hasTravelDoc === true && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t("fields.travelDocType")} optional>
+                  <TextInput name="travelDocType" placeholder={t("fields.phTravelDocType")} maxLength={RULES.TRAVEL_DOC_TYPE_MAX} />
+                </Field>
+                <Field label={t("fields.travelDocNo")} optional>
+                  <TextInput name="travelDocNo" placeholder={t("fields.phDocNumber")} allowChars="A-Za-z0-9" maxLength={RULES.TRAVEL_DOC_NO_MAX} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t("fields.travelIssuedDate")} optional>
+                  <DateInput name="travelIssuedDate" />
+                </Field>
+                <Field label={t("fields.travelExpiryDate")} optional>
+                  {/* A travel document expires in the FUTURE, so the picker must
+                      reach past today — the calendar's year grid ends at maxDate
+                      (defaulting to the current year). Allow the next 10 years. */}
+                  <DateInput name="travelExpiryDate" maxDate={`${currentYear + 10}-12-31`} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={t("fields.travelIssueCountry")} optional>
+                  <CountrySelect name="travelIssueCountry" placeholder={t("fields.phCountryNat")} />
+                </Field>
+                <Field label={t("fields.travelIssueAuthority")} optional>
+                  <TextInput name="travelIssueAuthority" placeholder={t("fields.phTravelIssueAuthority")} maxLength={RULES.TRAVEL_ISSUE_AUTHORITY_MAX} />
+                </Field>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

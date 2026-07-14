@@ -30,10 +30,15 @@ import {
   editStage5,
   editStage6,
   editStage8,
+  submitStage1Migrant,
+  editStage1Migrant,
+  submitTravelHistory,
+  editTravelHistory,
   uploadPassportPhoto,
   getStage9Preview,
   getStageData,
 } from "@/lib/api/registration";
+import type { RegistrationType } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
@@ -60,6 +65,7 @@ import {
   ATTACHMENT_TYPES,
   PASSPORT_PHOTO_TYPE,
   MANDATORY_ATTACHMENT_TYPE_IDS,
+  PARENT_BIRTH_CERT_TYPE_IDS,
   type UploadedAttachment,
 } from "@/lib/api/files";
 
@@ -98,6 +104,10 @@ const REQUIRED_FIELDS: string[][] = [
     "marriage",
     "phone",
     "email",
+    // Physical characteristics required by v002 (all categories).
+    "eyeColor",
+    "hairColor",
+    "languageSpoken",
   ],
   // Step 2: Address (permanent Region/District/Ward; current added when unlinked)
   ["permRegion", "permDistrict", "permWard"],
@@ -231,6 +241,7 @@ export default function RegistryWizard({
   selfDone,
   registeringMinor = false,
   minorRelationship = "",
+  registrationType,
   onExit,
   onComplete,
 }: {
@@ -242,6 +253,11 @@ export default function RegistryWizard({
   /** When registering a minor, the registrant's relationship to them, chosen at
    * the gate ("guardian" | "parent"). Drives Stage 3 (Parents vs Guardian). */
   minorRelationship?: "guardian" | "parent" | "";
+  /** Migrant-track category (MIGRANT / REFUGEE / ASYLUM_SEEKER) chosen at the
+   * category picker; undefined for the citizen track. Accepted now so the picker
+   * can route through here; the migrant Stage-1 endpoint + steps are wired in a
+   * later phase. */
+  registrationType?: RegistrationType;
   onExit: () => void;
   onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
 }) {
@@ -278,13 +294,32 @@ export default function RegistryWizard({
         ? { phone: prof.phoneNumber, email: prof.email }
         : profileToPersonal(prof)
       : {};
-    // The self-service wizard is for Tanzanian citizens (non-citizens are
-    // diverted at the citizenship gate), so seed nationality + citizenship type.
-    base.nationalityCountry = "Tanzania";
-    base.citizenshipTypeId = "1";
+    // Bind the country of nationality captured at profile creation to the
+    // account holder's OWN registration — migrants / refugees / asylum seekers
+    // keep their foreign nationality. Dependents and Tanzanian-origin minors are
+    // Tanzanian. (Legacy profiles with no nationality fall back to Tanzania.)
+    base.nationalityCountry = isFirstPerson ? (prof?.nationality || "Tanzania") : "Tanzania";
+    // Migrants/refugees/asylum seekers are non-citizens (citizenshipTypeId 2);
+    // the citizen track stays 1.
+    base.citizenshipTypeId = registrationType ? "2" : "1";
+    // Persist the chosen category IN THE DRAFT DATA. The `registrationType` prop
+    // only lives in registryClient's React state, so it is lost on a refresh (the
+    // wizard view is restored from sessionStorage) and on "Resume" (which skips
+    // the category picker). Storing it here means the draft itself remembers it.
+    base.registrationType = registrationType ?? "";
     // Saved form data wins over the profile prefill so entered values are kept.
     return resumable?.data ? { ...base, ...resumable.data } : base;
   });
+
+  // The active category: the draft's stored value (survives refresh/resume) wins,
+  // falling back to the prop for a freshly-picked category.
+  const activeRegistrationType: RegistrationType | undefined =
+    (typeof data.registrationType === "string" && data.registrationType
+      ? (data.registrationType as RegistrationType)
+      : registrationType) || undefined;
+  // Migrant track (Migrant / Refugee / Asylum Seeker). Drives the Stage-1 migrant
+  // endpoint + travel-history submission and the migrant-only fields in the steps.
+  const isMigrant = !!activeRegistrationType;
   const [errors, setErrors] = useState<string[]>([]);
   // Specific per-field messages (email format, DOB, NIDA, …). Fields in `errors`
   // without an entry here fall back to a generic "required" message at the field.
@@ -710,6 +745,20 @@ export default function RegistryWizard({
         flag(t("registry.spouseAgeError"));
       }
       // Applicant dob age rule is handled live by validateDob() via set()
+      return;
+    }
+
+    // 4b. Height — optional, but when supplied the backend requires 50–280 cm.
+    // (Reached only when non-empty, so an empty value stays valid/optional.)
+    if (name === "heightCm") {
+      const cm = Number(trimmed);
+      if (!Number.isFinite(cm) || cm < RULES.HEIGHT_CM_MIN || cm > RULES.HEIGHT_CM_MAX) {
+        flag(
+          t("registry.heightRange")
+            .replace("{min}", String(RULES.HEIGHT_CM_MIN))
+            .replace("{max}", String(RULES.HEIGHT_CM_MAX)),
+        );
+      }
       return;
     }
 
@@ -1715,6 +1764,15 @@ export default function RegistryWizard({
       for (let i = 1; i <= count; i++) {
         const p = `edu${i}`;
         if (i > 1 && !filled(`${p}School`)) continue;
+        // EVERY school in the repeater is sent as an EducationItemRequest, and
+        // the backend requires educationLevelId + city (the District field) +
+        // schoolName on EACH item — not just the first. Without this, a second
+        // school with only a name shipped `city: null` and was rejected.
+        if (i > 1) {
+          for (const suffix of ["Level", "District"]) {
+            if (!filled(`${p}${suffix}`)) missing.push(`${p}${suffix}`);
+          }
+        }
         if (filled(`${p}Year`)) {
           const year = Number((data[`${p}Year`] as string).trim());
           if (!Number.isFinite(year) || year < minYear || year > currentYear) {
@@ -1951,7 +2009,12 @@ export default function RegistryWizard({
 
     // Stage 8 — the applicant's and a parent's birth certificate / affidavit
     // MUST be uploaded before the stage can be submitted.
-    if (step === 8) {
+    //
+    // EXCEPT on the migrant track (Migrant / Refugee / Asylum Seeker / Alien /
+    // Undocumented Migrant / Voluntary Returnee): these applicants frequently
+    // have no civil documents at all, so uploads are COMPLETELY optional for
+    // them and this gate is skipped.
+    if (step === 8 && !isMigrant) {
       const have = new Set(parseAttachments(data.attachments).map((a) => a.typeId));
       // The passport photo isn't shown as a row here — it's captured at Stage 1
       // and uploaded/merged automatically by the submit path below — so it must
@@ -1959,10 +2022,29 @@ export default function RegistryWizard({
       const missing = MANDATORY_ATTACHMENT_TYPE_IDS.filter(
         (id) => id !== PASSPORT_PHOTO_TYPE && !have.has(id),
       );
-      if (missing.length > 0) {
-        // Flag each missing document at its own row (no generic banner).
-        setErrors(missing.map((id) => `attach${id}`));
-        setFieldErrors({});
+      // Backend business rule: AT LEAST ONE parent birth certificate (father OR
+      // mother). Neither type is mandatory on its own, so it can't be expressed
+      // via MANDATORY_ATTACHMENT_TYPE_IDS — check the pair here. Previously this
+      // wasn't enforced at all and the backend rejected the submit instead.
+      const needsParentCert = !PARENT_BIRTH_CERT_TYPE_IDS.some((id) => have.has(id));
+      if (missing.length > 0 || needsParentCert) {
+        // Flag each missing document at its own row (no generic banner). When no
+        // parent certificate is present, flag BOTH parent rows — either satisfies it.
+        const rows = [
+          ...missing,
+          ...(needsParentCert ? PARENT_BIRTH_CERT_TYPE_IDS : []),
+        ];
+        setErrors(rows.map((id) => `attach${id}`));
+        setFieldErrors(
+          needsParentCert
+            ? Object.fromEntries(
+                PARENT_BIRTH_CERT_TYPE_IDS.map((id) => [
+                  `attach${id}`,
+                  t("registry.parentCertRequired"),
+                ]),
+              )
+            : {},
+        );
         setFormError("");
         return;
       }
@@ -1995,7 +2077,11 @@ export default function RegistryWizard({
       try {
         if (step === 1) {
           if (edit) {
-            await editStage1(sid, data, isFirstPerson);
+            if (activeRegistrationType) {
+              await editStage1Migrant(sid, data, activeRegistrationType);
+            } else {
+              await editStage1(sid, data, isFirstPerson);
+            }
             // The photo isn't part of the Stage 1 JSON — it's uploaded
             // separately. On an edit, (re)upload it when the user captured a new
             // photo (a data: URL) so the change actually reaches the backend.
@@ -2005,10 +2091,14 @@ export default function RegistryWizard({
               const att = await uploadPassportPhoto(sid, photoDataUrl);
               if (att) recordPhotoAttachment(att);
             }
+            // Migrant Stage 1 also carries travel history (same subjectId).
+            if (isMigrant && sid) await editTravelHistory(sid, data);
           } else {
             const photoDataUrl =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : undefined;
-            const response = await submitStage1(data, isFirstPerson, photoDataUrl);
+            const response = activeRegistrationType
+              ? await submitStage1Migrant(data, activeRegistrationType, photoDataUrl)
+              : await submitStage1(data, isFirstPerson, photoDataUrl);
             sid = response.subjectId;
             setSubjectId(sid);
             appId = response.applicationId || response.subjectId;
@@ -2021,6 +2111,9 @@ export default function RegistryWizard({
             } else {
               set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
             }
+            // Migrant Stage 1 also carries travel history, submitted against the
+            // subjectId that Stage 1 just created.
+            if (isMigrant && sid) await submitTravelHistory(sid, data);
           }
         } else if (step === 2) {
           await (edit ? editStage2(sid, data) : submitStage2(sid, data));
@@ -2194,6 +2287,7 @@ export default function RegistryWizard({
                   fieldErrors={fieldErrors}
                   locked={locked}
                   isFirstPerson={isFirstPerson}
+                  isMigrant={isMigrant}
                   onGoToStep={goTo}
                   onSessionExpired={signOutToLogin}
                 >

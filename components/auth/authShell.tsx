@@ -421,7 +421,7 @@ export default function AuthShell({
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-20 object-contain"
+                  className="h-auto w-36 object-contain"
                 />
               </div>
               {/* <div className="mt-5 text-center">

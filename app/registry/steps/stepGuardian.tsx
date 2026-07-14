@@ -116,9 +116,9 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                   <Field label={t("fields.docNumber")} required>
                     {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
                     {isNida ? (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={20} />
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={RULES.NIDA_EXACT_DIGITS} />
                     ) : (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={20} />
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={RULES.DOC_NUMBER_MAX} />
                     )}
                   </Field>
                 )}

@@ -35,7 +35,13 @@ export default function PhoneInput({ name }: { name: string }) {
   const isLocked = locked.includes(name);
   const stored = (data[name] as string) ?? "";
 
-  const [country, setCountry] = useState<Country>(() => detectCountry(stored));
+  // Derived from the stored value's dialing code, NOT frozen in state at mount:
+  // wizard stage data is hydrated from the backend after mount, so a mount-time
+  // detection would keep the default (Tanzania) and leave a foreign number's
+  // country code stranded in the national digits. `picked` covers only the
+  // transient case where a country is chosen before any digits are typed.
+  const [picked, setPicked] = useState<Country | null>(null);
+  const country = stored ? detectCountry(stored) : (picked ?? TANZANIA);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -129,7 +135,7 @@ export default function PhoneInput({ name }: { name: string }) {
           onClose={() => setOpen(false)}
           showDial
           onSelect={(c) => {
-            setCountry(c);
+            setPicked(c);
             // Changing the country code clears any typed number — the old
             // national digits rarely belong to the newly chosen country, so
             // forcing a fresh entry avoids storing a mismatched number.

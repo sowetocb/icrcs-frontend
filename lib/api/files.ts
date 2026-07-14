@@ -40,6 +40,12 @@ export const MANDATORY_ATTACHMENT_TYPE_IDS = ATTACHMENT_TYPES.filter((a) => a.ma
   (a) => a.id,
 );
 
+/** Father / Mother birth certificates. Neither is mandatory ON ITS OWN — the
+ * backend business rule is "at least ONE parent birth certificate (father or
+ * mother)", so they can't be modelled with the per-type `mandatory` flag above.
+ * Stage 8 enforces the either/or rule against this pair. */
+export const PARENT_BIRTH_CERT_TYPE_IDS = [2, 3];
+
 /** Accepted upload formats (jpg/png/pdf) — MIME types from the shared RULES,
  *  plus the matching file extensions for the native picker. */
 export const ATTACHMENT_ACCEPT = `${RULES.FILE_ALLOWED_MIME.join(",")},.jpg,.jpeg,.png,.pdf`;
