@@ -1,4 +1,4 @@
-﻿export type Locale = "en" | "sw";
+export type Locale = "en" | "sw";
 
 export const LOCALES: { code: Locale; label: string }[] = [
   { code: "en", label: "English" },
@@ -296,9 +296,11 @@ const en = {
     motherTooYoung: "Mother must be at least 16 years older than the applicant.",
     parentAgeError: "Parent must be at least 18 years old.",
     futureDateError: "The date of birth cannot be in the future.",
+    dobTooOld: "Date of birth exceeds the maximum allowed age of {max} years.",
     submitError: "Could not submit this step. Please try again.",
     attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
     attachTooLarge: "File must be 300KB or smaller.",
+    attachTooMany: "Too many attachments — maximum {max} allowed.",
     attachFileEmpty: "File is empty — please choose a valid file.",
     attachChoose: "Choose file",
     attachPhotoRequired: "Please upload the required Passport Size Photo before continuing.",
@@ -437,6 +439,7 @@ const en = {
     startDependentDesc:
       "Add a dependent (under 18) under your profile.",
     finishFirstNote: "Finish your in-progress registration before starting a new one.",
+    registrationLimitReached: "You have reached the maximum number of registrations ({max}) allowed per profile.",
     approvalRequiredNote:
       "Your own registration must be approved before you can register a dependent.",
     nothingToResume: "No registration in progress.",
@@ -1164,9 +1167,11 @@ const sw: typeof en = {
     motherTooYoung: "Mama lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji.",
     parentAgeError: "Mzazi lazima awe na umri wa angalau miaka 18.",
     futureDateError: "Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.",
+    dobTooOld: "Tarehe ya kuzaliwa inazidi umri wa juu unaoruhusiwa wa miaka {max}.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
     attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
     attachTooLarge: "Faili lazima liwe 300KB au chini.",
+    attachTooMany: "Nyaraka nyingi sana — kiwango cha juu ni {max}.",
     attachFileEmpty: "Faili ni tupu — tafadhali chagua faili sahihi.",
     attachChoose: "Chagua faili",
     attachPhotoRequired: "Tafadhali pakia Picha ya Pasipoti inayohitajika kabla ya kuendelea.",
@@ -1305,6 +1310,7 @@ const sw: typeof en = {
     startDependentDesc:
       "Ongeza mtegemezi (chini ya miaka 18) chini ya wasifu wako.",
     finishFirstNote: "Kamilisha usajili unaoendelea kabla ya kuanza mpya.",
+    registrationLimitReached: "Umefika kiwango cha juu cha usajili ({max}) unaoruhusiwa kwa kila wasifu.",
     approvalRequiredNote:
       "Usajili wako mwenyewe lazima uidhinishwe kabla ya kusajili mtegemezi.",
     nothingToResume: "Hakuna usajili unaoendelea.",

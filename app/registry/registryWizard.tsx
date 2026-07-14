@@ -170,8 +170,8 @@ const PERSONAL_LOCK = [
 const CONTACT_LOCK = ["phone", "email"];
 
 // Allowed characters in any name field (First / Middle / Last).
-// Covers Unicode letters, spaces, hyphens and apostrophes (straight + curly).
-const NAME_RE = /^[\p{L} '’ʼ-]+$/u;
+// Uses the canonical pattern from rules.ts so the wizard and schemas agree.
+const NAME_RE = RULES.NAME_PATTERN;
 
 function isFutureDate(dob: string): boolean {
   const parts = dob.split("-").map(Number);
@@ -194,8 +194,16 @@ function isAtLeastAge(dob: string, minAge: number): boolean {
   }
   return age >= minAge;
 }
-function isAtLeast18(dob: string): boolean { return isAtLeastAge(dob, 18); }
-function isAtLeast16(dob: string): boolean { return isAtLeastAge(dob, 16); }
+function isAtLeast18(dob: string): boolean { return isAtLeastAge(dob, RULES.CONTACT_MIN_AGE); }
+function isAtLeast16(dob: string): boolean { return isAtLeastAge(dob, RULES.SPOUSE_MIN_AGE); }
+
+/** True when the given DOB implies an age above the backend's absolute maximum. */
+function isExceedsMaxAge(dob: string): boolean {
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return false;
+  const years = (Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  return years > RULES.MAX_AGE_YEARS;
+}
 
 /** True when `olderDob` is at least `years` years before `youngerDob`. Unknown/
  * unparseable dates pass (the check is skipped). */
@@ -691,6 +699,7 @@ export default function RegistryWizard({
     // 4. Date of birth fields — no future dates; age minimums per person type
     if (name === "dob" || name.endsWith("Dob")) {
       if (isFutureDate(trimmed)) { flag(t("registry.futureDateError")); return; }
+      if (isExceedsMaxAge(trimmed)) { flag(t("registry.dobTooOld").replace("{max}", String(RULES.MAX_AGE_YEARS))); return; }
       if (/^ec\d+Dob$/.test(name) && !isAtLeast18(trimmed)) {
         flag(t("registry.ecAgeError"));
       }
@@ -1492,7 +1501,13 @@ export default function RegistryWizard({
         setFormError("");
         return;
       }
-      const adult = isAtLeast18(dob);
+      if (isExceedsMaxAge(dob)) {
+        setErrors(["dob"]);
+        setFieldErrors({ dob: t("registry.dobTooOld").replace("{max}", String(RULES.MAX_AGE_YEARS)) });
+        setFormError("");
+        return;
+      }
+      const adult = isAtLeastAge(dob, RULES.CLAIM_MIN_AGE);
       if (isFirstPerson && !adult) {
         setErrors(["dob"]);
         setFieldErrors({ dob: t("registry.ageError") });
@@ -1638,6 +1653,22 @@ export default function RegistryWizard({
             const field = `sp${i}Gender`;
             setErrors([field]);
             setFieldErrors({ [field]: t("registry.spouseGenderMismatch") });
+            setFormError("");
+            return;
+          }
+        }
+      }
+
+      // Each spouse must be at least SPOUSE_MIN_AGE (16) years old
+      // (REGISTRATION_SPOUSE_UNDERAGE). Pinned to the offending DOB field.
+      if (data.isMarried === true) {
+        const spCount = Math.max(1, Number(data.spouseCount) || 1);
+        for (let i = 1; i <= spCount; i++) {
+          const spDob = String(data[`sp${i}Dob`] ?? "").trim();
+          if (spDob && !isAtLeast16(spDob)) {
+            const field = `sp${i}Dob`;
+            setErrors([field]);
+            setFieldErrors({ [field]: t("registry.spouseAgeError") });
             setFormError("");
             return;
           }
@@ -1935,6 +1966,15 @@ export default function RegistryWizard({
         setFormError("");
         return;
       }
+
+      // Enforce the total attachment ceiling (REGISTRATION_ATTACHMENT_LIMIT_EXCEEDED).
+      const allAttachments = parseAttachments(data.attachments);
+      if (allAttachments.length > RULES.ATTACHMENTS_MAX) {
+        setErrors([]);
+        setFieldErrors({});
+        setFormError(t("registry.attachTooMany").replace("{max}", String(RULES.ATTACHMENTS_MAX)));
+        return;
+      }
     }
 
     setErrors([]);
@@ -2133,13 +2173,13 @@ export default function RegistryWizard({
 
         <main className="flex-1 px-4 py-5 lg:px-8">
           <div className="mx-auto w-full max-w-6xl">
-            <p className="text-sm font-semibold text-success">
+            <p className="text-base font-semibold text-success">
               {t(`registry.s${step}Tag`)}
             </p>
             <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700">
               {t(`registry.s${step}Heading`)}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+            <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted">
               {t(`registry.s${step}Intro`)}
             </p>
 
@@ -2164,7 +2204,7 @@ export default function RegistryWizard({
                     genuine form-level message (e.g. a submit/API failure) is
                     surfaced here as a banner — never a grouped list of fields. */}
                 {formError && (
-                  <p role="alert" data-form-error className="mt-6 text-sm font-medium text-danger">
+                  <p role="alert" data-form-error className="mt-6 text-base font-medium text-danger">
                     {formError}
                   </p>
                 )}
@@ -2173,7 +2213,7 @@ export default function RegistryWizard({
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 transition hover:text-gold-700"
+                    className="inline-flex items-center gap-2 text-base font-semibold text-navy-700 transition hover:text-gold-700"
                   >
                     <ArrowLeft size={18} aria-hidden="true" />
                     {t(`registry.back${step}`)}
@@ -2182,7 +2222,7 @@ export default function RegistryWizard({
                   <button
                     type="submit"
                     disabled={(isLast && !agreed) || submitting}
-                    className="inline-flex items-center gap-2 rounded-lg bg-gold px-6 py-3 text-sm font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-navy-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg bg-gold px-6 py-3 text-base font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-navy-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting && (
                       <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />

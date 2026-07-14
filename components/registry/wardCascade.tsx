@@ -18,7 +18,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { ChevronDown } from "lucide-react";
 
 const selectCls =
-  "w-full appearance-none rounded-lg border border-input-line bg-card px-3.5 py-2.5 pr-9 text-sm outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15 disabled:cursor-not-allowed disabled:bg-line/30 disabled:text-muted";
+  "w-full appearance-none rounded-lg border border-input-line bg-card px-3.5 py-2.5 pr-9 text-base outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15 disabled:cursor-not-allowed disabled:bg-line/30 disabled:text-muted";
 
 function Chevron() {
   return (
@@ -51,7 +51,7 @@ function CascadeSelect({
   return (
     <div>
       {label && (
-        <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
+        <span className="mb-1.5 block text-base font-medium text-ink">{label}</span>
       )}
       <div className="relative">
       <select
@@ -123,7 +123,7 @@ function CountryPicker({
         onClick={() => setOpen((o) => !o)}
         onBlur={onBlur}
         disabled={disabled}
-        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 ${
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-base outline-none transition focus:ring-2 ${
           invalid
             ? "border-danger focus:border-danger focus:ring-danger/15"
             : "border-input-line focus:border-navy-500 focus:ring-navy-500/15"
@@ -261,7 +261,7 @@ export default function WardCascade({
       {/* Country — drives the regions below, with flag emoji + search */}
       {showCountry && (
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-ink">
+          <span className="mb-1.5 block text-base font-medium text-ink">
             {t("fields.country")}
           </span>
           <CountryPicker

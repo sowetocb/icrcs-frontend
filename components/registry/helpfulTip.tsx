@@ -15,7 +15,7 @@ export default function HelpfulTip() {
         <h3 className="font-display text-base font-bold text-navy-700">
           {t("registry.tipTitle")}
         </h3>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <p className="mt-1 text-base leading-relaxed text-muted">
           {t("registry.tipBody")}
         </p>
       </div>

@@ -64,7 +64,7 @@ export default function CountryMenu({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("fields.phSearchCountry")}
-          className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
+          className="w-full rounded-md border border-line bg-surface px-3 py-2 text-base text-ink outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15"
         />
       </div>
       <ul className="max-h-60 overflow-y-auto py-1">
@@ -76,7 +76,7 @@ export default function CountryMenu({
                 onSelect(c);
                 onClose();
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-ink transition hover:bg-surface"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-base text-ink transition hover:bg-surface"
             >
               <span className="text-base leading-none">{flagEmoji(c.code)}</span>
               <span className="flex-1 truncate">{c.name}</span>
@@ -85,7 +85,7 @@ export default function CountryMenu({
           </li>
         ))}
         {filtered.length === 0 && (
-          <li className="px-3 py-3 text-center text-sm text-muted">{t("fields.phNoMatch")}</li>
+          <li className="px-3 py-3 text-center text-base text-muted">{t("fields.phNoMatch")}</li>
         )}
       </ul>
     </div>

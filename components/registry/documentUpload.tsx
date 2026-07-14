@@ -58,11 +58,11 @@ export default function DocumentUpload({ prefix }: { prefix: string }) {
 
   return (
     <div>
-      <span className="mb-1 block text-sm font-medium text-navy-700">
+      <span className="mb-1 block text-base font-medium text-navy-700">
         {t("fields.docFile")}
       </span>
       <div className="flex flex-wrap items-center gap-3">
-        <label className="inline-flex cursor-pointer items-center overflow-hidden rounded-lg border border-line bg-surface text-sm">
+        <label className="inline-flex cursor-pointer items-center overflow-hidden rounded-lg border border-line bg-surface text-base">
           <span className="shrink-0 border-r border-line px-3 py-2 font-medium text-navy-700">
             {status === "uploading" ? t("fields.uploading") : t("fields.chooseFile")}
           </span>
@@ -79,7 +79,7 @@ export default function DocumentUpload({ prefix }: { prefix: string }) {
         </label>
 
         {status === "done" && (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-success">
+          <span className="inline-flex items-center gap-1 text-base font-semibold text-success">
             <Check size={16} strokeWidth={2.5} aria-hidden="true" />
             {t("fields.uploaded")}
           </span>

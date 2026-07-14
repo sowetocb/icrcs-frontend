@@ -325,7 +325,7 @@ export default function AuthShell({
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
         <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-1.5 sm:gap-6">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 sm:gap-6">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -333,21 +333,21 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
           />
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
+            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-base">
               {t("brand.country")}
             </p>
-            <p className="font-display text-sm font-bold text-white sm:text-base">
+            <p className="font-display text-base font-bold text-white sm:text-lg">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
+            <p className="font-display text-lg font-black uppercase tracking-tight text-white sm:text-xl">
               {t("brand.servicesDepartment")}
             </p>
-            <span className="mt-1 flex h-1 w-44 max-w-full overflow-hidden rounded-full sm:w-56">
+            <span className="mt-1.5 flex h-1 w-52 max-w-full overflow-hidden rounded-full sm:w-64">
               <span className="flex-1 bg-[#1eb53a]" />
               <span className="flex-1 bg-[#fcd116]" />
               <span className="flex-1 bg-black" />
@@ -363,7 +363,7 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
           />
         </div>
       </header>
@@ -375,7 +375,7 @@ export default function AuthShell({
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center px-4 sm:px-6 ${wide ? "justify-start py-1 sm:py-2" : "justify-center py-2"}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-2 sm:px-6 ${wide ? "sm:py-2" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About ICRCS" are rendered below the form instead. */}
         <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>

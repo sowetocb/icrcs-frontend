@@ -104,7 +104,7 @@ export default function PhoneInput({ name }: { name: string }) {
           type="button"
           onClick={() => setOpen((o) => !o)}
           disabled={isLocked}
-          className="flex shrink-0 items-center gap-1.5 border-r border-input-line bg-surface px-3 text-sm hover:bg-line/40 disabled:cursor-not-allowed"
+          className="flex shrink-0 items-center gap-1.5 border-r border-input-line bg-surface px-3 text-base hover:bg-line/40 disabled:cursor-not-allowed"
         >
           <span className="text-base leading-none">{flagEmoji(country.code)}</span>
           <span className="font-mono text-navy-700">{country.dial}</span>
@@ -120,7 +120,7 @@ export default function PhoneInput({ name }: { name: string }) {
           placeholder="624 839 009"
           aria-label={t("fields.phone")}
           disabled={isLocked}
-          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted/60 disabled:cursor-not-allowed disabled:text-muted"
+          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/60 disabled:cursor-not-allowed disabled:text-muted"
         />
       </div>
 

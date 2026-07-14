@@ -15,6 +15,7 @@ import { loadProfile } from "@/lib/auth/profile";
 import { getRegisteredPeople } from "@/lib/api/registry";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { RULES } from "@/lib/validation/rules";
 
 type Mode = "landing" | "gate" | "wizard" | "success";
 
@@ -250,6 +251,15 @@ export default function RegistryClient() {
   function startFresh() {
     // Rule 2: cannot start a new registration while one is incomplete.
     if (hasIncomplete) return;
+    // Rule 2b: enforce the per-profile registration ceiling.
+    const people = loadPeople();
+    if (people.filter(isSubmitted).length >= RULES.REGISTRATIONS_PER_PROFILE_MAX) {
+      notify(
+        t("registry.registrationLimitReached").replace("{max}", String(RULES.REGISTRATIONS_PER_PROFILE_MAX)),
+        "error",
+      );
+      return;
+    }
     // Rule 3: once the account holder is registered, "start" means registering a
     // dependent — only allowed when their own registration is APPROVED.
     if (selfDone && !ownerApproved) {
