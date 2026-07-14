@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { loadSession, subscribeSession } from "@/lib/auth/session";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
@@ -10,6 +12,14 @@ import { ABOUT_GUIDE } from "./aboutGuide";
 import { X, ShieldCheck, ArrowRight, Info, LoaderCircle } from "lucide-react";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
+// Stable store adapters for useSyncExternalStore — read the shared cross-tab
+// "logged-in" flag reactively during render (no effect/setState). The server
+// snapshot is always false so SSR renders the guest shell; the client then
+// re-reads localStorage and, if a session exists, redirects.
+const sessionStoreSubscribe = (cb: () => void) => subscribeSession(() => cb());
+const sessionStoreSnapshot = () => loadSession() !== null;
+const sessionStoreServerSnapshot = () => false;
 
 /** A gold bullet list item. */
 function Bullet({ text }: { text: string }) {
@@ -166,6 +176,21 @@ export default function AuthShell({
   const [statusLoading, setStatusLoading] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // Guest-only gate. The auth pages (login / create-profile / forgot) all render
+  // through this shell. `loggedIn` is read reactively from the shared cross-tab
+  // session flag, so it's already true when a NEW tab opens with a live session
+  // and flips live when the user signs in from ANOTHER tab. Either way we send
+  // them to the dashboard instead of showing a sign-in form.
+  const router = useRouter();
+  const loggedIn = useSyncExternalStore(
+    sessionStoreSubscribe,
+    sessionStoreSnapshot,
+    sessionStoreServerSnapshot,
+  );
+  useEffect(() => {
+    if (loggedIn) router.replace("/dashboard");
+  }, [loggedIn, router]);
+
   // Resolve a localized status label, falling back to a readable form.
   function statusLabel(status: string) {
     const key = `registry.status_${status}`;
@@ -315,6 +340,10 @@ export default function AuthShell({
     </button>
   );
 
+  // Already signed in (this tab or another) — render nothing while the effect
+  // above redirects to the dashboard, so the sign-in form never flashes.
+  if (loggedIn) return null;
+
   return (
     <div className="relative flex min-h-screen flex-col">
       {/* Tanzania flag-inspired background */}
@@ -325,7 +354,7 @@ export default function AuthShell({
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
         <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-1.5 sm:gap-6">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 sm:gap-6">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -333,21 +362,21 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
           />
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
+            <p className="text-lg font-bold uppercase tracking-wide text-white/80 sm:text-xl">
               {t("brand.country")}
             </p>
-            <p className="font-display text-sm font-bold text-white sm:text-base">
+            <p className="font-display text-base font-bold text-white sm:text-lg">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
+            <p className="font-display text-sm font-black uppercase tracking-tight text-white sm:text-base">
               {t("brand.servicesDepartment")}
             </p>
-            <span className="mt-1 flex h-1 w-44 max-w-full overflow-hidden rounded-full sm:w-56">
+            <span className="mt-1.5 flex h-1 w-52 max-w-full overflow-hidden rounded-full sm:w-64">
               <span className="flex-1 bg-[#1eb53a]" />
               <span className="flex-1 bg-[#fcd116]" />
               <span className="flex-1 bg-black" />
@@ -363,7 +392,7 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
           />
         </div>
       </header>
@@ -375,7 +404,7 @@ export default function AuthShell({
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center px-4 sm:px-6 ${wide ? "justify-start py-1 sm:py-2" : "justify-center py-2"}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-2 sm:px-6 ${wide ? "sm:py-2" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About ICRCS" are rendered below the form instead. */}
         <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>

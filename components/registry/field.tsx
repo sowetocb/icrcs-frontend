@@ -93,7 +93,7 @@ const lockedCls = "cursor-not-allowed bg-line/30 text-muted";
 // outline (rather than the hairline `line` used for dividers) so an empty field
 // is clearly visible — an accessibility aid for low-vision users.
 const baseInput =
-  "w-full rounded-lg bg-card px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:ring-2";
+  "w-full rounded-lg bg-card px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted/60 focus:ring-2";
 const okBorder = "border border-input-line focus:border-navy-500 focus:ring-navy-500/15";
 const errBorder = "border border-danger focus:border-danger focus:ring-danger/15";
 const inputCls = (invalid: boolean) =>
@@ -118,7 +118,7 @@ export function Field({
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-navy-700">
+        <label className="block text-base font-medium text-navy-700">
           {label}
           {required && <span className="ml-0.5 text-danger">*</span>}
           {optional && (

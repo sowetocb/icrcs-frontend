@@ -1,9 +1,17 @@
 // Client-side session helpers. Tokens are stored in HttpOnly cookies (set by
 // the server-side /api/auth/* routes) and are NOT accessible from JavaScript.
 //
-// The frontend only tracks a lightweight "logged-in" flag in sessionStorage so
-// components can conditionally render without inspecting the actual token.
-// The proxy route reads the cookie automatically on every fetch.
+// The frontend only tracks a lightweight "logged-in" flag so components can
+// conditionally render without inspecting the actual token. The proxy route
+// reads the cookie automatically on every fetch.
+//
+// The flag lives in localStorage (NOT sessionStorage) on purpose: the HttpOnly
+// auth cookie is shared by every tab, so the flag must be too. localStorage is
+// shared across all same-origin tabs AND emits a cross-tab `storage` event on
+// change — which lets a newly-opened tab detect the existing session and lets
+// every open tab react instantly when the user logs in or out in another tab
+// (see subscribeSession). sessionStorage is per-tab and fires no cross-tab
+// event, so a new tab could never see a session opened elsewhere.
 
 import type { Tokens } from "@/lib/api/auth";
 
@@ -18,7 +26,7 @@ export function loadSession(): Session | null {
   try {
     // The logged-in flag is set after a successful login call. The real tokens
     // are in HttpOnly cookies that the browser sends automatically.
-    const flag = window.sessionStorage.getItem(FLAG);
+    const flag = window.localStorage.getItem(FLAG);
     if (flag === "1") {
       return { accessToken: "__httponly__", refreshToken: "__httponly__" };
     }
@@ -33,7 +41,7 @@ export function loadSession(): Session | null {
 export function saveSession(_session: Session): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(FLAG, "1");
+    window.localStorage.setItem(FLAG, "1");
   } catch {
     // ignore
   }
@@ -42,10 +50,31 @@ export function saveSession(_session: Session): void {
 export function clearSession(): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.removeItem(FLAG);
+    window.localStorage.removeItem(FLAG);
   } catch {
     // ignore
   }
+}
+
+/**
+ * Subscribe to cross-tab session changes. `onChange` fires whenever the
+ * logged-in flag is set or cleared in ANOTHER tab (localStorage `storage`
+ * events only fire in other tabs, never the one that made the change), with the
+ * new logged-in state. Returns an unsubscribe function. No-op on the server.
+ *
+ * Used by AuthGuard (log out here when another tab signs out) and the guest
+ * shell (leave the login page when another tab signs in).
+ */
+export function subscribeSession(onChange: (loggedIn: boolean) => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const handler = (e: StorageEvent) => {
+    // key === null means localStorage.clear(); FLAG means our flag changed.
+    if (e.key === null || e.key === FLAG) {
+      onChange(loadSession() !== null);
+    }
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
 }
 
 // A one-shot notice explaining an automatic sign-out, so the login screen can

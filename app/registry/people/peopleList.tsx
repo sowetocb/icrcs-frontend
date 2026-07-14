@@ -177,10 +177,10 @@ export default function PeopleList() {
     const profile = loadProfile();
     const profileName = profile
       ? [profile.firstName, profile.middleName, profile.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim()
-          .toLowerCase()
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+        .toLowerCase()
       : "";
     if (profileName) {
       const match = sortedPeople.find((p) => rowOf(p).name.trim().toLowerCase() === profileName);
@@ -394,7 +394,7 @@ export default function PeopleList() {
                           <tr>
                             <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
                               {t("people.noResults")}
-                            </td> 
+                            </td>
                           </tr>
                         ) : filteredPeople.map((p) => {
                           const remote = isRemotePerson(p);

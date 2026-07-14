@@ -109,11 +109,10 @@ export default function CitizenSidebar() {
                 href={href}
                 onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  active
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active
                     ? "bg-sidebar-active text-icrcs-navy font-semibold shadow-sm"
                     : "text-white/70 hover:bg-sidebar-hover hover:text-white"
-                }`}
+                  }`}
               >
                 <Icon size={18} className={active ? "text-icrcs-navy" : "text-white/50"} />
                 {t(`nav.${key}`)}
