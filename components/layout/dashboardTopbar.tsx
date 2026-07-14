@@ -190,10 +190,10 @@ export default function DashboardTopbar() {
             className="h-16 w-16 object-contain"
           />
           <div className="hidden leading-tight sm:block">
-            <p className="text-sm font-medium uppercase tracking-wider text-icrcs-gold-light/80">
+            <p className="text-lg font-medium uppercase tracking-wider text-icrcs-gold-light/80 sm:text-xl">
               {t("brand.country")}
             </p>
-            <p className="font-display text-lg font-bold text-white sm:text-xl">
+            <p className="font-display text-md font-bold text-white">
               {t("brand.department")}
             </p>
           </div>

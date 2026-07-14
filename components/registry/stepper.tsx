@@ -12,7 +12,7 @@ const REFEREE_STEP = 7;
 const VISIBLE_STEPS = STEPS.filter((n) => n !== REFEREE_STEP);
 
 function CheckIcon() {
-  return <Check size={12} strokeWidth={3} aria-hidden="true" />;
+  return <Check size={10} strokeWidth={3} aria-hidden="true" />;
 }
 
 export default function Stepper({
@@ -77,8 +77,8 @@ export default function Stepper({
         <div className="h-1 w-full shrink-0 bg-gold" aria-hidden="true" />
 
         {/* Header badge + close (close is mobile-only). */}
-        <div className="flex items-center justify-between px-3 pt-2 pb-0.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/40">
+        <div className="flex items-center justify-between px-3 pt-1.5 pb-0.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("registry.stepsLabel")}
           </p>
           <button
@@ -91,7 +91,7 @@ export default function Stepper({
           </button>
         </div>
 
-        <ol className="flex-1 space-y-0 px-2 pb-1 lg:flex lg:min-h-0 lg:flex-col">
+        <ol className="flex-1 space-y-0 px-2 pb-0.5 lg:flex lg:min-h-0 lg:flex-col">
           {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
@@ -106,7 +106,7 @@ export default function Stepper({
                   type="button"
                   onClick={() => go(n)}
                   disabled={locked}
-                  className={`flex w-full gap-2 rounded-lg px-2 py-1.5 text-left transition lg:h-full ${
+                  className={`flex w-full gap-1.5 rounded-lg px-2 py-1 text-left transition lg:h-full ${
                     active
                       ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
@@ -116,7 +116,7 @@ export default function Stepper({
                 >
                   <span className="flex flex-col items-center self-stretch">
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                         done
                           ? "bg-success text-white"
                           : active
@@ -130,9 +130,9 @@ export default function Stepper({
                       <span className="mt-1 w-px flex-1 bg-white/10" />
                     )}
                   </span>
-                  <span className="pb-1">
+                  <span className="pb-0.5">
                     <span
-                      className={`block text-[17px] font-semibold ${
+                      className={`block text-[13px] font-semibold leading-tight ${
                         active
                           ? "text-icrcs-navy"
                           : done
@@ -143,7 +143,7 @@ export default function Stepper({
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
-                      className={`mt-0.5 block text-[14px] leading-snug [@media(max-height:900px)]:hidden ${
+                      className={`block text-[11px] leading-snug ${
                         active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >
@@ -156,14 +156,14 @@ export default function Stepper({
           })}
         </ol>
 
-        <div className="border-t border-white/10 p-1.5">
+        <div className="border-t border-white/10 p-1">
           <button
             type="button"
             onClick={() => {
               onSaveExit();
               setOpen(false);
             }}
-            className="w-full rounded-lg border border-white/15 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
+            className="w-full rounded-lg border border-white/15 py-1.5 text-[13px] font-semibold text-white/70 transition hover:bg-sidebar-hover hover:text-white"
           >
             {t("registry.saveExit")}
           </button>

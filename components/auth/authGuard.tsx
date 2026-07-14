@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { loadSession } from "@/lib/auth/session";
+import { loadSession, subscribeSession } from "@/lib/auth/session";
 
 // Remembers, for the lifetime of the tab, that we've already confirmed a live
 // session. Because /dashboard, /registry, /registry/people, … are separate
@@ -35,17 +35,17 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
-  // Also listen for storage changes (logout from another tab)
+  // React to a sign-out (or idle/expiry) that happened in ANOTHER tab: the
+  // shared localStorage flag is cleared there, this fires here, and we drop the
+  // user to /login so no tab keeps showing protected content after logout.
   useEffect(() => {
-    function onStorageChange(e: StorageEvent) {
-      if (e.key === "icrcs-session" && !e.newValue) {
+    return subscribeSession((loggedIn) => {
+      if (!loggedIn) {
         sessionVerified = false;
         setAuthorized(false);
         router.replace("/login");
       }
-    }
-    window.addEventListener("storage", onStorageChange);
-    return () => window.removeEventListener("storage", onStorageChange);
+    });
   }, [router]);
 
   if (!authorized) {

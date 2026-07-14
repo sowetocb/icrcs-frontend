@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { loadSession, subscribeSession } from "@/lib/auth/session";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
@@ -10,6 +12,14 @@ import { ABOUT_GUIDE } from "./aboutGuide";
 import { X, ShieldCheck, ArrowRight, Info, LoaderCircle } from "lucide-react";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
+// Stable store adapters for useSyncExternalStore — read the shared cross-tab
+// "logged-in" flag reactively during render (no effect/setState). The server
+// snapshot is always false so SSR renders the guest shell; the client then
+// re-reads localStorage and, if a session exists, redirects.
+const sessionStoreSubscribe = (cb: () => void) => subscribeSession(() => cb());
+const sessionStoreSnapshot = () => loadSession() !== null;
+const sessionStoreServerSnapshot = () => false;
 
 /** A gold bullet list item. */
 function Bullet({ text }: { text: string }) {
@@ -166,6 +176,21 @@ export default function AuthShell({
   const [statusLoading, setStatusLoading] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // Guest-only gate. The auth pages (login / create-profile / forgot) all render
+  // through this shell. `loggedIn` is read reactively from the shared cross-tab
+  // session flag, so it's already true when a NEW tab opens with a live session
+  // and flips live when the user signs in from ANOTHER tab. Either way we send
+  // them to the dashboard instead of showing a sign-in form.
+  const router = useRouter();
+  const loggedIn = useSyncExternalStore(
+    sessionStoreSubscribe,
+    sessionStoreSnapshot,
+    sessionStoreServerSnapshot,
+  );
+  useEffect(() => {
+    if (loggedIn) router.replace("/dashboard");
+  }, [loggedIn, router]);
+
   // Resolve a localized status label, falling back to a readable form.
   function statusLabel(status: string) {
     const key = `registry.status_${status}`;
@@ -315,6 +340,10 @@ export default function AuthShell({
     </button>
   );
 
+  // Already signed in (this tab or another) — render nothing while the effect
+  // above redirects to the dashboard, so the sign-in form never flashes.
+  if (loggedIn) return null;
+
   return (
     <div className="relative flex min-h-screen flex-col">
       {/* Tanzania flag-inspired background */}
@@ -338,13 +367,13 @@ export default function AuthShell({
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-base">
+            <p className="text-lg font-bold uppercase tracking-wide text-white/80 sm:text-xl">
               {t("brand.country")}
             </p>
             <p className="font-display text-base font-bold text-white sm:text-lg">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-lg font-black uppercase tracking-tight text-white sm:text-xl">
+            <p className="font-display text-sm font-black uppercase tracking-tight text-white sm:text-base">
               {t("brand.servicesDepartment")}
             </p>
             <span className="mt-1.5 flex h-1 w-52 max-w-full overflow-hidden rounded-full sm:w-64">

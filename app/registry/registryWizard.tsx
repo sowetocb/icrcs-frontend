@@ -2171,7 +2171,7 @@ export default function RegistryWizard({
         onSaveExit={saveExit}
       />
 
-        <main className="flex-1 px-4 py-5 lg:px-8">
+        <main className="flex-1 px-4 py-5 lg:px-[10%]">
           <div className="mx-auto w-full max-w-6xl">
             <p className="text-base font-semibold text-success">
               {t(`registry.s${step}Tag`)}
