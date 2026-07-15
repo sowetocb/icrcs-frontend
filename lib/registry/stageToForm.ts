@@ -158,6 +158,9 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     if (p.occupationTypeId != null) out[`${prefix}OccType`] = str(p.occupationTypeId);
     if (p.documentTypeId != null) out[`${prefix}DocType`] = str(p.documentTypeId);
     if (p.documentNumber != null) out[`${prefix}DocNumber`] = str(p.documentNumber);
+    // Uploaded document file (the per-person documentUpload widget) — restore the
+    // stored URL so the upload isn't shown as missing on resume.
+    if (p.documentFileUrl != null) out[`${prefix}DocFileUrl`] = strNN(p.documentFileUrl);
     // Identification documents repeater: the backend returns a `documents`
     // array with `{ documentTypeId, documentNumber }`. The dropdown's option
     // VALUE is the documentTypeId, so map the id straight through (no code
@@ -423,5 +426,42 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     return out;
   }
 
+  return out;
+}
+
+/** Maps the migrant Travel History GET response (GET /v1/registration/{id}/
+ * travel-history) back into the wizard `data` shape. Travel history is a SEPARATE
+ * endpoint from the per-stage data, so it must be hydrated on its own when
+ * resuming Stage 1 on a migrant registration — otherwise the whole Travel History
+ * section (point of entry, transit country, travel document) comes back blank. */
+export async function travelHistoryToForm(raw: unknown): Promise<Data> {
+  const d = obj(raw);
+  const out: Data = {};
+  if (Object.keys(d).length === 0) return out;
+
+  const countries = await getCountries().catch(() => []);
+  const countryByCode = new Map(
+    countries.filter((c) => c.code).map((c) => [c.code!.toUpperCase(), c.name]),
+  );
+  const isoToName = (code: unknown) => {
+    const c = str(code).toUpperCase();
+    if (!c) return "";
+    return countryByCode.get(c) ?? LOCAL_ALPHA3_TO_NAME.get(c) ?? str(code);
+  };
+
+  const hasDoc = d.hasDocument === true;
+  out.hasTravelDoc = hasDoc;
+  if (d.firstDateOfEntry != null) out.firstDateOfEntry = strNN(d.firstDateOfEntry);
+  if (d.pointOfEntry != null) out.pointOfEntry = strNN(d.pointOfEntry);
+  // transitCountry / issueCountryCode are stored as ISO codes → back to names.
+  if (d.transitCountry != null) out.transitCountry = isoToName(d.transitCountry);
+  if (hasDoc) {
+    if (d.documentType != null) out.travelDocType = strNN(d.documentType);
+    if (d.documentNo != null) out.travelDocNo = strNN(d.documentNo);
+    if (d.issuedDate != null) out.travelIssuedDate = strNN(d.issuedDate);
+    if (d.expiryDate != null) out.travelExpiryDate = strNN(d.expiryDate);
+    if (d.issueCountryCode != null) out.travelIssueCountry = isoToName(d.issueCountryCode);
+    if (d.issueAuthority != null) out.travelIssueAuthority = strNN(d.issueAuthority);
+  }
   return out;
 }

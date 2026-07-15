@@ -45,14 +45,14 @@ export const isMigrantCategory = (c: RegistrationCategory): boolean =>
   CATEGORY_TRACK[c] === "migrant";
 
 /** The migrant-track registration types the backend can report on `/registration/all`.
- * Citizens come back as DOMESTIC / FOREIGN, which are NOT migrant types. */
-const MIGRANT_REGISTRATION_TYPES = new Set<RegistrationType>([
-  "ASYLUM_SEEKER",
-  "REFUGEE",
-  "ALIEN",
-  "UNDOCUMENTED_MIGRANT",
-  "VOLUNTARY_RETURNEE",
-]);
+ * Derived from CATEGORY_REGISTRATION_TYPE so there is a SINGLE source of truth for
+ * which types are migrant — citizens come back as DOMESTIC / FOREIGN, which are
+ * absent from that map and so are NOT migrant types. */
+const MIGRANT_REGISTRATION_TYPES = new Set<RegistrationType>(
+  Object.values(CATEGORY_REGISTRATION_TYPE).filter(
+    (t): t is RegistrationType => t != null,
+  ),
+);
 
 /** Coerce a backend `registrationType` string into the migrant `RegistrationType`
  * union, or `undefined` if it's a citizen type (DOMESTIC / FOREIGN) or unknown.

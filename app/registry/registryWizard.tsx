@@ -34,13 +34,14 @@ import {
   editStage1Migrant,
   submitTravelHistory,
   editTravelHistory,
+  getTravelHistory,
   uploadPassportPhoto,
   getStage9Preview,
   getStageData,
 } from "@/lib/api/registration";
 import type { RegistrationType } from "@/lib/api/registration";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
-import { stageToForm } from "@/lib/registry/stageToForm";
+import { stageToForm, travelHistoryToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
 import { localizeBackendMessage } from "@/lib/api/errorMessagesSw";
 import { useToast } from "@/components/ui/toast";
@@ -414,6 +415,13 @@ export default function RegistryWizard({
         const raw = await getStageData(subjectId, step);
         if (!raw || cancelled) return;
         const mapped = await stageToForm(step, raw);
+        // Migrant Stage 1 stores Travel History on a SEPARATE endpoint, so pull
+        // it alongside the stage data and merge it in — otherwise the whole
+        // Travel History section resumes blank on a fresh device.
+        if (step === 1 && isMigrant) {
+          const th = await getTravelHistory(subjectId).catch(() => null);
+          if (th) Object.assign(mapped, await travelHistoryToForm(th));
+        }
         if (cancelled || Object.keys(mapped).length === 0) return;
         setData((d) => {
           const next = { ...d };
@@ -466,6 +474,23 @@ export default function RegistryWizard({
           return next;
         });
         hydratedStages.current.add(n);
+      }
+      // Migrant Travel History lives on its own endpoint — pull it for the
+      // preview so the summary reflects it (Stage 1 must have been submitted).
+      if (isMigrant && submittedStages.has(1)) {
+        const th = await getTravelHistory(subjectId).catch(() => null);
+        if (cancelled) return;
+        if (th) {
+          const mapped = await travelHistoryToForm(th);
+          if (cancelled) return;
+          if (Object.keys(mapped).length > 0) {
+            setData((d) => {
+              const next = { ...d };
+              for (const [k, v] of Object.entries(mapped)) next[k] = v;
+              return next;
+            });
+          }
+        }
       }
     })();
     return () => {

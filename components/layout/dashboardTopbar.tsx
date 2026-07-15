@@ -179,19 +179,8 @@ export default function DashboardTopbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">
       <div className="flex h-20 items-center justify-between px-6">
-        {/* Left — Brand */}
+        {/* Left — Brand (emblem stays pinned to the left of the bar) */}
         <div className="flex items-center gap-3">
-          {/* Mobile nav toggle — lives IN the top bar (like the TRC portal), not
-              as a floating edge handle. Opens the sibling sidebar drawer via the
-              shared MobileNav context. Hidden on lg+ where the sidebar is fixed. */}
-          <button
-            type="button"
-            onClick={mobileNav.toggle}
-            aria-label={t("nav.openMenu")}
-            className="-ml-1 shrink-0 rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white lg:hidden"
-          >
-            <Menu size={22} strokeWidth={2.5} aria-hidden="true" />
-          </button>
           {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
               logo replacement works without images.localPatterns config. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -214,6 +203,18 @@ export default function DashboardTopbar() {
 
         {/* Right — Controls + User */}
         <div className="flex items-center gap-3">
+          {/* Mobile nav toggle — sits on the RIGHT next to the language switcher
+              (like the TRC portal), not as a floating edge handle. Opens the
+              sibling sidebar drawer via the shared MobileNav context. Hidden on
+              lg+ where the sidebar is always visible. */}
+          <button
+            type="button"
+            onClick={mobileNav.toggle}
+            aria-label={t("nav.openMenu")}
+            className="shrink-0 rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white lg:hidden"
+          >
+            <Menu size={22} strokeWidth={2.5} aria-hidden="true" />
+          </button>
           <LanguageSwitcher />
 
           {/* User — a trigger that opens a small menu (View profile / Logout) */}
