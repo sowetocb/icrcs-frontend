@@ -285,6 +285,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
       const curPostal = d.currentPostalAddress ?? d.currentPostalCode;
       if (curPostal != null) out.curPostalCode = str(curPostal);
     }
+    // Migrant-only: refugee/settlement camp + dwelling description. Absent for
+    // citizens, so nothing overwrites those (unused) fields.
+    if (d.campName != null) out.campName = strNN(d.campName);
+    if (d.properties != null) out.properties = strNN(d.properties);
     return out;
   }
 
