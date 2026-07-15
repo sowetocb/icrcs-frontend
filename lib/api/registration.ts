@@ -284,7 +284,16 @@ async function buildStage1Payload(
 /** Stage 1.5 — Naturalization details. The guide exposes this as a separate
  * conditional endpoint (POST /registration/{subjectId}/naturalization), not as
  * Stage 1 fields. Sent only when the applicant supplied a certificate number.
- * Non-fatal: a failure here doesn't undo the already-created registration. */
+ * Non-fatal: a failure here doesn't undo the already-created registration.
+ *
+ * ⚠️ DORMANT (intentionally inactive): no UI collects `naturalizationCertNo` /
+ * `naturalizationPlace` / `naturalizationDate` — there is no citizenship-type
+ * picker on Stage 1 (citizenshipTypeId is hardcoded to 1/2), so this always
+ * no-ops. The plumbing is kept ready for a future naturalized-citizen path.
+ * TODO(naturalization): add a Stage-1 citizenship-type select (Birth / Descent /
+ * Naturalization from the lookup) that, when Naturalization is chosen, reveals +
+ * requires those three fields (caps: RULES.NATURALIZATION_CERT_NUMBER_MAX /
+ * _ISSUE_PLACE_MAX; issueDate past-or-present). Then this fires with real data. */
 async function submitNaturalization(subjectId: string, data: Data): Promise<void> {
   const certificateNumber = str(data, "naturalizationCertNo");
   if (!subjectId || !certificateNumber) return;

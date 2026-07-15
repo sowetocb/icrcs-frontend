@@ -127,8 +127,10 @@ const REQUIRED_FIELDS: string[][] = [
   // Step 4: Education & Employment — employment status is mandatory (the backend
   // requires it); school is validated separately ("at least one if attended").
   ["jobStatus"],
-  // Step 5: Emergency Contacts — relationship, name, gender, phone,
-  // nationality, and residence country are all required by the backend validator.
+  // Step 5: Emergency Contacts — the backend requires AT LEAST ONE contact
+  // (RULES.EMERGENCY_CONTACTS_MIN = 1). So only the first contact's fields are
+  // always required; the second is optional and validated conditionally (see
+  // ec2Active in missingFields) — required in full only once the user starts it.
   [
     "ec1RelType",
     ...nameFields("ec1"),
@@ -136,12 +138,6 @@ const REQUIRED_FIELDS: string[][] = [
     "ec1Phone",
     "ec1NatCountry",
     "ec1ResCountry",
-    "ec2RelType",
-    ...nameFields("ec2"),
-    "ec2Gender",
-    "ec2Phone",
-    "ec2NatCountry",
-    "ec2ResCountry",
   ],
   // Step 6: Family — at least two relatives (full name + dob + gender + nationality +
   // residence country; phone is optional per backend; cascade is in missingFields)
@@ -688,6 +684,17 @@ export default function RegistryWizard({
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
       }
+      // Step 5 — the second emergency contact is optional, but once STARTED it
+      // must be complete. If any ec2 field carries a value, blur-flag the rest.
+      if (step === 5 && /^ec2(RelType|First|Middle|Last|Gender|Phone|NatCountry|ResCountry)$/.test(name)) {
+        const live = typeof data[name] === "string" ? (data[name] as string).trim() : "";
+        if (!live) {
+          const ec2Started = ["ec2RelType", "ec2First", "ec2Middle", "ec2Last", "ec2Gender", "ec2Phone", "ec2NatCountry", "ec2ResCountry"]
+            .some((f) => typeof data[f] === "string" && (data[f] as string).trim() !== "");
+          if (ec2Started) setErrors((e) => (e.includes(name) ? e : [...e, name]));
+        }
+      }
+
       // Step 6 conditional required fields — spouses need all person fields + phone;
       // children need all person fields except phone (ChildItemRequest has no phoneNumber).
       // Guard against stale closure values from picker components (e.g. CountryMenu
@@ -762,9 +769,21 @@ export default function RegistryWizard({
       return;
     }
 
-    // 5. Employer, school name / district — min 2 chars
+    // 4c. Special mark — ORG-class free text (max enforced by the input). Reject
+    // the symbol soup the backend's ORG validator refuses.
+    if (name === "specialMark") {
+      if (!RULES.ORG_PATTERN.test(trimmed)) flag(t("registry.orgInvalid"));
+      return;
+    }
+
+    // 5. Employer, school name / district — min 2 chars. `employer`
+    // (organizationName) and the school name are ORG-class, so they also reject
+    // the symbol soup the backend's ORG validator refuses (District/otherOccupation
+    // are plain text, only length-checked).
     if (name === "employer" || name === "otherOccupation" || /^edu\d+(School|District)$/.test(name)) {
-      if (trimmed.length < 2) flag(t("registry.textTooShort"));
+      if (trimmed.length < 2) { flag(t("registry.textTooShort")); return; }
+      const isOrg = name === "employer" || /^edu\d+School$/.test(name);
+      if (isOrg && !RULES.ORG_PATTERN.test(trimmed)) flag(t("registry.orgInvalid"));
       return;
     }
 
@@ -801,8 +820,8 @@ export default function RegistryWizard({
       const yr = Number(trimmed);
       const currentYear = new Date().getFullYear();
       const dobStr = typeof data.dob === "string" ? data.dob : "";
-      const birthYear = dobStr ? new Date(dobStr).getFullYear() : 1900;
-      const minYear = Number.isFinite(birthYear) && birthYear > 1900 ? birthYear : 1900;
+      const birthYear = dobStr ? new Date(dobStr).getFullYear() : RULES.EDU_YEAR_MIN;
+      const minYear = Number.isFinite(birthYear) && birthYear > RULES.EDU_YEAR_MIN ? birthYear : RULES.EDU_YEAR_MIN;
       if (!Number.isFinite(yr) || yr < minYear || yr > currentYear) {
         flag(
           t("registry.completionYearRange")
@@ -1081,18 +1100,28 @@ export default function RegistryWizard({
       required = required.filter((n) => n !== "jobStatus");
     }
 
-    // Step 5: Emergency contacts' residence is mandatory; place of birth is
-    // strictly optional.
+    // Step 5: Emergency contacts. Only the FIRST contact is mandatory (backend
+    // minimum is 1). The second is optional, but if the user has STARTED it, the
+    // whole contact must be completed — a partial contact fails the backend.
     if (step === 5) {
-      for (const p of ["ec1", "ec2"]) {
+      // A contact's residence (mandatory for a required contact) → cascade.
+      const resCascade = (p: string) => {
         const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
-        if (resCountry === "Tanzania") {
-          required = [...required, ...cascadeRequired(`${p}Res`, true)];
-        } else if (resCountry) {
-          required = [...required, `${p}ResCity`];
-        } else {
-          required = [...required, `${p}ResCountry`];
-        }
+        if (resCountry === "Tanzania") return cascadeRequired(`${p}Res`, true);
+        if (resCountry) return [`${p}ResCity`];
+        return [`${p}ResCountry`];
+      };
+      // First contact — always required (its person fields are in REQUIRED_FIELDS).
+      required = [...required, ...resCascade("ec1")];
+      // Second contact — "active" once any of its fields carries a value.
+      const ec2Fields = [
+        "ec2RelType", ...nameFields("ec2"), "ec2Gender", "ec2Phone", "ec2NatCountry", "ec2ResCountry",
+      ];
+      const ec2Active = ec2Fields.some(
+        (f) => typeof data[f] === "string" && (data[f] as string).trim() !== "",
+      );
+      if (ec2Active) {
+        required = [...required, ...ec2Fields, ...resCascade("ec2")];
       }
     }
 
@@ -1258,7 +1287,7 @@ export default function RegistryWizard({
           { keyword: "contact",   prefix: "ec", countKey: "ecCount", min: 2 },
         ],
         6: [
-          { keyword: "relative", prefix: "rel", countKey: "relativeCount", min: 2 },
+          { keyword: "relative", prefix: "rel", countKey: "relativeCount", min: RULES.RELATIVES_MIN },
           { keyword: "spouse",   prefix: "sp",  countKey: "spouseCount",   min: 1 },
           { keyword: "child",    prefix: "ch",  countKey: "childCount",    min: 1 },
         ],
@@ -1453,7 +1482,7 @@ export default function RegistryWizard({
     if (step === 5) return ["ec1Phone", "ec2Phone"];
     if (step === 6) {
       const out: string[] = [];
-      const rel = Math.max(2, Number(String(data.relativeCount ?? "")) || 2);
+      const rel = Math.max(RULES.RELATIVES_MIN, Number(String(data.relativeCount ?? "")) || RULES.RELATIVES_MIN);
       for (let i = 1; i <= rel; i++) out.push(`rel${i}Phone`);
       if (data.isMarried === true) {
         const sp = Math.max(1, Number(String(data.spouseCount ?? "")) || 1);
@@ -1757,8 +1786,8 @@ export default function RegistryWizard({
       const count = Math.max(1, Number(data.eduCount) || 1);
       // Derive the birth year for completion-year lower bound.
       const dobStr = typeof data.dob === "string" ? data.dob : "";
-      const birthYear = dobStr ? new Date(dobStr).getFullYear() : 1900;
-      const minYear = Number.isFinite(birthYear) && birthYear > 1900 ? birthYear : 1900;
+      const birthYear = dobStr ? new Date(dobStr).getFullYear() : RULES.EDU_YEAR_MIN;
+      const minYear = Number.isFinite(birthYear) && birthYear > RULES.EDU_YEAR_MIN ? birthYear : RULES.EDU_YEAR_MIN;
       const currentYear = new Date().getFullYear();
       const yearErrors: Record<string, string> = {};
       for (let i = 1; i <= count; i++) {

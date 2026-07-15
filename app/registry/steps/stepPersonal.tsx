@@ -96,6 +96,11 @@ function PhotoUpload() {
 // Identification document types offered at Stage 1.
 const ID_DOC_SUFFIXES = ["Type", "Number"];
 
+// ORG-class character set (letters, numbers, basic punctuation) for the
+// specialMark input's `allowChars`. Mirrors RULES.ORG_PATTERN's body; kept as a
+// string here because allowChars is spliced into a [^…] class, not a full regex.
+const ORG_CHARS = "\\p{L}\\p{N} .,'\"()/&-";
+
 export default function StepPersonal() {
   const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
   const { t } = useI18n();
@@ -271,7 +276,14 @@ export default function StepPersonal() {
             <TextInput name="heightCm" placeholder={t("fields.phHeightCm")} numeric maxLength={String(RULES.HEIGHT_CM_MAX).length} />
           </Field>
           <Field label={t("fields.specialMark")} optional>
-            <TextInput name="specialMark" placeholder={t("fields.phSpecialMark")} maxLength={RULES.SPECIAL_MARK_MAX} />
+            {/* ORG-class free text: letters, numbers and basic punctuation only —
+                strip the symbol soup the backend's ORG validator rejects. */}
+            <TextInput
+              name="specialMark"
+              placeholder={t("fields.phSpecialMark")}
+              allowChars={ORG_CHARS}
+              maxLength={RULES.SPECIAL_MARK_MAX}
+            />
           </Field>
         </div>
       </div>

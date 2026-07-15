@@ -32,6 +32,11 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
     <div className="space-y-5">
       <h3 className="font-display text-base font-bold text-navy-700">
         {t(index === 1 ? "fields.emergencyContact1" : "fields.emergencyContact2")}
+        {/* Only one contact is required; the second is optional (but must be
+            completed once started). */}
+        {index === 2 && (
+          <span className="ml-2 text-sm font-normal text-muted">({t("fields.optional")})</span>
+        )}
       </h3>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

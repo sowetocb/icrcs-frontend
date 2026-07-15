@@ -123,8 +123,10 @@ export default function StepDetails({
 
   const hasMin = form.password.length >= RULES.PASSWORD_MIN;
   const hasCapital = RULES.PASSWORD_HAS_CAPITAL.test(form.password);
+  const hasLower = RULES.PASSWORD_HAS_LOWER.test(form.password);
+  const hasDigit = RULES.PASSWORD_HAS_DIGIT.test(form.password);
   const hasSpecial = RULES.PASSWORD_HAS_SPECIAL.test(form.password);
-  const allMet = hasMin && hasCapital && hasSpecial;
+  const allMet = hasMin && hasCapital && hasLower && hasDigit && hasSpecial;
   const matches = form.password === confirm && confirm.length > 0;
   const confirmInvalid = touchedConfirm && confirm.length > 0 && !matches;
 
@@ -436,6 +438,8 @@ export default function StepDetails({
             <ul className="space-y-1 pl-0.5">
               {!hasMin && <UnmetRequirement label={t("password.reqMin")} />}
               {!hasCapital && <UnmetRequirement label={t("password.reqCapital")} />}
+              {!hasLower && <UnmetRequirement label={t("password.reqLower")} />}
+              {!hasDigit && <UnmetRequirement label={t("password.reqDigit")} />}
               {!hasSpecial && <UnmetRequirement label={t("password.reqSpecial")} />}
             </ul>
           ) : null}

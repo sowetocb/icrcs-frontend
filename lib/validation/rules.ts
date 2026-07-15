@@ -34,6 +34,12 @@ export const RULES = {
   NAME_MAX: 100, // backend contract; UI enforces UI_NAME_MAX (30)
   NAME_PATTERN: /^[\p{L}][\p{L}'\- ]*$/u, // letters, spaces, hyphens, apostrophes
 
+  // ---- ORG-class free text (schoolName, organizationName, specialMark, issue
+  // place). Letters/digits plus common punctuation found in org/place names and
+  // physical-mark descriptions; excludes the symbol soup ( _ ( ) * & % $ # ! @ )
+  // the backend's ORG validator rejects. ----
+  ORG_PATTERN: /^[\p{L}\p{N} .,'"()/&-]+$/u,
+
   // ---- Email (REGISTRATION_EMAIL_REQUIRED / _INVALID / _TOO_LONG, PROFILE_EMAIL_EXISTS) ----
   EMAIL_MAX: 255, // backend contract; UI enforces UI_EMAIL_MAX (50)
 
@@ -51,8 +57,11 @@ export const RULES = {
   TANZANIA_ISO3: 'TZA',
 
   // ---- Password (Reset Password UI Requirements checklist) ----
+  // Backend PASSWORD class: min 8 + uppercase + lowercase + digit + special.
   PASSWORD_MIN: 8,
   PASSWORD_HAS_CAPITAL: /[A-Z]/,
+  PASSWORD_HAS_LOWER: /[a-z]/,
+  PASSWORD_HAS_DIGIT: /[0-9]/,
   PASSWORD_HAS_SPECIAL: /[^A-Za-z0-9]/,
 
   // ---- OTP ----

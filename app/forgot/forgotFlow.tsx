@@ -118,8 +118,10 @@ export default function ForgotFlow() {
 
   const hasMin = password.length >= RULES.PASSWORD_MIN;
   const hasCapital = RULES.PASSWORD_HAS_CAPITAL.test(password);
+  const hasLower = RULES.PASSWORD_HAS_LOWER.test(password);
+  const hasDigit = RULES.PASSWORD_HAS_DIGIT.test(password);
   const hasSpecial = RULES.PASSWORD_HAS_SPECIAL.test(password);
-  const allMet = hasMin && hasCapital && hasSpecial;
+  const allMet = hasMin && hasCapital && hasLower && hasDigit && hasSpecial;
   const matches = password === confirm && confirm.length > 0;
 
   async function handleSend(e: React.FormEvent<HTMLFormElement>) {
@@ -364,6 +366,8 @@ export default function ForgotFlow() {
             <ul className="mt-2 space-y-1.5 pl-1 text-sm">
               <Requirement met={hasMin} label={t("password.reqMin")} />
               <Requirement met={hasCapital} label={t("password.reqCapital")} />
+              <Requirement met={hasLower} label={t("password.reqLower")} />
+              <Requirement met={hasDigit} label={t("password.reqDigit")} />
               <Requirement met={hasSpecial} label={t("password.reqSpecial")} />
               <Requirement met={matches} label={t("password.reqMatch")} />
             </ul>
