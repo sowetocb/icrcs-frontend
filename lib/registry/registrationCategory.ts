@@ -43,3 +43,27 @@ export const CATEGORY_REGISTRATION_TYPE: Partial<
 
 export const isMigrantCategory = (c: RegistrationCategory): boolean =>
   CATEGORY_TRACK[c] === "migrant";
+
+/** The migrant-track registration types the backend can report on `/registration/all`.
+ * Citizens come back as DOMESTIC / FOREIGN, which are NOT migrant types. */
+const MIGRANT_REGISTRATION_TYPES = new Set<RegistrationType>([
+  "ASYLUM_SEEKER",
+  "REFUGEE",
+  "ALIEN",
+  "UNDOCUMENTED_MIGRANT",
+  "VOLUNTARY_RETURNEE",
+]);
+
+/** Coerce a backend `registrationType` string into the migrant `RegistrationType`
+ * union, or `undefined` if it's a citizen type (DOMESTIC / FOREIGN) or unknown.
+ * This is how resume determines the flow when the local draft cache is gone
+ * (e.g. resuming on another device): the category is read from the backend, and
+ * only a genuine migrant type routes the wizard into the migrant track. */
+export function toMigrantRegistrationType(
+  raw: string | undefined | null,
+): RegistrationType | undefined {
+  const v = (raw ?? "").trim().toUpperCase();
+  return MIGRANT_REGISTRATION_TYPES.has(v as RegistrationType)
+    ? (v as RegistrationType)
+    : undefined;
+}

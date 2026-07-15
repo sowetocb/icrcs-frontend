@@ -648,6 +648,13 @@ export default function RegistryWizard({
 
     // ── Empty: required check ────────────────────────────────────────────────
     if (empty) {
+      // "Required" errors for an EMPTY field are shown on Save, not from an
+      // incidental blur — e.g. clicking a dropdown/date picker moves focus off
+      // the field and would otherwise flag it "required" before the user is
+      // done. Before the first save attempt this is silent; after a save, live
+      // feedback resumes so fields visibly clear as they're fixed. (Format
+      // checks for NON-empty values below are unaffected — they always run.)
+      if (saveAttempt === 0) return;
       const required = REQUIRED_FIELDS[step - 1] ?? [];
       if (required.includes(name)) {
         setErrors((e) => (e.includes(name) ? e : [...e, name]));
@@ -684,16 +691,11 @@ export default function RegistryWizard({
           setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
       }
-      // Step 5 — the second emergency contact is optional, but once STARTED it
-      // must be complete. If any ec2 field carries a value, blur-flag the rest.
-      if (step === 5 && /^ec2(RelType|First|Middle|Last|Gender|Phone|NatCountry|ResCountry)$/.test(name)) {
-        const live = typeof data[name] === "string" ? (data[name] as string).trim() : "";
-        if (!live) {
-          const ec2Started = ["ec2RelType", "ec2First", "ec2Middle", "ec2Last", "ec2Gender", "ec2Phone", "ec2NatCountry", "ec2ResCountry"]
-            .some((f) => typeof data[f] === "string" && (data[f] as string).trim() !== "");
-          if (ec2Started) setErrors((e) => (e.includes(name) ? e : [...e, name]));
-        }
-      }
+      // NOTE: the second emergency contact is OPTIONAL — it is validated only on
+      // Save (see the ec2Active branch in missingFields), NOT live on blur. Live
+      // blur-flagging while the user is still filling ec2 raised a "required"
+      // error just from moving focus away (e.g. opening the Nationality dropdown),
+      // which is premature for an optional section.
 
       // Step 6 conditional required fields — spouses need all person fields + phone;
       // children need all person fields except phone (ChildItemRequest has no phoneNumber).

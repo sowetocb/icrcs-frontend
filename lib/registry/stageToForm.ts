@@ -33,6 +33,12 @@ type Data = Record<string, string | boolean>;
 type Obj = Record<string, unknown>;
 
 const str = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
+// Like `str`, but collapses the backend's literal "NULL"/"null" sentinel (seen
+// on optional text columns) to an empty string so it isn't rendered verbatim.
+const strNN = (v: unknown) => {
+  const s = str(v);
+  return s.trim().toUpperCase() === "NULL" ? "" : s;
+};
 const obj = (v: unknown): Obj => (v && typeof v === "object" ? (v as Obj) : {});
 const arr = (v: unknown): Obj[] => (Array.isArray(v) ? (v as Obj[]) : []);
 
@@ -193,6 +199,20 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     const m = d.maritalStatusId ?? d.maritalStatus;
     if (m != null) out.marriage = maritalCode(m);
     if (d.dateOfBirth != null) out.dob = str(d.dateOfBirth);
+    // Physical characteristics (v002) — added to Stage 1 for every category but
+    // never reverse-mapped, so they came back blank on resume. Optional text
+    // fields may arrive as the literal "NULL" sentinel, so strip that.
+    if (d.otherNames != null) out.otherNames = strNN(d.otherNames);
+    if (d.tribe != null) out.tribe = strNN(d.tribe);
+    if (d.eyeColor != null) out.eyeColor = strNN(d.eyeColor);
+    if (d.hairColor != null) out.hairColor = strNN(d.hairColor);
+    if (d.heightCm != null) {
+      const h = strNN(d.heightCm);
+      // 0 / non-positive means "not provided" — keep the field blank.
+      if (h && Number(h) > 0) out.heightCm = h;
+    }
+    if (d.specialMark != null) out.specialMark = strNN(d.specialMark);
+    if (d.languageSpoken != null) out.languageSpoken = strNN(d.languageSpoken);
     if (d.citizenshipTypeId != null) out.citizenshipTypeId = str(d.citizenshipTypeId);
     if (d.nationalityCode != null) out.nationalityCountry = isoToName(d.nationalityCode);
     if (d.countryOfBirthCode != null) out.pobCountry = isoToName(d.countryOfBirthCode);

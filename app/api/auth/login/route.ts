@@ -31,15 +31,26 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   }
 
-  // Forward the login request to the backend
-  const res = await fetch(`${BACKEND}/v1/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      identifier: body.identifier,
-      password: body.password,
-    }),
-  });
+  // Forward the login request to the backend. A THROW here means the backend is
+  // unreachable (down / DNS / TLS) — that is NOT a credentials problem, so return
+  // a distinct 503 + code so the UI can say "can't reach the server" instead of
+  // "invalid email or password".
+  let res: Response;
+  try {
+    res = await fetch(`${BACKEND}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: body.identifier,
+        password: body.password,
+      }),
+    });
+  } catch {
+    return Response.json(
+      { error: "Unable to reach the authentication server", code: "CONNECTION" },
+      { status: 503 },
+    );
+  }
 
   const data = await res.json().catch(() => null);
 
@@ -47,6 +58,8 @@ export async function POST(request: Request) {
     const message =
       (data as { message?: string } | null)?.message ??
       `Login failed (${res.status})`;
+    // Forward the backend's real reason + status so the UI can distinguish an
+    // actual bad-credentials 401 from other failures (locked / inactive / 5xx).
     return Response.json({ error: message }, { status: res.status });
   }
 

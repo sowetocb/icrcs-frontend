@@ -4,6 +4,7 @@ import "./globals.css";
 import { LocaleProvider } from "./i18n/localeProvider";
 import { ThemeProvider, themeNoFlashScript } from "./theme/themeProvider";
 import { ToastProvider } from "@/components/ui/toast";
+import { MobileNavProvider } from "@/components/layout/mobileNav";
 import SessionKeepAlive from "@/components/auth/sessionKeepAlive";
 import IdleLogout from "@/components/auth/idleLogout";
 
@@ -59,9 +60,11 @@ export default function RootLayout({
         <ThemeProvider>
           <LocaleProvider>
             <ToastProvider>
-              <SessionKeepAlive />
-              <IdleLogout />
-              {children}
+              <MobileNavProvider>
+                <SessionKeepAlive />
+                <IdleLogout />
+                {children}
+              </MobileNavProvider>
             </ToastProvider>
           </LocaleProvider>
         </ThemeProvider>

@@ -35,10 +35,15 @@ export const RULES = {
   NAME_PATTERN: /^[\p{L}][\p{L}'\- ]*$/u, // letters, spaces, hyphens, apostrophes
 
   // ---- ORG-class free text (schoolName, organizationName, specialMark, issue
-  // place). Letters/digits plus common punctuation found in org/place names and
-  // physical-mark descriptions; excludes the symbol soup ( _ ( ) * & % $ # ! @ )
-  // the backend's ORG validator rejects. ----
-  ORG_PATTERN: /^[\p{L}\p{N} .,'"()/&-]+$/u,
+  // place). Must CONTAIN at least one letter and START with a letter or digit —
+  // so a string of only punctuation/digits (e.g. "-----''''999000") is rejected,
+  // not just the symbol soup. Interior chars: letters, digits, spaces and the
+  // common punctuation of org/place names + mark descriptions. ----
+  ORG_PATTERN: /^(?=.*\p{L})[\p{L}\p{N}][\p{L}\p{N} .,'()/&-]*$/u,
+  // Character class (no anchors) for the live input filter — strips anything not
+  // in the ORG interior set as the user types. The "≥1 letter / no leading
+  // punctuation" rules above are enforced on blur (a filter can't check those).
+  ORG_ALLOWED_CHARS: "\\p{L}\\p{N} .,'()/&-",
 
   // ---- Email (REGISTRATION_EMAIL_REQUIRED / _INVALID / _TOO_LONG, PROFILE_EMAIL_EXISTS) ----
   EMAIL_MAX: 255, // backend contract; UI enforces UI_EMAIL_MAX (50)

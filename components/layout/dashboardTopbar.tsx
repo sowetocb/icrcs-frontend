@@ -9,7 +9,8 @@ import { refreshMyProfile, fetchProfilePicture, logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { LOGO_EMBLEM } from "@/lib/assets";
-import { UserRound, LogOut } from "lucide-react";
+import { UserRound, LogOut, Menu } from "lucide-react";
+import { useMobileNav } from "@/components/layout/mobileNav";
 import {
   loadProfile,
   saveProfile,
@@ -89,6 +90,7 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
 export default function DashboardTopbar() {
   const { t } = useI18n();
   const router = useRouter();
+  const mobileNav = useMobileNav();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -179,6 +181,17 @@ export default function DashboardTopbar() {
       <div className="flex h-20 items-center justify-between px-6">
         {/* Left — Brand */}
         <div className="flex items-center gap-3">
+          {/* Mobile nav toggle — lives IN the top bar (like the TRC portal), not
+              as a floating edge handle. Opens the sibling sidebar drawer via the
+              shared MobileNav context. Hidden on lg+ where the sidebar is fixed. */}
+          <button
+            type="button"
+            onClick={mobileNav.toggle}
+            aria-label={t("nav.openMenu")}
+            className="-ml-1 shrink-0 rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white lg:hidden"
+          >
+            <Menu size={22} strokeWidth={2.5} aria-hidden="true" />
+          </button>
           {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
               logo replacement works without images.localPatterns config. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}

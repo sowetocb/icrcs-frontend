@@ -51,6 +51,10 @@ function PhotoUpload() {
   return (
     <Field label={t("fields.photo")} required>
       <div
+        // The scroll-to-first-error effect targets [data-field] / [data-field-error];
+        // this custom (non-input) field carries the marker so a missing photo is
+        // scroll-targetable like every other field.
+        data-field="stage1PhotoData"
         className={`flex items-center gap-5 rounded-xl border bg-card p-4 ${
           invalid ? "border-danger" : "border-line"
         }`}
@@ -96,10 +100,6 @@ function PhotoUpload() {
 // Identification document types offered at Stage 1.
 const ID_DOC_SUFFIXES = ["Type", "Number"];
 
-// ORG-class character set (letters, numbers, basic punctuation) for the
-// specialMark input's `allowChars`. Mirrors RULES.ORG_PATTERN's body; kept as a
-// string here because allowChars is spliced into a [^…] class, not a full regex.
-const ORG_CHARS = "\\p{L}\\p{N} .,'\"()/&-";
 
 export default function StepPersonal() {
   const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
@@ -281,7 +281,8 @@ export default function StepPersonal() {
             <TextInput
               name="specialMark"
               placeholder={t("fields.phSpecialMark")}
-              allowChars={ORG_CHARS}
+              allowChars={RULES.ORG_ALLOWED_CHARS}
+              mustStartWithLetter
               maxLength={RULES.SPECIAL_MARK_MAX}
             />
           </Field>

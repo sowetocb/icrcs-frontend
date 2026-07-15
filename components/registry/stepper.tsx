@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
-import { Check, Menu, X } from "lucide-react";
+import { useMobileNav } from "@/components/layout/mobileNav";
+import { Check, X } from "lucide-react";
 
 const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 // The Referees stage (7) accepts no user input, so it is removed from the wizard
@@ -31,9 +31,9 @@ export default function Stepper({
   onSaveExit: () => void;
 }) {
   const { t } = useI18n();
-  // On small screens the sidebar is an off-canvas drawer toggled by the edge
-  // handle; on lg+ it's always-visible and this state is ignored.
-  const [open, setOpen] = useState(false);
+  // On small screens the steps sidebar is an off-canvas drawer toggled by the
+  // top-bar hamburger (shared MobileNav context); on lg+ it's always-visible.
+  const { open, setOpen } = useMobileNav();
 
   // Selecting a step (or saving) closes the mobile drawer so the form is visible.
   function go(n: number) {
@@ -43,20 +43,8 @@ export default function Stepper({
 
   return (
     <>
-      {/* Edge handle — pulls the drawer in on mobile (hidden while open and on lg+). */}
-      {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={t("registry.openSteps")}
-          // Translucent bluish fill + defining border + backdrop blur so the
-          // handle always reads as an independent element — even when it scrolls
-          // over the same-navy header (a solid navy fill would blend in there).
-          className="fixed left-0 top-24 z-40 flex items-center rounded-r-lg border border-white/30 bg-navy-700/55 py-3 pl-1.5 pr-2 text-white shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-navy-700/75 lg:hidden"
-        >
-          <Menu size={20} strokeWidth={2.5} aria-hidden="true" />
-        </button>
-      )}
+      {/* Mobile drawer is opened from the top-bar hamburger (DashboardTopbar) via
+          the shared MobileNav context — no floating edge handle. */}
 
       {/* Backdrop — tap to dismiss the drawer (mobile only). */}
       {open && (

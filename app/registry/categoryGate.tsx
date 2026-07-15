@@ -12,7 +12,10 @@ import {
   ArrowLeft,
   ArrowRight as ArrowRightIcon,
 } from "lucide-react";
-import type { RegistrationCategory } from "@/lib/registry/registrationCategory";
+import {
+  CATEGORY_TRACK,
+  type RegistrationCategory,
+} from "@/lib/registry/registrationCategory";
 
 type IconType = typeof User;
 
@@ -40,16 +43,25 @@ const CATEGORIES: {
  * the chosen category to a track + registrationType.
  */
 export default function CategoryGate({
+  track,
   onSelect,
   onExit,
 }: {
+  /** The account holder's own registration track. A citizen/foreign holder may
+   * only register citizens/foreigners; a migrant holder only migrants. `null`
+   * (no prior registration — their own first) offers every category. */
+  track?: "citizen" | "migrant" | null;
   onSelect: (category: RegistrationCategory) => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
 
+  const categories = track
+    ? CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === track)
+    : CATEGORIES;
+
   return (
-    <main className="flex flex-1 flex-col justify-center px-6 py-8 lg:px-[10%]">
+    <main className="flex flex-1 flex-col px-6 py-8 lg:px-[10%]">
       <div className="mx-auto w-full max-w-5xl">
         <p className="text-sm font-semibold text-success">{t("category.title")}</p>
         <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
@@ -58,7 +70,7 @@ export default function CategoryGate({
         <p className="mt-3 max-w-2xl leading-relaxed text-muted">{t("category.subtitle")}</p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CATEGORIES.map(({ key, Icon, titleKey, descKey }) => (
+          {categories.map(({ key, Icon, titleKey, descKey }) => (
             <button
               key={key}
               type="button"

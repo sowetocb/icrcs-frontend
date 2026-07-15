@@ -144,6 +144,7 @@ export function TextInput({
   numeric = false,
   lettersOnly = false,
   allowChars,
+  mustStartWithLetter = false,
   min,
   max,
 }: {
@@ -159,6 +160,10 @@ export function TextInput({
   /** A regex character-class body (e.g. "A-Za-z0-9 ") of the ONLY characters
    * allowed; anything outside it is stripped as the user types. */
   allowChars?: string;
+  /** Strip leading non-letter characters live, so the value can never START with
+   * a digit or punctuation. Guarantees at least one letter and blocks all-digit
+   * / all-symbol entries as they're typed (used for ORG-class fields). */
+  mustStartWithLetter?: boolean;
   /** Numeric bounds (type="number"): the value is clamped to [min, max] on blur. */
   min?: number;
   max?: number;
@@ -170,14 +175,19 @@ export function TextInput({
   // Numeric → digits only; letters-only → letters plus spaces, apostrophes and
   // hyphens (real names like "Mwakang'ata" or "Marry-Stella"), nothing else;
   // otherwise strip leading whitespace while typing (mid-word spaces are kept).
-  const sanitize = (raw: string) =>
-    numeric
+  const sanitize = (raw: string) => {
+    let out = numeric
       ? raw.replace(/\D/g, "")
       : lettersOnly
         ? raw.replace(/[^\p{L} '’-]/gu, "")
         : allowChars
           ? raw.replace(new RegExp(`[^${allowChars}]`, "gu"), "")
           : raw.replace(/^\s+/, "");
+    // Drop any leading run of non-letters so the value always begins with real
+    // text (blocks all-digit / all-symbol input live).
+    if (mustStartWithLetter) out = out.replace(/^[^\p{L}]+/u, "");
+    return out;
+  };
   // For a bounded numeric field, keep the typed value inside [min, max] live:
   // the upper bound is enforced immediately; the lower bound only once the entry
   // is full-width (so partial input like "1" isn't snapped up to "1900").

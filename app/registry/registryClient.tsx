@@ -11,6 +11,7 @@ import RegistryWizard from "./registryWizard";
 import {
   CATEGORY_REGISTRATION_TYPE,
   isMigrantCategory,
+  toMigrantRegistrationType,
   type RegistrationCategory,
 } from "@/lib/registry/registrationCategory";
 import type { RegistrationType } from "@/lib/api/registration";
@@ -90,6 +91,12 @@ export default function RegistryClient() {
   // registration has been APPROVED by an officer. Defaults to false so the
   // action stays blocked until the backend confirms approval.
   const [ownerApproved, setOwnerApproved] = useState(false);
+  // The track (citizen vs migrant) the ACCOUNT HOLDER registered under, derived
+  // from their own (first) registration's backend `registrationType`. A citizen/
+  // foreign account holder may only register citizens/foreigners, so the category
+  // picker is constrained to their track. `null` = no prior registration yet
+  // (their own first registration) → every category is offered.
+  const [ownerTrack, setOwnerTrack] = useState<"citizen" | "migrant" | null>(null);
   // Persist the current view so a page refresh can restore it (see the mode
   // initializer above).
   useEffect(() => {
@@ -139,6 +146,14 @@ export default function RegistryClient() {
             .slice()
             .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))[0];
           setOwnerApproved(!!owner && owner.status.toUpperCase() === "APPROVED");
+          // The account holder's own registration fixes which categories they may
+          // register: a migrant type → migrant track, otherwise (DOMESTIC /
+          // FOREIGN) → citizen track. Used to constrain the category picker.
+          if (owner) {
+            setOwnerTrack(
+              toMigrantRegistrationType(owner.registrationType) ? "migrant" : "citizen",
+            );
+          }
 
           // Stale-draft cleanup: if the local draft points to a registration the
           // backend already considers finished (e.g. completed in another
@@ -170,6 +185,14 @@ export default function RegistryClient() {
               (_, i) => i + 1,
             );
 
+            // The category is authoritative on the backend (`registrationType`).
+            // On another device the local draft cache is gone, so this is the
+            // ONLY way to know whether to resume into the citizen or migrant
+            // flow. Citizens report DOMESTIC / FOREIGN → undefined (citizen flow);
+            // a genuine migrant type routes the wizard into the migrant track.
+            const resumeType = toMigrantRegistrationType(remoteIncomplete.registrationType);
+            if (resumeType) setRegistrationType(resumeType);
+
             if (!currentDraft || currentDraft.subjectId !== remoteIncomplete.subjectId) {
               // No matching local draft — seed one from the backend record.
               const nameParts = remoteIncomplete.fullName.trim().split(/\s+/).filter(Boolean);
@@ -191,6 +214,9 @@ export default function RegistryClient() {
                   applicantLast: last,
                   email: remoteIncomplete.email,
                   phone: remoteIncomplete.phoneNumber,
+                  // Persist the category so the wizard enters the right track
+                  // (its `activeRegistrationType` reads `data.registrationType`).
+                  registrationType: resumeType ?? "",
                 },
               });
             } else {
@@ -203,9 +229,14 @@ export default function RegistryClient() {
                 new Set([...(currentDraft.submittedStages ?? []), ...serverSubmitted]),
               ).sort((a, b) => a - b);
               const step = Math.max(currentDraft.step ?? 1, serverStep);
+              // Backfill the category if this draft predates category-persistence
+              // (or was seeded before the backend reported the type).
+              const needsType =
+                !!resumeType && currentDraft.data?.registrationType !== resumeType;
               const advanced =
                 step !== currentDraft.step ||
-                mergedSubmitted.length !== (currentDraft.submittedStages?.length ?? 0);
+                mergedSubmitted.length !== (currentDraft.submittedStages?.length ?? 0) ||
+                needsType;
               if (advanced) {
                 saveRegistration({
                   ...currentDraft,
@@ -214,6 +245,9 @@ export default function RegistryClient() {
                   step,
                   maxStep: Math.max(currentDraft.maxStep ?? 1, step),
                   submittedStages: mergedSubmitted,
+                  data: needsType
+                    ? { ...currentDraft.data, registrationType: resumeType }
+                    : currentDraft.data,
                 });
               }
             }
@@ -325,6 +359,7 @@ export default function RegistryClient() {
           <div className="flex flex-1">
             <CitizenSidebar />
             <CategoryGate
+              track={ownerTrack}
               onSelect={chooseCategory}
               onExit={() => setMode("landing")}
             />

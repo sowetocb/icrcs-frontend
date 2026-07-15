@@ -72,51 +72,61 @@ export default function LoginForm() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+
+    // Login via the server-side route that sets HttpOnly cookies — the tokens
+    // never reach the browser (not in localStorage, not in the response body).
+    // A throw here = the client couldn't reach the Next server at all (offline /
+    // dev server down): a connection problem, NOT bad credentials.
+    let res: Response;
     try {
-      // Login via the server-side route that sets HttpOnly cookies — the tokens
-      // never reach the browser (not in localStorage, not in the response body).
-      const res = await fetch("/api/auth/login", {
+      res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ identifier: email.trim(), password }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(
-          (data as { error?: string } | null)?.error || `Login failed (${res.status})`,
-        );
-      }
-      // Mark the session as active (the actual tokens are in HttpOnly cookies).
-      saveSession({ accessToken: "__httponly__", refreshToken: "__httponly__" });
-      // Fetch the full profile once and cache it. Non-fatal: a failure here
-      // shouldn't block sign-in — the dashboard can fall back gracefully.
-      try {
-        const profile = await getMyProfile("__httponly__");
-        saveProfile(profile);
-        // Drop any locally cached registration/people that belong to a
-        // different account on this browser, so a new user never inherits a
-        // previous user's "pending registration" draft.
-        const draft = loadRegistration();
-        if (draft && (draft.ownerId ?? "") !== (profile.profileId ?? "")) {
-          clearRegistration();
-          clearPeople();
-        }
-      } catch {
-        // ignore — profile can be re-fetched later
-      }
-      notify(t("toast.loginSuccess"));
-      router.push("/dashboard");
-    } catch (err) {
+    } catch {
       setSubmitting(false);
-      // A server/connection outage must not read as "invalid credentials".
-      const msg = err instanceof Error ? err.message : "";
-      setLoginError(
-        /unreachable|network|timeout|fetch/i.test(msg)
-          ? t("form.connectionError")
-          : t("form.loginFailed"),
-      );
+      setLoginError(t("form.connectionError"));
+      return;
     }
+
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as
+        | { error?: string; code?: string }
+        | null;
+      setSubmitting(false);
+      // Only a genuine 401 means the email/password is wrong. A 503 (or the
+      // route's CONNECTION code) means the auth server is unreachable; any other
+      // status surfaces the backend's actual reason (e.g. account locked) or a
+      // generic connection message — never "invalid email or password" for a
+      // failure that isn't about credentials.
+      if (res.status === 401) setLoginError(t("form.loginFailed"));
+      else if (res.status === 503 || data?.code === "CONNECTION") setLoginError(t("form.connectionError"));
+      else setLoginError(data?.error || t("form.connectionError"));
+      return;
+    }
+
+    // Mark the session as active (the actual tokens are in HttpOnly cookies).
+    saveSession({ accessToken: "__httponly__", refreshToken: "__httponly__" });
+    // Fetch the full profile once and cache it. Non-fatal: a failure here
+    // shouldn't block sign-in — the dashboard can fall back gracefully.
+    try {
+      const profile = await getMyProfile("__httponly__");
+      saveProfile(profile);
+      // Drop any locally cached registration/people that belong to a different
+      // account on this browser, so a new user never inherits a previous user's
+      // "pending registration" draft.
+      const draft = loadRegistration();
+      if (draft && (draft.ownerId ?? "") !== (profile.profileId ?? "")) {
+        clearRegistration();
+        clearPeople();
+      }
+    } catch {
+      // ignore — profile can be re-fetched later
+    }
+    notify(t("toast.loginSuccess"));
+    router.push("/dashboard");
   }
 
   return (

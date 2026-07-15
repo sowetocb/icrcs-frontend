@@ -15,6 +15,12 @@ export type RegisteredPerson = {
   emailVerified: boolean;
   isActive: boolean;
   createdAt: string;
+  /** Backend registration category — "DOMESTIC"/"FOREIGN" for citizens, or a
+   * migrant type (REFUGEE / ASYLUM_SEEKER / MIGRANT / ALIEN / …). This is the
+   * SOURCE OF TRUTH for the category on resume: the local draft cache holds it
+   * too, but on another device the cache is gone, so the wizard reads it from
+   * here to enter the correct (citizen vs migrant) flow. */
+  registrationType: string;
 };
 
 export type ApplicationStatus = {
@@ -42,6 +48,7 @@ function normalizeRegisteredPerson(raw: unknown): RegisteredPerson {
     emailVerified: Boolean(obj.emailVerified ?? obj.email_verified ?? false),
     isActive: Boolean(obj.isActive ?? obj.active ?? false),
     createdAt: String(obj.createdAt ?? obj.created_at ?? ""),
+    registrationType: String(obj.registrationType ?? obj.registration_type ?? ""),
   };
 }
 
