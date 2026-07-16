@@ -172,6 +172,7 @@ export default function WardCascade({
   showStreet = false,
   alwaysCascade = false,
   excludeTanzania = false,
+  lockTanzania = false,
 }: {
   prefix: string;
   disabled?: boolean;
@@ -186,9 +187,22 @@ export default function WardCascade({
   alwaysCascade?: boolean;
   /** When true, Tanzania is excluded from the country dropdown. */
   excludeTanzania?: boolean;
+  /** Keep the country picker VISIBLE but locked to Tanzania (e.g. a migrant's
+   * current address — they reside in Tanzania). Forces the value to Tanzania and
+   * disables the dropdown. */
+  lockTanzania?: boolean;
 }) {
   const { data, set, errors } = useWizard();
   const { t } = useI18n();
+
+  // Migrant current address is fixed to Tanzania — pin the value so the Tanzania
+  // cascade shows and Stage 2 routes to /domestic.
+  const lockedCountryValue = data[`${prefix}Country`] as string;
+  useEffect(() => {
+    if (lockTanzania && lockedCountryValue !== "Tanzania") {
+      set(`${prefix}Country`, "Tanzania");
+    }
+  }, [lockTanzania, prefix, lockedCountryValue, set]);
 
   // The Tanzania cascade is rooted at Territory (Mainland / Zanzibar), which
   // drives regions. The Country picker is a separate concern (nationality /
@@ -267,7 +281,7 @@ export default function WardCascade({
           <CountryPicker
             countryName={countryName}
             placeholder={t("fields.phCountry")}
-            disabled={disabled}
+            disabled={disabled || lockTanzania}
             invalid={errors.includes(`${prefix}Country`)}
             lookupCountries={countries}
             excludeTanzania={excludeTanzania}

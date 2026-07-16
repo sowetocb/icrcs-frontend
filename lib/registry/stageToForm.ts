@@ -287,11 +287,31 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
       if (curHouse != null) out.curHouseNumber = str(curHouse);
       const curPostal = d.currentPostalAddress ?? d.currentPostalCode;
       if (curPostal != null) out.curPostalCode = str(curPostal);
+    } else {
+      // "Same as permanent": the wizard mirrors perm* → cur* live via an effect,
+      // but that effect doesn't run on the preview (or any non-Stage-2 view). So
+      // mirror it here during hydration, otherwise the CURRENT ADDRESS — which the
+      // preview & printable form read from cur* — resumes blank on another device.
+      for (const suffix of [
+        "Country", "TerritoryId", "Territory", "RegionId", "Region",
+        "DistrictId", "District", "WardId", "Ward", "StreetId", "Street",
+        "City", "HouseNumber", "PostalCode",
+      ]) {
+        if (out[`perm${suffix}`] != null) out[`cur${suffix}`] = out[`perm${suffix}`];
+      }
     }
-    // Migrant-only: refugee/settlement camp + dwelling description. Absent for
-    // citizens, so nothing overwrites those (unused) fields.
-    if (d.campName != null) out.campName = strNN(d.campName);
-    if (d.properties != null) out.properties = strNN(d.properties);
+    // Migrant-only: refugee/settlement camp + dwelling description. The backend
+    // may return these at the top level or nested on the current-address object.
+    // NOTE: as of this backend, camp fields are NOT returned by the stage GET or
+    // the preview at all — they're accepted on POST but never echoed back — so on
+    // a fresh device they can't be restored until the backend persists/returns
+    // them. This mapping is ready for when it does.
+    const campAddr =
+      arr(d.addresses).find((a) => a.campName != null || a.properties != null) ?? {};
+    const campName = d.campName ?? campAddr.campName;
+    const campProps = d.properties ?? campAddr.properties;
+    if (campName != null) out.campName = strNN(campName);
+    if (campProps != null) out.properties = strNN(campProps);
     return out;
   }
 

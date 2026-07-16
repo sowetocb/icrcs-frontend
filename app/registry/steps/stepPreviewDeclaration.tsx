@@ -112,7 +112,7 @@ function PreviewSubTitle({ children }: { children: React.ReactNode }) {
 
 export default function StepPreviewDeclaration() {
   const { t } = useI18n();
-  const { data, set, onGoToStep, onSessionExpired } = useWizard();
+  const { data, set, isMigrant, onGoToStep, onSessionExpired } = useWizard();
 
   const s = (key: string) => {
     const v = data[key];
@@ -269,6 +269,42 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.street")} value={titleCase(s("pobStreet"))} />
         <PreviewRow label={t("preview.villageStreet")} value={s("pobCityVillage")} />
 
+        {/* Physical characteristics (v002) — shown for any category when filled. */}
+        {["otherNames", "tribe", "eyeColor", "hairColor", "heightCm", "specialMark", "languageSpoken"]
+          .some((k) => s(k)) && (
+          <>
+            <PreviewSubTitle>{t("fields.physicalCharacteristics")}</PreviewSubTitle>
+            <PreviewRow label={t("fields.otherNames")} value={s("otherNames")} />
+            <PreviewRow label={t("fields.tribe")} value={s("tribe")} />
+            <PreviewRow label={t("fields.eyeColor")} value={s("eyeColor")} />
+            <PreviewRow label={t("fields.hairColor")} value={s("hairColor")} />
+            <PreviewRow label={t("fields.heightCm")} value={s("heightCm")} />
+            <PreviewRow label={t("fields.specialMark")} value={s("specialMark")} />
+            <PreviewRow label={t("fields.languageSpoken")} value={s("languageSpoken")} />
+          </>
+        )}
+
+        {/* Travel History (migrant flow) — shown when filled. */}
+        {isMigrant &&
+          ["pointOfEntry", "transitCountry", "firstDateOfEntry"].some((k) => s(k)) && (
+          <>
+            <PreviewSubTitle>{t("fields.travelHistory")}</PreviewSubTitle>
+            <PreviewRow label={t("fields.firstDateOfEntry")} value={s("firstDateOfEntry")} />
+            <PreviewRow label={t("fields.pointOfEntry")} value={s("pointOfEntry")} />
+            <PreviewRow label={t("fields.transitCountry")} value={s("transitCountry")} />
+            {data.hasTravelDoc === true && (
+              <>
+                <PreviewRow label={t("fields.travelDocType")} value={s("travelDocType")} />
+                <PreviewRow label={t("fields.travelDocNo")} value={s("travelDocNo")} />
+                <PreviewRow label={t("fields.travelIssuedDate")} value={s("travelIssuedDate")} />
+                <PreviewRow label={t("fields.travelExpiryDate")} value={s("travelExpiryDate")} />
+                <PreviewRow label={t("fields.travelIssueCountry")} value={s("travelIssueCountry")} />
+                <PreviewRow label={t("fields.travelIssueAuthority")} value={s("travelIssueAuthority")} />
+              </>
+            )}
+          </>
+        )}
+
         {s("citizenshipTypeId") === "3" && (
           <>
             <PreviewSubTitle>{t("preview.naturalization")}</PreviewSubTitle>
@@ -307,6 +343,15 @@ export default function StepPreviewDeclaration() {
             </>,
           )
         )}
+
+        {/* Refugee/settlement camp + dwelling description (migrant flow) — when filled. */}
+        {isMigrant && (s("campName") || s("properties")) && (
+          <>
+            <PreviewSubTitle>{t("fields.campName")}</PreviewSubTitle>
+            <PreviewRow label={t("fields.campName")} value={s("campName")} />
+            <PreviewRow label={t("fields.properties")} value={s("properties")} />
+          </>
+        )}
       </PreviewSection>
 
       {/* ─── Step 3: Parents Information ─── */}
@@ -317,8 +362,6 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("fatherGender"))} />
         <PreviewRow label={t("preview.phone")} value={s("fatherPhone")} />
         <PreviewRow label={t("preview.nationality")} value={s("fatherNatCountry")} />
-        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-        {cascadeRows("fatherPob", <PreviewRow label={t("preview.village")} value={s("fatherVillage")} />)}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("fatherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("fatherResCity"))} />)}
         {(() => {
@@ -340,8 +383,6 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("motherGender"))} />
         <PreviewRow label={t("preview.phone")} value={s("motherPhone")} />
         <PreviewRow label={t("preview.nationality")} value={s("motherNatCountry")} />
-        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-        {cascadeRows("motherPob", <PreviewRow label={t("preview.village")} value={s("motherVillage")} />)}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("motherRes", <PreviewRow label={t("preview.city")} value={titleCase(s("motherResCity"))} />)}
         {(() => {
@@ -397,8 +438,7 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec1Gender"))} />
         <PreviewRow label={t("preview.phone")} value={s("ec1Phone")} />
         <PreviewRow label={t("preview.nationality")} value={s("ec1NatCountry")} />
-        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-        {cascadeRows("ec1Pob", <PreviewRow label={t("preview.village")} value={s("ec1Village")} />)}
+        {/* Emergency contacts do NOT collect place of birth — only residence. */}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("ec1Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec1ResCity"))} />)}
         {s("ec1DocType") && (
@@ -416,8 +456,7 @@ export default function StepPreviewDeclaration() {
         <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec2Gender"))} />
         <PreviewRow label={t("preview.phone")} value={s("ec2Phone")} />
         <PreviewRow label={t("preview.nationality")} value={s("ec2NatCountry")} />
-        <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-        {cascadeRows("ec2Pob", <PreviewRow label={t("preview.village")} value={s("ec2Village")} />)}
+        {/* Emergency contacts do NOT collect place of birth — only residence. */}
         <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
         {cascadeRows("ec2Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec2ResCity"))} />)}
         {s("ec2DocType") && (
@@ -445,8 +484,7 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.phone")} value={s(`sp${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`sp${n}NatCountry`)} />
                 <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`sp${n}OccType`))} />
-                <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-                {cascadeRows(`sp${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`sp${n}Village`)} />)}
+                {/* Family members do NOT collect place of birth — only residence. */}
                 <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
                 {cascadeRows(`sp${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`sp${n}ResCity`))} />)}
               </div>
@@ -463,8 +501,7 @@ export default function StepPreviewDeclaration() {
                 <PreviewRow label={t("preview.gender")} value={genderLabel(s(`ch${n}Gender`))} />
                 <PreviewRow label={t("preview.phone")} value={s(`ch${n}Phone`)} />
                 <PreviewRow label={t("preview.nationality")} value={s(`ch${n}NatCountry`)} />
-                <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-                {cascadeRows(`ch${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`ch${n}Village`)} />)}
+                {/* Family members do NOT collect place of birth — only residence. */}
                 <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
                 {cascadeRows(`ch${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`ch${n}ResCity`))} />)}
               </div>
@@ -482,8 +519,7 @@ export default function StepPreviewDeclaration() {
               <PreviewRow label={t("preview.phone")} value={s(`rel${n}Phone`)} />
               <PreviewRow label={t("preview.nationality")} value={s(`rel${n}NatCountry`)} />
               <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s(`rel${n}OccType`))} />
-              <PreviewSubTitle>{t("preview.placeOfBirth")}</PreviewSubTitle>
-              {cascadeRows(`rel${n}Pob`, <PreviewRow label={t("preview.village")} value={s(`rel${n}Village`)} />)}
+              {/* Family members do NOT collect place of birth — only residence. */}
               <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
               {cascadeRows(`rel${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`rel${n}ResCity`))} />)}
             </div>

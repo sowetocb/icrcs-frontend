@@ -102,7 +102,9 @@ export default function StepAddress() {
       {!sameAsPerm && (
         <Field label={t("fields.curAddress")} required>
           <div className="space-y-3">
-            <WardCascade prefix="cur" showStreet />
+            {/* Migrants reside IN Tanzania, so their current address country is
+                locked to Tanzania (dropdown shown but not editable). */}
+            <WardCascade prefix="cur" showStreet lockTanzania={isMigrant} />
             {curIsTz ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label={t("fields.phHouseStreet")}>

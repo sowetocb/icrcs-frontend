@@ -10,7 +10,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
 import WardCascade from "@/components/registry/wardCascade";
 import CountrySelect from "@/components/registry/countrySelect";
-import { RULES } from "@/lib/validation/rules";
+import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { Camera, X, Plus } from "lucide-react";
 
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
@@ -294,7 +294,8 @@ export default function StepPersonal() {
       <div className="space-y-3">
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`idDoc${n}Type`] === "string" ? (data[`idDoc${n}Type`] as string) : "";
-          const isNida = !!idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase().includes("NIDA");
+          const docLabel = idDocTypeOptions.find((o) => o.value === type)?.label ?? "";
+          const docRule = docNumberRuleFor(docLabel);
           // A document type already chosen in another row is hidden here so it
           // can't be picked twice (the current row keeps its own selection).
           const pickedElsewhere = new Set(
@@ -323,18 +324,22 @@ export default function StepPersonal() {
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.docType")} optional>
-                  <Select name={`idDoc${n}Type`} placeholder={t("fields.phSelect")} options={availableOptions} />
+                  {/* Changing the document type clears the number — a number
+                      entered for one type must not carry over to another. */}
+                  <Select
+                    name={`idDoc${n}Type`}
+                    placeholder={t("fields.phSelect")}
+                    options={availableOptions}
+                    onValueChange={() => set(`idDoc${n}Number`, "")}
+                  />
                 </Field>
                 {type && (
                   <Field label={t("fields.docNumber")} required>
-                    {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
-                    {isNida ? (
-                      <TextInput name={`idDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={RULES.NIDA_EXACT_DIGITS} />
+                    {/* Per-type format (NIDA 20 digits, TIN 9–10, others ranged). */}
+                    {docRule.numeric ? (
+                      <TextInput name={`idDoc${n}Number`} placeholder="1234567890" numeric maxLength={docRule.max} />
                     ) : (
-                      // Contract allows up to DOC_NUMBER_MAX (50) — this was
-                      // capped at 20, which silently blocked long passport /
-                      // document numbers from being entered at all.
-                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={RULES.DOC_NUMBER_MAX} />
+                      <TextInput name={`idDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={docRule.max} />
                     )}
                   </Field>
                 )}
@@ -427,7 +432,7 @@ export default function StepPersonal() {
           {data.hasTravelDoc === true && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label={t("fields.travelDocType")} optional>
+                <Field label={t("fields.travelDocType")} required>
                   <TextInput name="travelDocType" placeholder={t("fields.phTravelDocType")} maxLength={RULES.TRAVEL_DOC_TYPE_MAX} />
                 </Field>
                 <Field label={t("fields.travelDocNo")} optional>

@@ -119,6 +119,21 @@ export const RULES = {
   // Identification documents (DocumentItemRequest).
   DOC_NUMBER_MAX: 50, // DOC_NUM
   NIDA_EXACT_DIGITS: 20,
+  // Per-document-type number formats (Tanzania), keyed by a keyword found in the
+  // document-type label/code. `numeric` = digits only; else alphanumeric.
+  // min/max are character counts (min===max means an exact length).
+  // NIDA (20) and TIN (9/10) match the backend; Driving Licence / Voter's ID /
+  // Certificate are best-effort ranges — CONFIRM the official formats and
+  // tune here (this is the single source of truth for both the input cap and the
+  // blur-time length check).
+  DOC_NUMBER_RULES: {
+    NIDA:    { numeric: true,  min: 20, max: 20 },
+    TIN:     { numeric: true,  min: 9,  max: 10 },
+    DRIVING: { numeric: false, min: 8,  max: 16 },
+    VOTERS:  { numeric: false, min: 6,  max: 15 },
+    BIRTH:   { numeric: false, min: 5,  max: 20 },
+    DEFAULT: { numeric: false, min: 3,  max: 50 },
+  },
 
   // Naturalization certificate.
   NATURALIZATION_CERT_NUMBER_MAX: 100, // DOC_NUM
@@ -155,3 +170,20 @@ export const RULES = {
 
 export type SexId = (typeof RULES.SEX)[keyof typeof RULES.SEX];
 export type CitizenshipTypeId = (typeof RULES.CITIZENSHIP_TYPE)[keyof typeof RULES.CITIZENSHIP_TYPE];
+
+export type DocNumberRule = { numeric: boolean; min: number; max: number };
+
+/** Map an identification-document TYPE (its label or code) to its number rule.
+ * Central classifier used by both the input cap and the blur-time length check,
+ * so a document number can't be an arbitrary long blob (e.g. a 28-digit "birth
+ * certificate"). Unknown types fall back to DEFAULT. */
+export function docNumberRuleFor(labelOrCode: string): DocNumberRule {
+  const s = (labelOrCode ?? "").toUpperCase();
+  const R = RULES.DOC_NUMBER_RULES;
+  if (s.includes("NIDA")) return R.NIDA;
+  if (/\bTIN\b/.test(s)) return R.TIN;
+  if (s.includes("DRIV") || s.includes("LICEN")) return R.DRIVING;
+  if (s.includes("VOTER") || s.includes("VOTE")) return R.VOTERS;
+  if (s.includes("BIRTH")) return R.BIRTH;
+  return R.DEFAULT;
+}

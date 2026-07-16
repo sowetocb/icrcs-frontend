@@ -47,7 +47,7 @@ import { localizeBackendMessage } from "@/lib/api/errorMessagesSw";
 import { useToast } from "@/components/ui/toast";
 import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type PersonGroup } from "@/lib/api/lookup";
 import { isPhoneComplete } from "@/lib/phoneLengths";
-import { RULES } from "@/lib/validation/rules";
+import { RULES, docNumberRuleFor, type DocNumberRule } from "@/lib/validation/rules";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { setSignoutNotice } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/api/client";
@@ -343,6 +343,10 @@ export default function RegistryWizard({
   // them from other doc types synchronously without an async lookup.
   const nidaTypeIds = useRef<Set<number>>(new Set());
   const tinTypeIds  = useRef<Set<number>>(new Set());
+  // Per-document-type number rule (length/charset), keyed by the backend type id,
+  // so blur() can length-check any document type (Driving Licence / Voter's ID /
+  // Birth Certificate, …), not just NIDA/TIN.
+  const docRuleById = useRef<Map<number, DocNumberRule>>(new Map());
   // Readable labels of the fields the user skipped on the current step, shown
   // so they know specifically what to go back and fill.
   const [applicationId, setApplicationId] = useState(
@@ -506,16 +510,19 @@ export default function RegistryWizard({
       .then((types) => {
         const nida = new Set<number>();
         const tin  = new Set<number>();
+        const ruleMap = new Map<number, DocNumberRule>();
         for (const docs of Object.values(types)) {
           for (const d of docs) {
             const code = (d.code ?? "").toUpperCase();
             const name = (d.name ?? "").toUpperCase();
             if (code.includes("NIDA") || name.includes("NIDA")) nida.add(d.id);
             if (/\bTIN\b/.test(code) || /\bTIN\b/.test(name))  tin.add(d.id);
+            ruleMap.set(d.id, docNumberRuleFor(name || code));
           }
         }
         nidaTypeIds.current = nida;
         tinTypeIds.current  = tin;
+        docRuleById.current = ruleMap;
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -665,8 +672,16 @@ export default function RegistryWizard({
         if (!/^\d+$/.test(trimmed) || (trimmed.length !== 9 && trimmed.length !== 10)) {
           flag(t("registry.tinInvalid"));
         }
-      } else if (trimmed.length < 3) {
-        flag(t("registry.docNumberTooShort"));
+      } else {
+        // Every other type (Driving Licence / Voter's ID / Birth Certificate / …)
+        // is length-checked against its per-type rule so a number can't be an
+        // arbitrary long blob. Falls back to the generic 3–50 range.
+        const rule = docRuleById.current.get(typeId) ?? RULES.DOC_NUMBER_RULES.DEFAULT;
+        if (rule.numeric && !/^\d+$/.test(trimmed)) {
+          flag(t("registry.docNumberRange").replace("{min}", String(rule.min)).replace("{max}", String(rule.max)));
+        } else if (trimmed.length < rule.min || trimmed.length > rule.max) {
+          flag(t("registry.docNumberRange").replace("{min}", String(rule.min)).replace("{max}", String(rule.max)));
+        }
       }
       return;
     }
@@ -1053,6 +1068,14 @@ export default function RegistryWizard({
       // and auto-set to Single — remove it so a slow lookup doesn't falsely block.
       if (!isFirstPerson) {
         required = required.filter((n) => n !== "marriage");
+      }
+      // Migrant Travel History: when the applicant says they HAVE a travel
+      // document, the backend requires its type ("Document type is required when
+      // hasDocument is true"). Enforce it here with a friendly, field-anchored
+      // message so the raw backend error never surfaces — and so the travel-
+      // history POST can't fail and abort an already-created Stage 1.
+      if (isMigrant && data.hasTravelDoc === true) {
+        required = [...required, "travelDocType"];
       }
     }
 
@@ -2148,7 +2171,15 @@ export default function RegistryWizard({
               if (att) recordPhotoAttachment(att);
             }
             // Migrant Stage 1 also carries travel history (same subjectId).
-            if (isMigrant && sid) await editTravelHistory(sid, data);
+            // Non-fatal: Stage 1 is already saved, so a travel-history hiccup
+            // must never abort it (it can be retried by re-saving Stage 1).
+            if (isMigrant && sid) {
+              try {
+                await editTravelHistory(sid, data);
+              } catch (thErr) {
+                console.error("Travel history update failed (non-fatal):", thErr);
+              }
+            }
           } else {
             const photoDataUrl =
               typeof data.stage1PhotoData === "string" ? data.stage1PhotoData : undefined;
@@ -2168,8 +2199,16 @@ export default function RegistryWizard({
               set("passportPhotoUploaded", response.photoUploaded ? "true" : "");
             }
             // Migrant Stage 1 also carries travel history, submitted against the
-            // subjectId that Stage 1 just created.
-            if (isMigrant && sid) await submitTravelHistory(sid, data);
+            // subjectId that Stage 1 just created. Non-fatal: the registration
+            // already exists, so this must never abort Stage 1 (which would
+            // suppress the Application ID dialog and leave it looking incomplete).
+            if (isMigrant && sid) {
+              try {
+                await submitTravelHistory(sid, data);
+              } catch (thErr) {
+                console.error("Travel history submit failed (non-fatal):", thErr);
+              }
+            }
           }
         } else if (step === 2) {
           await (edit ? editStage2(sid, data) : submitStage2(sid, data));

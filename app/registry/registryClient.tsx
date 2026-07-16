@@ -155,24 +155,33 @@ export default function RegistryClient() {
             );
           }
 
-          // Stale-draft cleanup: if the local draft points to a registration the
-          // backend already considers finished (e.g. completed in another
-          // browser), drop it so the user isn't prompted to resume a finished
-          // registration. A draft without a subjectId is a local-only, not-yet-
-          // submitted draft and is left alone.
+          // Reconcile the local "in-progress" state against the backend, which is
+          // the source of truth. A registration is genuinely RESUMABLE only while
+          // the backend still reports it PENDING with unfinished stages.
+          const remoteIncomplete = remoteList.find(isIncomplete);
           const localDraft = loadRegistrationFor(ownerId);
-          if (localDraft && !localDraft.completed && localDraft.subjectId) {
-            const remoteMatch = remoteList.find(
-              (p) => p.subjectId === localDraft.subjectId,
-            );
-            if (remoteMatch && !isIncomplete(remoteMatch)) {
+
+          if (!remoteIncomplete) {
+            // Nothing on the backend is resumable. A local draft that was already
+            // submitted at least once (it carries a subjectId from Stage 1) is
+            // therefore STALE — the backend considers that registration finished
+            // (PENDING_ENROLLMENT / APPROVED) or removed. This is the case even if
+            // the local completion save never stuck (e.g. Stage 9 POSTed but the
+            // browser closed before persisting completed:true). Clear it so the
+            // user isn't stuck on "Resume" — or left EDITING a finished
+            // registration. A draft with NO subjectId is a brand-new, not-yet-
+            // submitted registration and is left alone (still genuinely resumable).
+            if (localDraft && !localDraft.completed && localDraft.subjectId) {
               clearRegistration();
               setHasIncomplete(false);
+              // SENSITIVE: the mode initializer may already have opened the wizard
+              // from a stale sessionStorage flag + this (now finished) draft. A
+              // completed registration must never stay open for editing.
+              setMode((m) => (m === "wizard" ? "landing" : m));
             }
           }
 
           // If any registration is still genuinely incomplete on the backend:
-          const remoteIncomplete = remoteList.find(isIncomplete);
           if (remoteIncomplete) {
             setHasIncomplete(true);
             // The backend is the source of truth for progress. Reconcile the
@@ -360,6 +369,12 @@ export default function RegistryClient() {
             <CitizenSidebar />
             <CategoryGate
               track={ownerTrack}
+              excludeCitizen={(() => {
+                // A foreign-nationality profile can't register as a Tanzanian
+                // citizen. Empty / "Tanzania" nationality counts as Tanzanian.
+                const nat = (loadProfile()?.nationality ?? "").trim();
+                return nat !== "" && nat !== "Tanzania";
+              })()}
               onSelect={chooseCategory}
               onExit={() => setMode("landing")}
             />

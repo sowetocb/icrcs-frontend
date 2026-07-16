@@ -7,7 +7,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
-import { RULES } from "@/lib/validation/rules";
+import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { X, Plus } from "lucide-react";
 
 // Identification document type suffixes cleared when removing the last entry.
@@ -82,7 +82,8 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
       <div className="space-y-3">
         {Array.from({ length: idDocCount }, (_, i) => i + 1).map((n) => {
           const type = typeof data[`${prefix}IdDoc${n}Type`] === "string" ? (data[`${prefix}IdDoc${n}Type`] as string) : "";
-          const isNida = !!idDocTypeOptions.find((o) => o.value === type)?.label.toUpperCase().includes("NIDA");
+          const docLabel = idDocTypeOptions.find((o) => o.value === type)?.label ?? "";
+          const docRule = docNumberRuleFor(docLabel);
           // Hide a document type already chosen in another row (keep this row's own).
           const pickedElsewhere = new Set(
             Array.from({ length: idDocCount }, (_, m) => m + 1)
@@ -110,15 +111,22 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.docType")} optional>
-                  <Select name={`${prefix}IdDoc${n}Type`} placeholder={t("fields.phSelect")} options={availableOptions} />
+                  {/* Changing the document type clears the number — a number
+                      entered for one type must not carry over to another. */}
+                  <Select
+                    name={`${prefix}IdDoc${n}Type`}
+                    placeholder={t("fields.phSelect")}
+                    options={availableOptions}
+                    onValueChange={() => set(`${prefix}IdDoc${n}Number`, "")}
+                  />
                 </Field>
                 {type && (
                   <Field label={t("fields.docNumber")} required>
-                    {/* NIDA is exactly 20 digits — numeric, capped; others free-form. */}
-                    {isNida ? (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="12345678901234567890" numeric maxLength={RULES.NIDA_EXACT_DIGITS} />
+                    {/* Per-type format (NIDA 20 digits, TIN 9–10, others ranged). */}
+                    {docRule.numeric ? (
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="1234567890" numeric maxLength={docRule.max} />
                     ) : (
-                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={RULES.DOC_NUMBER_MAX} />
+                      <TextInput name={`${prefix}IdDoc${n}Number`} placeholder="e.g. AB123456" allowChars="A-Za-z0-9" maxLength={docRule.max} />
                     )}
                   </Field>
                 )}

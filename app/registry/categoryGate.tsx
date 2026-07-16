@@ -44,6 +44,7 @@ const CATEGORIES: {
  */
 export default function CategoryGate({
   track,
+  excludeCitizen = false,
   onSelect,
   onExit,
 }: {
@@ -51,14 +52,18 @@ export default function CategoryGate({
    * only register citizens/foreigners; a migrant holder only migrants. `null`
    * (no prior registration — their own first) offers every category. */
   track?: "citizen" | "migrant" | null;
+  /** Hide the Citizen category — set when the profile's nationality is foreign
+   * (a non-Tanzanian can't register as a Tanzanian citizen). */
+  excludeCitizen?: boolean;
   onSelect: (category: RegistrationCategory) => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
 
-  const categories = track
+  const categories = (track
     ? CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === track)
-    : CATEGORIES;
+    : CATEGORIES
+  ).filter(({ key }) => !(excludeCitizen && key === "CITIZEN"));
 
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:px-[10%]">
