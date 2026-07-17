@@ -346,6 +346,9 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
         if (e.city != null) out[`edu${n}District`] = str(e.city);
         if (e.registrationNumber != null) out[`edu${n}IndexNo`] = str(e.registrationNumber);
         if (e.completionYear != null) out[`edu${n}Year`] = str(e.completionYear);
+        // Completion flag — map explicitly so a resumed "not completed" entry
+        // isn't shown as completed (the UI now defaults unset → completed).
+        if (e.isCompleted != null) out[`edu${n}Completed`] = e.isCompleted === true;
       });
     }
     const job = d.employmentStatusId ?? d.employmentStatus;

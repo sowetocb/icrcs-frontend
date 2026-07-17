@@ -5,12 +5,14 @@ import {
   useGenderOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
+  MigrantStageGate,
 } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { RULES } from "@/lib/validation/rules";
+import { Plus, X } from "lucide-react";
 
 /**
  * A single emergency contact block matching the Stage 5 API:
@@ -61,7 +63,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
         <Field label={t("fields.firstName")} required>
           <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
-        <Field label={t("fields.middleName")} required>
+        <Field label={t("fields.middleName")} optional>
           <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
@@ -99,11 +101,57 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
 }
 
 export default function StepEmergency() {
-  return (
+  const { data, set, setQuiet, isMigrant } = useWizard();
+  const { t } = useI18n();
+
+  // The 2nd contact is optional and hidden until the user adds it (or it already
+  // has data from a resumed draft).
+  const ec2Shown =
+    data.ec2Added === true ||
+    (typeof data.ec2First === "string" && data.ec2First.trim() !== "");
+
+  function removeEc2() {
+    set("ec2Added", false);
+    for (const k of Object.keys(data)) if (k.startsWith("ec2")) setQuiet(k, "");
+  }
+
+  const content = (
     <div className="space-y-8">
       <ContactBlock prefix="ec1" index={1} />
-      <hr className="border-line" />
-      <ContactBlock prefix="ec2" index={2} />
+      {ec2Shown ? (
+        <>
+          <hr className="border-line" />
+          <div className="space-y-3">
+            <ContactBlock prefix="ec2" index={2} />
+            <button
+              type="button"
+              onClick={removeEc2}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-danger transition hover:opacity-80"
+            >
+              <X size={16} strokeWidth={2.5} aria-hidden="true" />
+              {t("fields.remove")}
+            </button>
+          </div>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => set("ec2Added", true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
+        >
+          <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+          {t("fields.addEmergencyContact")}
+        </button>
+      )}
     </div>
   );
+  // Migrant flow: gate the whole stage behind a "do you have this?" question.
+  if (isMigrant) {
+    return (
+      <MigrantStageGate field="mHasEmergency" question={t("registry.gateEmergency")}>
+        {content}
+      </MigrantStageGate>
+    );
+  }
+  return content;
 }

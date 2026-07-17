@@ -12,7 +12,7 @@ const REFEREE_STEP = 7;
 const VISIBLE_STEPS = STEPS.filter((n) => n !== REFEREE_STEP);
 
 function CheckIcon() {
-  return <Check size={12} strokeWidth={3} aria-hidden="true" />;
+  return <Check strokeWidth={3} aria-hidden="true" className="h-3 w-3" />;
 }
 
 export default function Stepper({
@@ -79,13 +79,9 @@ export default function Stepper({
           </button>
         </div>
 
-        {/* Step list — uses flex on lg+ to distribute items evenly across the
-            sidebar height. NOTE: min-h-0 is intentionally omitted so that each
-            item keeps its natural content height (title + description); without
-            this, flex-shrink can compress items below their content size and
-            overflow-hidden clips the description text — the root cause of
-            descriptions disappearing on Windows where fonts render taller. */}
-        <ol className="flex-1 space-y-0 px-2 pb-1 lg:flex lg:flex-col">
+        {/* Step list — STATIC (never scrolls). Steps are compact so all 8 fit in
+            the sidebar height; any leftover space sits below the last step. */}
+        <ol className="flex-1 space-y-0 px-2 pb-1">
           {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
@@ -95,12 +91,12 @@ export default function Stepper({
             // jump back and forth between completed stages.
             const locked = n > maxStep;
             return (
-              <li key={n} className="lg:flex lg:flex-1">
+              <li key={n}>
                 <button
                   type="button"
                   onClick={() => go(n)}
                   disabled={locked}
-                  className={`flex w-full gap-2 rounded-lg px-2 py-1.5 text-left transition lg:h-full ${
+                  className={`flex w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition ${
                     active
                       ? "bg-sidebar-active text-icrcs-navy shadow-sm"
                       : locked
@@ -110,7 +106,7 @@ export default function Stepper({
                 >
                   <span className="flex flex-col items-center self-stretch">
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
                         done
                           ? "bg-success text-white"
                           : active
@@ -126,7 +122,7 @@ export default function Stepper({
                   </span>
                   <span className="pb-1">
                     <span
-                      className={`block text-[17px] font-semibold ${
+                      className={`block text-sm font-semibold ${
                         active
                           ? "text-icrcs-navy"
                           : done
@@ -137,7 +133,7 @@ export default function Stepper({
                       {t(`registry.s${n}Title`)}
                     </span>
                     <span
-                      className={`mt-0.5 block text-[14px] leading-snug ${
+                      className={`mt-0.5 block text-xs leading-snug ${
                         active ? "text-icrcs-navy/70" : "text-white/40"
                       }`}
                     >

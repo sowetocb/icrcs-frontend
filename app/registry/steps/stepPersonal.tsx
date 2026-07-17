@@ -5,6 +5,7 @@ import {
   useGenderOptions,
   useMarriageOptions,
   usePersonDocumentTypeOptions,
+  useTravelDocumentTypeOptions,
 } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
@@ -106,6 +107,7 @@ export default function StepPersonal() {
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
+  const travelDocTypes = useTravelDocumentTypeOptions();
   const currentYear = new Date().getFullYear();
 
   // Identification documents repeater (one or more): idDoc1Type/Number, …
@@ -197,7 +199,7 @@ export default function StepPersonal() {
         <Field label={t("fields.firstName")} required>
           <TextInput name="applicantFirst" placeholder={t("fields.phFirstName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
-        <Field label={t("fields.middleName")} required>
+        <Field label={t("fields.middleName")} optional>
           <TextInput name="applicantMiddle" placeholder={t("fields.phMiddleName")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
@@ -433,7 +435,9 @@ export default function StepPersonal() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.travelDocType")} required>
-                  <TextInput name="travelDocType" placeholder={t("fields.phTravelDocType")} maxLength={RULES.TRAVEL_DOC_TYPE_MAX} />
+                  {/* Foreign National Travel Document lookup — the selected name
+                      is sent as the free-text `documentType`. */}
+                  <Select name="travelDocType" placeholder={t("fields.phTravelDocType")} options={travelDocTypes} />
                 </Field>
                 <Field label={t("fields.travelDocNo")} optional>
                   <TextInput name="travelDocNo" placeholder={t("fields.phDocNumber")} allowChars="A-Za-z0-9" maxLength={RULES.TRAVEL_DOC_NO_MAX} />

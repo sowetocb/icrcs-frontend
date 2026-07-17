@@ -176,7 +176,8 @@ export default function StepDetails({
 
     const next: Partial<Record<keyof RegistrationDetails, boolean>> = {
       firstName: !form.firstName.trim(),
-      middleName: !form.middleName.trim(),
+      // Middle name is optional everywhere (profile + all registration stages).
+      middleName: false,
       lastName: !form.lastName.trim(),
       gender: !form.gender,
       nationality: !form.nationality,

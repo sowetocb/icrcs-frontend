@@ -502,6 +502,10 @@ const en = {
     statusIncompleteBadge: "Incomplete",
     yes: "Yes",
     no: "No",
+    pleaseAnswer: "Please answer this question.",
+    gateEducation: "Do you have education or employment information to provide?",
+    gateEmergency: "Do you have people you can contact in case of emergency?",
+    gateFamily: "Do you have family information (spouse, children, or relatives) to provide?",
     // Mirrors the backend RegistrationStatus enum — these four values only.
     status_PENDING: "Pending",
     status_PENDING_ENROLLMENT: "Pending Enrollment",
@@ -763,6 +767,7 @@ const en = {
     maxReached: "Maximum of {n} reached",
     addSchool: "Add School", // REVIEW
     addDocument: "Add Document",
+    addEmergencyContact: "Add emergency contact",
     documentN: "Document {n}",
     remove: "Remove", // REVIEW
     required: "Required", // REVIEW
@@ -1454,6 +1459,10 @@ const sw: typeof en = {
     statusIncompleteBadge: "Haijakamilika",
     yes: "Ndiyo",
     no: "Hapana",
+    pleaseAnswer: "Tafadhali jibu swali hili.",
+    gateEducation: "Je, una taarifa za elimu au ajira za kutoa?",
+    gateEmergency: "Je, una watu unaoweza kuwasiliana nao wakati wa dharura?",
+    gateFamily: "Je, una taarifa za familia (mwenzi, watoto, au ndugu) za kutoa?",
     // Inalingana na enum ya RegistrationStatus ya backend — thamani hizi nne pekee.
     status_PENDING: "Inasubiri",
     status_PENDING_ENROLLMENT: "Inasubiri kuandikishwa",
@@ -1714,6 +1723,7 @@ const sw: typeof en = {
     maxReached: "Kiwango cha juu cha {n} kimefikiwa",
     addSchool: "Ongeza Shule", // REVIEW
     addDocument: "Ongeza Hati",
+    addEmergencyContact: "Ongeza mtu wa dharura",
     documentN: "Hati {n}",
     remove: "Ondoa", // REVIEW
     required: "Inahitajika", // REVIEW

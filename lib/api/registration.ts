@@ -253,7 +253,7 @@ async function buildStage1Payload(
   // payload contract.
   const base: Record<string, unknown> = {
     firstName: str(data, "applicantFirst"),
-    middleName: str(data, "applicantMiddle"),
+    middleName: str(data, "applicantMiddle") || null, // optional
     lastName: str(data, "applicantLast"),
     gender: await resolveGenderId(str(data, "gender")),
     dateOfBirth: str(data, "dob"),
@@ -636,7 +636,7 @@ async function buildParentPayload(data: Data, prefix: string): Promise<Record<st
   const resTanzania = isTanzania(str(data, `${prefix}ResCountry`));
   return {
     firstName: str(data, `${prefix}First`),
-    middleName: str(data, `${prefix}Middle`),
+    middleName: str(data, `${prefix}Middle`) || null, // optional
     lastName: str(data, `${prefix}Last`),
     dateOfBirth: str(data, `${prefix}Dob`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
@@ -752,7 +752,8 @@ async function buildStage4Payload(data: Data, _isSelf: boolean): Promise<Record<
       if (!str(data, `${p}School`)) continue;
       // "Completed" drives the year: a completed level carries its completion
       // year; a level still in progress sends null.
-      const completed = data[`${p}Completed`] === true;
+      // "Completed" is the default — an unset value counts as completed.
+      const completed = data[`${p}Completed`] !== false;
       educationList.push({
         // No `?? 1` fallback: a missing level is a REQUIRED-field error (now
         // enforced per item in the wizard), not something to silently persist as
@@ -836,7 +837,7 @@ async function buildPersonPayload(data: Data, prefix: string): Promise<Record<st
   const pobTanzania = isTanzania(str(data, `${prefix}PobCountry`));
   return {
     firstName: str(data, `${prefix}First`),
-    middleName: str(data, `${prefix}Middle`),
+    middleName: str(data, `${prefix}Middle`) || null, // optional
     lastName: str(data, `${prefix}Last`),
     gender: await resolveGenderId(str(data, `${prefix}Gender`)),
     dateOfBirth: str(data, `${prefix}Dob`) || null,

@@ -369,11 +369,13 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
             <label htmlFor="gender" className={labelClass}>
               {t("register.gender")}
             </label>
+            {/* Gender is set at profile creation and cannot be changed here. */}
             <select
               id="gender"
               value={form.gender}
-              onChange={(e) => setField("gender", e.target.value)}
-              className={inputClass}
+              disabled
+              aria-disabled="true"
+              className={`${inputClass} cursor-not-allowed opacity-70`}
             >
               <option value="">{t("register.genderSelect")}</option>
               {genders.map((g) => (

@@ -60,7 +60,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
         <Field label={t("fields.firstName")} required>
           <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
-        <Field label={t("fields.middleName")} required>
+        <Field label={t("fields.middleName")} optional>
           <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>

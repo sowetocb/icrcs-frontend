@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
-import { useEmploymentStatusOptions, useOccupationTypeOptions } from "@/components/registry/blocks";
+import { useEmploymentStatusOptions, useOccupationTypeOptions, MigrantStageGate } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { RULES } from "@/lib/validation/rules";
 import { useLookup } from "@/components/lookup/useLookup";
@@ -44,7 +44,8 @@ function SchoolBlock({
   const { t } = useI18n();
   const { data, set } = useWizard();
   const p = `edu${n}`;
-  const completed = data[`${p}Completed`] === true;
+  // "Completed" is the default (an unset value counts as completed).
+  const completed = data[`${p}Completed`] !== false;
   return (
     <div className="space-y-4 rounded-xl border border-line bg-card p-5">
       <div className="flex items-center justify-between">
@@ -121,7 +122,7 @@ function SchoolBlock({
 
 export default function StepEducation() {
   const { t } = useI18n();
-  const { data, set, setQuiet, isFirstPerson } = useWizard();
+  const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
   const occupations = useOccupationTypeOptions();
   const jobStatuses = useEmploymentStatusOptions();
 
@@ -204,7 +205,7 @@ export default function StepEducation() {
     set("eduCount", String(schoolCount - 1));
   }
 
-  return (
+  const content = (
     <div className="space-y-8">
       <div className="space-y-5">
         <div className="rounded-lg border border-line bg-card p-4">
@@ -329,4 +330,13 @@ export default function StepEducation() {
       )}
     </div>
   );
+  // Migrant flow: gate the whole stage behind a "do you have this?" question.
+  if (isMigrant) {
+    return (
+      <MigrantStageGate field="mHasEducation" question={t("registry.gateEducation")}>
+        {content}
+      </MigrantStageGate>
+    );
+  }
+  return content;
 }

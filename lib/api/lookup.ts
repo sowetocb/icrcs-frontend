@@ -419,6 +419,29 @@ export function getDocumentTypes(): Promise<LookupItem[]> {
   })).catch(() => MOCK_DOCUMENT_TYPES);
 }
 
+// Foreign-national travel-document types (migrant Stage 1 travel history). Sent
+// back as the free-text `documentType`, so options carry the display name.
+const MOCK_FN_TRAVEL_DOCS: LookupItem[] = [
+  { id: 1, name: "Passport", code: "PASSPORT" },
+  { id: 2, name: "Travel Document", code: "TRAVEL_DOCUMENT" },
+  { id: 3, name: "Refugee Convention Travel Document", code: "CONVENTION_TRAVEL_DOCUMENT" },
+  { id: 4, name: "Emergency Travel Document", code: "EMERGENCY_TRAVEL_DOCUMENT" },
+  { id: 5, name: "Laissez-Passer", code: "LAISSEZ_PASSER" },
+  { id: 6, name: "Certificate of Identity", code: "CERTIFICATE_OF_IDENTITY" },
+];
+
+/** GET /v1/lookup/foreign-national-travel-documents — travel-document types for
+ * the migrant travel-history block. NOTE: confirm the exact endpoint path; the
+ * mock fallback keeps the dropdown usable if it 404s. */
+export function getForeignNationalTravelDocuments(): Promise<LookupItem[]> {
+  if (BYPASS) return Promise.resolve(MOCK_FN_TRAVEL_DOCS);
+  return getList("/v1/lookup/foreign-national-travel-documents", (o) => ({
+    id: num(o.documentTypeId ?? o.id),
+    name: str(o.documentName ?? o.name ?? o.typeName),
+    code: str(o.code),
+  })).catch(() => MOCK_FN_TRAVEL_DOCS);
+}
+
 /** GET /v1/lookup/attachment-types */
 export function getAttachmentTypes(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_ATTACHMENT_TYPES);

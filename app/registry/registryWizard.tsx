@@ -90,7 +90,9 @@ const STEP_COMPONENTS = [
   StepPreviewDeclaration, // 9
 ];
 
-const nameFields = (p: string) => [`${p}First`, `${p}Middle`, `${p}Last`];
+// Middle name is OPTIONAL for every person at every stage — only First and Last
+// are required. (Middle still validates its FORMAT when provided; see blur().)
+const nameFields = (p: string) => [`${p}First`, `${p}Last`];
 
 // Required field names for each step (declaration is gated by its checkbox).
 const REQUIRED_FIELDS: string[][] = [
@@ -163,6 +165,23 @@ const REQUIRED_FIELDS: string[][] = [
   // Step 9: Preview & Declaration
   [],
 ];
+
+// Migrant flow only: stages 4–6 open with a "do you have this info?" question.
+// Answering NO skips the whole stage (no fields, no validation, empty submit);
+// YES reveals the normal form. Keyed by step → the boolean gate field.
+const MIGRANT_STAGE_GATE: Record<number, string> = {
+  4: "mHasEducation",
+  5: "mHasEmergency",
+  6: "mHasFamily",
+};
+
+// Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
+// (now hidden) stage submits empty even if fields were filled before toggling.
+const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
+  4: /^(edu\d|eduCount|neverAttendedSchool|jobStatus|occupation|otherOccupation|employer)/,
+  5: /^ec\d/,
+  6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
+};
 
 // The account holder's personal details are locked on their own registration.
 const PERSONAL_LOCK = [
@@ -1125,7 +1144,6 @@ export default function RegistryWizard({
       if (guardianOnly) {
         required = [
           "guardianFirst",
-          "guardianMiddle",
           "guardianLast",
           "guardianDob",
           "guardianNatCountry",
@@ -1178,8 +1196,8 @@ export default function RegistryWizard({
     // Step 6: conditional required fields for spouses and children, plus
     // residence cascade for relatives (mandatory), spouses, and children.
     if (step === 6) {
-      const SP_FIELDS = ["First", "Middle", "Last", "Dob", "Gender", "Phone", "NatCountry"];
-      const CH_FIELDS = ["First", "Middle", "Last", "Dob", "Gender", "NatCountry"];
+      const SP_FIELDS = ["First", "Last", "Dob", "Gender", "Phone", "NatCountry"];
+      const CH_FIELDS = ["First", "Last", "Dob", "Gender", "NatCountry"];
       const residencePrefixes: string[] = ["rel1", "rel2"];
       if (data.isMarried === true) {
         const spCount = Math.max(1, Number(data.spouseCount) || 1);
@@ -1565,6 +1583,31 @@ export default function RegistryWizard({
       onComplete(data, applicationId);
       return;
     }
+
+    // Migrant flow: stages 4–6 are gated by a "do you have this info?" question.
+    // Unanswered → require it. "No" → skip the whole stage (clear its fields so
+    // the submit is empty) and bypass all field validation below.
+    const migrantGateField = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
+    if (migrantGateField && data[migrantGateField] !== true && data[migrantGateField] !== false) {
+      setErrors([migrantGateField]);
+      setFieldErrors({ [migrantGateField]: t("registry.pleaseAnswer") });
+      setFormError("");
+      return;
+    }
+    const gateSkip = !!migrantGateField && data[migrantGateField] === false;
+    // When skipping, submit an EMPTY stage: clear the stage's fields for both the
+    // payload and the saved draft (they're hidden anyway). A cleared COPY is used
+    // for this submit because setData below only applies on the next render.
+    const stageData: Record<string, string | boolean> = gateSkip
+      ? Object.fromEntries(
+          Object.entries(data).map(([k, v]) =>
+            MIGRANT_STAGE_CLEAR[step]?.test(k) ? [k, ""] : [k, v],
+          ),
+        )
+      : data;
+    if (gateSkip) setData(stageData);
+
+    if (!gateSkip) {
     const missing = missingFields();
     if (missing.length > 0) {
       setErrors(missing);
@@ -2030,7 +2073,6 @@ export default function RegistryWizard({
             : [`${p}ResCountry`];
         const missingSpouse = [
           `${p}First`,
-          `${p}Middle`,
           `${p}Last`,
           `${p}Gender`,
           `${p}NatCountry`,
@@ -2070,7 +2112,6 @@ export default function RegistryWizard({
             : [`${p}ResCountry`];
         const missingChild = [
           `${p}First`,
-          `${p}Middle`,
           `${p}Last`,
           `${p}Gender`,
           `${p}NatCountry`,
@@ -2137,6 +2178,7 @@ export default function RegistryWizard({
         return;
       }
     }
+    } // end if (!gateSkip) — validation is skipped when a migrant answered "No"
 
     setErrors([]);
     setFieldErrors({});
@@ -2215,13 +2257,14 @@ export default function RegistryWizard({
         } else if (step === 3) {
           await (edit ? editStage3(sid, data) : submitStage3(sid, data));
         } else if (step === 4) {
+          // stageData === data unless a migrant answered "No" (then it's empty).
           await (edit
-            ? editStage4(sid, data, isFirstPerson)
-            : submitStage4(sid, data, isFirstPerson));
+            ? editStage4(sid, stageData, isFirstPerson)
+            : submitStage4(sid, stageData, isFirstPerson));
         } else if (step === 5) {
-          await (edit ? editStage5(sid, data) : submitStage5(sid, data));
+          await (edit ? editStage5(sid, stageData) : submitStage5(sid, stageData));
         } else if (step === 6) {
-          await (edit ? editStage6(sid, data) : submitStage6(sid, data));
+          await (edit ? editStage6(sid, stageData) : submitStage6(sid, stageData));
         } else if (step === 7) {
           // Referees — GET only, nothing to submit
           await submitStage7(sid);
@@ -2327,7 +2370,7 @@ export default function RegistryWizard({
       applicationId: appId || undefined,
       subjectId: sid || undefined,
       submittedStages: [...updatedStages],
-      data: mergedData ?? data,
+      data: mergedData ?? stageData,
     });
     // The stage's data is now persisted — no longer dirty.
     setDirty(false);

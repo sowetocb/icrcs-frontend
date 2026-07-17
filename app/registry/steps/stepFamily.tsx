@@ -8,6 +8,7 @@ import {
   useMarriageOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
+  MigrantStageGate,
 } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
@@ -94,7 +95,7 @@ function PersonFields({
         <Field label={t("fields.firstName")} required>
           <TextInput name={`${prefix}First`} placeholder={t("fields.phFirst")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
-        <Field label={t("fields.middleName")} required>
+        <Field label={t("fields.middleName")} optional>
           <TextInput name={`${prefix}Middle`} placeholder={t("fields.phMiddle")} lettersOnly maxLength={RULES.UI_NAME_MAX} />
         </Field>
         <Field label={t("fields.lastName")} required>
@@ -216,7 +217,7 @@ function PersonBlock({
 }
 
 export default function StepFamily() {
-  const { data, set, setQuiet } = useWizard();
+  const { data, set, setQuiet, isMigrant } = useWizard();
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
 
@@ -286,7 +287,7 @@ export default function StepFamily() {
     set("spouseCount", String(spouseCount - 1));
   }
 
-  return (
+  const content = (
     <div className="space-y-8">
       {/* Children */}
       <div className="space-y-4">
@@ -480,4 +481,13 @@ export default function StepFamily() {
       </div>
     </div>
   );
+  // Migrant flow: gate the whole stage behind a "do you have this?" question.
+  if (isMigrant) {
+    return (
+      <MigrantStageGate field="mHasFamily" question={t("registry.gateFamily")}>
+        {content}
+      </MigrantStageGate>
+    );
+  }
+  return content;
 }

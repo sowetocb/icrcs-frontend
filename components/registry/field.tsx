@@ -359,9 +359,9 @@ export function Select({
           disabled={isLocked}
           className={`${inputCls(invalid)} appearance-none pr-9 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          {/* Selectable (not disabled) so the user can re-pick it to clear the
+              field's value. */}
+          <option value="">{placeholder}</option>
           {options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}

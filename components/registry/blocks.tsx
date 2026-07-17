@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TextInput, useWizard } from "./field";
+import { useEffect, useState, type ReactNode } from "react";
+import { FieldError, TextInput, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { localizeOccupation } from "@/lib/i18n/occupations";
 import { RULES } from "@/lib/validation/rules";
@@ -14,6 +14,7 @@ import {
   getOccupations,
   getEmploymentStatuses,
   getPersonDocumentTypes,
+  getForeignNationalTravelDocuments,
   type LookupItem,
   type PersonGroup,
 } from "@/lib/api/lookup";
@@ -152,6 +153,59 @@ export const useOccupationTypeOptions = (): Opt[] => {
 // and resolved to the lookup id in the Stage 4 payload).
 export const useEmploymentStatusOptions = () =>
   useLocalizedOptions(getEmploymentStatuses, jobOptions, "code");
+
+// Foreign-national travel-document types (migrant travel history). The option
+// VALUE is the display name — sent straight through as the free-text
+// `documentType` in the travel-history payload.
+export const useTravelDocumentTypeOptions = (): Opt[] => {
+  const { options: items } = useLookup(getForeignNationalTravelDocuments, []);
+  return items.map((i) => ({ value: i.name, label: i.name }));
+};
+
+/** Migrant-flow gate for stages 4–6: a Yes/No question shown before the stage
+ * form. The stage's fields (children) render only when the user answers "Yes";
+ * "No" leaves them hidden and the wizard skips the stage on Save. `field` is the
+ * boolean gate key (stored in wizard data), validated in the wizard's Save. */
+export function MigrantStageGate({
+  field,
+  question,
+  children,
+}: {
+  field: string;
+  question: string;
+  children: ReactNode;
+}) {
+  const { data, set, errors } = useWizard();
+  const { t } = useI18n();
+  const val = data[field];
+  const invalid = errors.includes(field);
+  return (
+    <div className="space-y-6">
+      <div>
+        <span className="block text-base font-medium text-ink">{question}</span>
+        <div className="mt-2 flex flex-wrap gap-6" data-field={field}>
+          {[
+            { v: true, label: t("registry.yes") },
+            { v: false, label: t("registry.no") },
+          ].map(({ v, label }) => (
+            <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+              <input
+                type="radio"
+                name={field}
+                checked={val === v}
+                onChange={() => set(field, v)}
+                className={`h-4 w-4 accent-navy-700 ${invalid ? "outline outline-2 outline-danger" : ""}`}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <FieldError name={field} />
+      </div>
+      {val === true && children}
+    </div>
+  );
+}
 
 /** Identification document type options for a person group (applicant / father
  * / mother), fetched from /lookup/person-document-types. The option VALUE is the

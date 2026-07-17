@@ -50,6 +50,12 @@ export default function StepAddress() {
     });
   }, [sameAsPerm, permValues, data, set]);
 
+  // Migrants have no "same as permanent" option — keep it off so the distinct
+  // current-address section is always shown.
+  useEffect(() => {
+    if (isMigrant && sameAsPerm) set("sameAsPerm", false);
+  }, [isMigrant, sameAsPerm, set]);
+
   function handleSameAsPerm(checked: boolean) {
     set("sameAsPerm", checked);
     if (checked) {
@@ -89,15 +95,19 @@ export default function StepAddress() {
         </div>
       </Field>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input-line bg-card p-4">
-        <input
-          type="checkbox"
-          checked={sameAsPerm}
-          onChange={(e) => handleSameAsPerm(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-input-line accent-navy-700"
-        />
-        <span className="text-sm font-medium text-ink">{t("registry.sameAsPerm")}</span>
-      </label>
+      {/* Migrants always give a distinct current (Tanzania) address, so the
+          "same as permanent" shortcut is hidden for them. */}
+      {!isMigrant && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input-line bg-card p-4">
+          <input
+            type="checkbox"
+            checked={sameAsPerm}
+            onChange={(e) => handleSameAsPerm(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-input-line accent-navy-700"
+          />
+          <span className="text-sm font-medium text-ink">{t("registry.sameAsPerm")}</span>
+        </label>
+      )}
 
       {!sameAsPerm && (
         <Field label={t("fields.curAddress")} required>
