@@ -44,26 +44,40 @@ const CATEGORIES: {
  */
 export default function CategoryGate({
   track,
-  excludeCitizen = false,
+  isTanzanian = false,
+  isDependent = false,
   onSelect,
   onExit,
 }: {
-  /** The account holder's own registration track. A citizen/foreign holder may
-   * only register citizens/foreigners; a migrant holder only migrants. `null`
-   * (no prior registration — their own first) offers every category. */
+  /** The account holder's own registration track (citizen vs migrant), used to
+   * scope which categories a DEPENDENT (minor) may be registered under. */
   track?: "citizen" | "migrant" | null;
-  /** Hide the Citizen category — set when the profile's nationality is foreign
-   * (a non-Tanzanian can't register as a Tanzanian citizen). */
-  excludeCitizen?: boolean;
+  /** Whether the profile's nationality is Tanzanian. */
+  isTanzanian?: boolean;
+  /** True when this is a DEPENDENT (minor) registration — i.e. the account
+   * holder has already registered (and had approved) themselves. */
+  isDependent?: boolean;
   onSelect: (category: RegistrationCategory) => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
 
-  const categories = (track
-    ? CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === track)
-    : CATEGORIES
-  ).filter(({ key }) => !(excludeCitizen && key === "CITIZEN"));
+  // Category availability:
+  //  • OWN registration — nationality decides outright: a Tanzanian national can
+  //    register ONLY as a Citizen; a foreign national sees every category EXCEPT
+  //    Citizen (Foreign National + the migrant categories).
+  //  • DEPENDENT (minor) — inherits the account holder's track: a citizen/foreign
+  //    (Tanzanian) holder may register a Tanzanian citizen OR a foreign minor
+  //    (Citizen + Foreign); a migrant holder registers migrant categories.
+  let categories;
+  if (isDependent) {
+    const depTrack = track ?? (isTanzanian ? "citizen" : "migrant");
+    categories = CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === depTrack);
+  } else {
+    categories = CATEGORIES.filter(({ key }) =>
+      isTanzanian ? key === "CITIZEN" : key !== "CITIZEN",
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:px-[10%]">

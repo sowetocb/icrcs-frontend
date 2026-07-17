@@ -369,12 +369,14 @@ export default function RegistryClient() {
             <CitizenSidebar />
             <CategoryGate
               track={ownerTrack}
-              excludeCitizen={(() => {
-                // A foreign-nationality profile can't register as a Tanzanian
-                // citizen. Empty / "Tanzania" nationality counts as Tanzanian.
+              isTanzanian={(() => {
+                // Empty / "Tanzania" nationality counts as Tanzanian (domestic).
                 const nat = (loadProfile()?.nationality ?? "").trim();
-                return nat !== "" && nat !== "Tanzania";
+                return nat === "" || nat === "Tanzania";
               })()}
+              // The owner registering again (after their own is done) = a
+              // dependent (minor) registration.
+              isDependent={selfDone}
               onSelect={chooseCategory}
               onExit={() => setMode("landing")}
             />

@@ -22,7 +22,8 @@ function StatusIcon({ className }: IconProps) {
 }
 
 function ArrowRight() {
-  return <ArrowRightIcon size={16} aria-hidden="true" />;
+  // rem-based so it scales with the root font (screen-size responsive).
+  return <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />;
 }
 
 export default function RegistryLanding({
@@ -88,7 +89,7 @@ export default function RegistryLanding({
   ];
 
   return (
-    <main className="flex flex-1 flex-col justify-center px-4 py-5 lg:px-8">
+    <main className="flex flex-1 flex-col px-4 py-8 lg:px-8 lg:py-10">
       <div className="mx-auto w-full max-w-6xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           {/* Intro */}
@@ -115,7 +116,9 @@ export default function RegistryLanding({
                 className="group flex flex-col rounded-xl border border-line bg-card p-5 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:border-line disabled:hover:shadow-none"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
-                  <Icon />
+                  {/* rem-based size so the glyph scales with the root font (which
+                      scales by screen size), not a fixed 24px. */}
+                  <Icon className="h-6 w-6" />
                 </span>
                 <h2 className="mt-3 text-lg font-bold text-navy-700">{title}</h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{desc}</p>

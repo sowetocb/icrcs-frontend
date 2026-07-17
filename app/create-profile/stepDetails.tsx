@@ -52,7 +52,7 @@ const NATIONALITY_OPTIONS = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
+  "w-full rounded-lg border border-input-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
 const labelClass = "block text-sm font-medium text-navy-700";
 const errorRing = "border-danger focus:border-danger focus:ring-danger/15";
 

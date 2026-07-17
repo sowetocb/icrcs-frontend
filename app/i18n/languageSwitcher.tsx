@@ -53,7 +53,7 @@ export default function LanguageSwitcher({
         aria-label={current.label}
         className={`inline-flex items-center gap-1 px-1 py-1 text-base font-semibold leading-none transition ${triggerCls}`}
       >
-        <Globe size={18} strokeWidth={1.8} aria-hidden="true" />
+        <Globe strokeWidth={1.8} aria-hidden="true" className="h-5 w-5 shrink-0" />
         <span>{current.label}</span>
       </button>
 

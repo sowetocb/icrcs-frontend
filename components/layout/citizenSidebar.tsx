@@ -101,7 +101,7 @@ export default function CitizenSidebar() {
                     : "text-white/70 hover:bg-sidebar-hover hover:text-white"
                   }`}
               >
-                <Icon size={18} className={active ? "text-icrcs-navy" : "text-white/50"} />
+                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-icrcs-navy" : "text-white/50"}`} />
                 {t(`nav.${key}`)}
               </Link>
             );
@@ -115,7 +115,7 @@ export default function CitizenSidebar() {
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition hover:bg-sidebar-hover hover:text-red-400"
           >
-            <LogOut size={18} />
+            <LogOut className="h-5 w-5 shrink-0" />
             {t("nav.logout")}
           </button>
         </div>

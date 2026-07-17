@@ -178,6 +178,18 @@ html {
   font-size: clamp(16px, 0.9vw + 12px, 18px);
 }
 
+/* Larger monitors: scale the whole (rem-based) UI up proportionally so it fills
+   the screen instead of sitting as a small island in a sea of whitespace.
+   Standard laptops/desktops (<1920px) stay at the 18px base — the sweet spot for
+   cross-OS consistency; only genuinely large screens scale, smoothly from 18px up
+   to a 28px cap. The type scale, max-widths, padding and gaps are all rem-based,
+   so they grow together — no per-component changes needed. */
+@media (min-width: 1920px) {
+  html {
+    font-size: clamp(18px, calc(18px + (100vw - 1920px) * 0.0065), 28px);
+  }
+}
+
 html.dark {
   color-scheme: dark;
 }

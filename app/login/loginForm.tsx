@@ -178,7 +178,7 @@ export default function LoginForm() {
             className={`w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
               errors.email
                 ? "border-danger focus:border-danger focus:ring-danger/15"
-                : "border-line focus:border-navy-700 focus:ring-navy-700/15"
+                : "border-input-line focus:border-navy-700 focus:ring-navy-700/15"
             }`}
           />
           {errors.email && (
@@ -215,7 +215,7 @@ export default function LoginForm() {
               className={`w-full rounded-lg border bg-surface px-3.5 py-2.5 pr-11 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
                 errors.password
                   ? "border-danger focus:border-danger focus:ring-danger/15"
-                  : "border-line focus:border-navy-700 focus:ring-navy-700/15"
+                  : "border-input-line focus:border-navy-700 focus:ring-navy-700/15"
               }`}
             />
             <button

@@ -96,13 +96,13 @@ export default function ProfilePhoneInput({
         className={`flex items-stretch overflow-hidden rounded-lg border bg-surface transition focus-within:ring-2 ${
           invalid
             ? "border-danger focus-within:border-danger focus-within:ring-danger/15"
-            : "border-line focus-within:border-navy-500 focus-within:bg-card focus-within:ring-navy-500/15"
+            : "border-input-line focus-within:border-navy-500 focus-within:bg-card focus-within:ring-navy-500/15"
         }`}
       >
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex shrink-0 items-center gap-1.5 border-r border-line bg-card px-3 text-sm hover:bg-line/40"
+          className="flex shrink-0 items-center gap-1.5 border-r border-input-line bg-card px-3 text-sm hover:bg-line/40"
           aria-label={country.name}
         >
           <span className="text-base leading-none">{flagEmoji(country.code)}</span>

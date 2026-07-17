@@ -244,7 +244,7 @@ export default function DashboardTopbar() {
                 <span className="block text-base font-medium text-white">
                   {name || "—"}
                 </span>
-                <span className="block font-mono text-[11px] text-white/50" suppressHydrationWarning>
+                <span className="block font-mono text-xs text-white/50" suppressHydrationWarning>
                   {time}
                 </span>
               </span>
