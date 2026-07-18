@@ -67,7 +67,7 @@ function isDisallowedOrigin(request: NextRequest): boolean {
 
 // Allowed second segment under /api/proxy/v1/*. The first segment must be "v1"
 // or "lookup" (the lookup microservice). Anything outside this set is 404'd.
-const ALLOWED_V1 = new Set(["auth", "profile", "registration", "lookup", "files"]);
+const ALLOWED_V1 = new Set(["auth", "profile", "registration", "lookup", "files", "officer"]);
 
 /** Public proxy paths that do NOT require an authenticated session. */
 function isPublicProxyPath(segs: string[]): boolean {

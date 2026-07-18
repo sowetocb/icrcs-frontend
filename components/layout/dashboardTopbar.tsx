@@ -7,6 +7,8 @@ import ProfileView from "@/app/dashboard/profile/profileView";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { refreshMyProfile, fetchProfilePicture, logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
+import { isOfficer, clearOfficer, loadOfficer, type OfficerUser } from "@/lib/auth/officerSession";
+import { getOfficerProfile } from "@/lib/api/officer";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { LOGO_EMBLEM } from "@/lib/assets";
 import { UserRound, LogOut, Menu } from "lucide-react";
@@ -31,6 +33,15 @@ function initials(p: Profile | null): string {
 function fullName(p: Profile | null): string {
   if (!p) return "";
   return [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+}
+
+/** Initials from a single full-name string (officers store a `fullName`). */
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  const first = parts[0][0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase() || "?";
 }
 
 function formatTime(d: Date): string {
@@ -92,13 +103,15 @@ export default function DashboardTopbar() {
   const router = useRouter();
   const mobileNav = useMobileNav();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [officer, setOfficer] = useState<OfficerUser | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [time, setTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const photoUrl = photoFailed ? null : (photo ?? profilePhotoSrc(profile));
+  // Officers have no citizen photo — always show their initials.
+  const photoUrl = isOfficer() ? null : (photoFailed ? null : (photo ?? profilePhotoSrc(profile)));
 
   // Close the user menu on an outside click or Escape.
   useEffect(() => {
@@ -119,6 +132,17 @@ export default function DashboardTopbar() {
 
   async function handleLogout() {
     setMenuOpen(false);
+    // Officer (government user) session — clear via its own proxy + store.
+    if (isOfficer()) {
+      try {
+        await fetch("/api/officer/logout", { method: "POST", credentials: "include" });
+      } catch {
+        // ignore — clear the local officer session regardless
+      }
+      clearOfficer();
+      router.push("/login");
+      return;
+    }
     const session = loadSession();
     if (session?.refreshToken) {
       try {
@@ -136,6 +160,33 @@ export default function DashboardTopbar() {
   }
 
   useEffect(() => {
+    // Officers have NO citizen profile — never hit the citizen /me endpoint.
+    // Use the cached officer identity and refresh it from /v1/officer/profile.
+    if (isOfficer()) {
+      const cachedOfficer = loadOfficer();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOfficer(cachedOfficer);
+      let alive = true;
+      (async () => {
+        try {
+          const p = await getOfficerProfile();
+          if (!alive) return;
+          setOfficer((o) => ({
+            roles: o?.roles ?? [],
+            permissions: o?.permissions ?? [],
+            ...o,
+            username: p.username || o?.username,
+            stationId: p.stationId || o?.stationId,
+          }));
+        } catch {
+          // keep the cached officer identity
+        }
+      })();
+      return () => {
+        alive = false;
+      };
+    }
+
     const cached = loadProfile();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfile(cached);
@@ -174,7 +225,10 @@ export default function DashboardTopbar() {
     return () => clearInterval(id);
   }, []);
 
-  const name = fullName(profile);
+  // Officer identity takes precedence over the (absent) citizen profile.
+  const officerName = officer ? (officer.fullName || officer.username || "") : "";
+  const name = officer ? officerName : fullName(profile);
+  const avatarInitials = officer ? initialsFromName(officerName) : initials(profile);
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">
@@ -237,7 +291,7 @@ export default function DashboardTopbar() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  initials(profile)
+                  avatarInitials
                 )}
               </span>
               <span className="hidden leading-tight lg:block">

@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import { getMyProfile } from "@/lib/api/auth";
-import { saveSession, takeSignoutNotice } from "@/lib/auth/session";
-import { saveProfile } from "@/lib/auth/profile";
+import { saveSession, clearSession, takeSignoutNotice } from "@/lib/auth/session";
+import { saveOfficer, clearOfficer, officerCanRegisterIcrcs } from "@/lib/auth/officerSession";
+import { saveProfile, clearProfile } from "@/lib/auth/profile";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { RULES } from "@/lib/validation/rules";
@@ -23,6 +24,10 @@ const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 // union of valid local-part and domain characters, plus the @). Anything else
 // is stripped as the user types so they can't enter what would never validate.
 const EMAIL_DISALLOWED = /[^A-Za-z0-9._%+\-@]/g;
+
+// Government officers use `.go.tz` email addresses and authenticate against the
+// SEPARATE User Management API (via /api/officer/login), not the citizen service.
+const OFFICER_EMAIL = /\.go\.tz$/i;
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -72,6 +77,52 @@ export default function LoginForm() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+
+    // ── Officer sign-in (.go.tz) — same form, SEPARATE service ───────────────
+    // Officers authenticate against the User Management API via /api/officer/login
+    // (username = their .go.tz email). On success their profile is cached
+    // (icrcs-officer-*) and they go straight to the registry to register migrants.
+    if (OFFICER_EMAIL.test(email.trim())) {
+      let ores: Response;
+      try {
+        ores = await fetch("/api/officer/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username: email.trim(), password }),
+        });
+      } catch {
+        setSubmitting(false);
+        setLoginError(t("form.connectionError"));
+        return;
+      }
+      const odata = (await ores.json().catch(() => null)) as
+        | { success?: boolean; error?: string; user?: Record<string, unknown> }
+        | null;
+      if (!ores.ok || !odata?.success) {
+        setSubmitting(false);
+        if (ores.status === 401) setLoginError(t("form.loginFailed"));
+        else if (ores.status === 503) setLoginError(t("form.connectionError"));
+        else setLoginError(odata?.error || t("form.connectionError"));
+        return;
+      }
+      // Officers have no citizen session/profile — clear any stale one so the two
+      // identities never mix on this browser.
+      clearSession();
+      clearProfile();
+      saveOfficer({ roles: [], permissions: [], ...(odata.user ?? {}) });
+      // A .go.tz account may authenticate for OTHER modules (RSICN / WEBSITE / …)
+      // without any ICRCS right — deny access to the registry in that case.
+      if (!officerCanRegisterIcrcs()) {
+        clearOfficer();
+        setSubmitting(false);
+        setLoginError(t("form.officerNoIcrcs"));
+        return;
+      }
+      notify(t("toast.loginSuccess"));
+      router.push("/registry");
+      return;
+    }
 
     // Login via the server-side route that sets HttpOnly cookies — the tokens
     // never reach the browser (not in localStorage, not in the response body).

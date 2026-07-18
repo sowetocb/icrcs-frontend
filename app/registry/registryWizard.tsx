@@ -38,8 +38,10 @@ import {
   uploadPassportPhoto,
   getStage9Preview,
   getStageData,
+  setRegistrationOfficerMode,
 } from "@/lib/api/registration";
 import type { RegistrationType } from "@/lib/api/registration";
+import { isOfficer } from "@/lib/auth/officerSession";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm, travelHistoryToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
@@ -393,6 +395,14 @@ export default function RegistryWizard({
       ...(resumable?.submittedStages ?? []),
     ),
   );
+  // Route every stage submit to the officer namespace (/v1/officer/registration/*)
+  // when a government officer is registering, or the citizen namespace otherwise.
+  // Set before any submit can fire (submits require user interaction post-mount).
+  useEffect(() => {
+    setRegistrationOfficerMode(isOfficer());
+    return () => setRegistrationOfficerMode(false);
+  }, []);
+
   // Whenever the current step advances past the known frontier, push it out.
   useEffect(() => {
     setMaxStep((m) => Math.max(m, step));

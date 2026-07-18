@@ -46,6 +46,7 @@ export default function CategoryGate({
   track,
   isTanzanian = false,
   isDependent = false,
+  officerMode = false,
   onSelect,
   onExit,
 }: {
@@ -57,12 +58,16 @@ export default function CategoryGate({
   /** True when this is a DEPENDENT (minor) registration — i.e. the account
    * holder has already registered (and had approved) themselves. */
   isDependent?: boolean;
+  /** A government officer is registering an immigrant — only the migrant
+   * categories are offered (never Citizen / Foreign National). */
+  officerMode?: boolean;
   onSelect: (category: RegistrationCategory) => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
 
   // Category availability:
+  //  • OFFICER — only the migrant categories (registering an immigrant).
   //  • OWN registration — nationality decides outright: a Tanzanian national can
   //    register ONLY as a Citizen; a foreign national sees every category EXCEPT
   //    Citizen (Foreign National + the migrant categories).
@@ -70,7 +75,9 @@ export default function CategoryGate({
   //    (Tanzanian) holder may register a Tanzanian citizen OR a foreign minor
   //    (Citizen + Foreign); a migrant holder registers migrant categories.
   let categories;
-  if (isDependent) {
+  if (officerMode) {
+    categories = CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === "migrant");
+  } else if (isDependent) {
     const depTrack = track ?? (isTanzanian ? "citizen" : "migrant");
     categories = CATEGORIES.filter(({ key }) => CATEGORY_TRACK[key] === depTrack);
   } else {

@@ -16,6 +16,7 @@ import {
 } from "@/components/registry/blocks";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, getMaritalStatuses } from "@/lib/api/lookup";
+import { Check, ArrowLeft, ArrowRight } from "lucide-react";
 
 /** The same document-type labels used in the identification documents repeater
  * on Personal Information and Parents, keyed by the form value. */
@@ -42,15 +43,20 @@ function PreviewSection({
   step,
   onEdit,
   photo,
+  active = true,
   children,
 }: {
   title: string;
   step: number;
   onEdit: (step: number) => void;
   photo?: string;
+  /** Only the currently-selected stage renders (horizontal tabbed review). */
+  active?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
+
+  if (!active) return null;
 
   return (
     <section className="rounded-xl border border-line bg-surface/30">
@@ -219,6 +225,30 @@ export default function StepPreviewDeclaration() {
     onGoToStep?.(step);
   }
 
+  // ── Horizontal tabbed review ────────────────────────────────────────────────
+  // The stages are laid out left→right; the applicant reviews one at a time. The
+  // declaration can't be agreed to (and so the submit stays disabled) until EVERY
+  // stage has been viewed.
+  const STAGES = [1, 2, 3, 4, 5, 6];
+  const [activeStage, setActiveStage] = useState(1);
+  const [reviewed, setReviewed] = useState<Set<number>>(() => new Set([1]));
+  const allReviewed = STAGES.every((n) => reviewed.has(n));
+  const stageIdx = STAGES.indexOf(activeStage);
+
+  function selectStage(n: number) {
+    setActiveStage(n);
+    setReviewed((r) => (r.has(n) ? r : new Set(r).add(n)));
+  }
+  const goPrev = () => stageIdx > 0 && selectStage(STAGES[stageIdx - 1]);
+  const goNext = () => stageIdx < STAGES.length - 1 && selectStage(STAGES[stageIdx + 1]);
+
+  // Force a fresh review every time the preview is opened: clear a stale
+  // agreement so submission always requires re-viewing all sections.
+  useEffect(() => {
+    if (data.agree === true) set("agree", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-5">
       {previewState === "loading" && (
@@ -232,11 +262,49 @@ export default function StepPreviewDeclaration() {
         </p>
       )}
 
+      {/* Horizontal stage tabs (left → right). A tick appears once a stage has
+          been reviewed; every stage must be viewed to enable submission. */}
+      <div className="flex w-full border-b border-line">
+        {STAGES.map((n) => {
+          const isActive = activeStage === n;
+          const done = reviewed.has(n);
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => selectStage(n)}
+              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-1.5 py-3 text-center text-sm font-semibold transition ${
+                isActive
+                  ? "border-navy-700 text-navy-700"
+                  : "border-transparent text-muted hover:text-navy-700"
+              }`}
+            >
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  done
+                    ? "bg-success text-white"
+                    : isActive
+                      ? "bg-navy-700 text-white"
+                      : "border border-input-line text-navy-700"
+                }`}
+              >
+                {done ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : n}
+              </span>
+              {t(`registry.s${n}Title`)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active stage — the panel scrolls internally so the tabs + declaration
+          stay in view (review happens horizontally, not by scrolling the page). */}
+      <div className="max-h-[52vh] overflow-y-auto pr-1">
       {/* ─── Step 1: Personal Information ─── */}
       <PreviewSection
         title={t("registry.s1Title")}
         step={1}
         onEdit={edit}
+        active={activeStage === 1}
         photo={s("passportPhotoData") || s("stage1PhotoData") || undefined}
       >
         <PreviewRow label={t("preview.fullName")} value={applicantName} />
@@ -316,7 +384,7 @@ export default function StepPreviewDeclaration() {
       </PreviewSection>
 
       {/* ─── Step 2: Address ─── */}
-      <PreviewSection title={t("registry.s2Title")} step={2} onEdit={edit}>
+      <PreviewSection title={t("registry.s2Title")} step={2} onEdit={edit} active={activeStage === 2}>
         <PreviewSubTitle>{t("preview.currentAddress")}</PreviewSubTitle>
         {cascadeRows(
           "cur",
@@ -355,7 +423,7 @@ export default function StepPreviewDeclaration() {
       </PreviewSection>
 
       {/* ─── Step 3: Parents Information ─── */}
-      <PreviewSection title={t("registry.s3Title")} step={3} onEdit={edit}>
+      <PreviewSection title={t("registry.s3Title")} step={3} onEdit={edit} active={activeStage === 3}>
         <PreviewSubTitle>{t("preview.father")}</PreviewSubTitle>
         <PreviewRow label={t("preview.fullName")} value={fullName("father")} />
         <PreviewRow label={t("preview.dob")} value={s("fatherDob")} />
@@ -400,7 +468,7 @@ export default function StepPreviewDeclaration() {
       </PreviewSection>
 
       {/* ─── Step 4: Education & Employment ─── */}
-      <PreviewSection title={t("registry.s4Title")} step={4} onEdit={edit}>
+      <PreviewSection title={t("registry.s4Title")} step={4} onEdit={edit} active={activeStage === 4}>
         {data.neverAttendedSchool === true ? (
           <PreviewRow label={t("preview.education")} value={t("registry.neverAttendedSchool")} />
         ) : (
@@ -429,7 +497,7 @@ export default function StepPreviewDeclaration() {
       </PreviewSection>
 
       {/* ─── Step 5: Emergency Contacts ─── */}
-      <PreviewSection title={t("registry.s5Title")} step={5} onEdit={edit}>
+      <PreviewSection title={t("registry.s5Title")} step={5} onEdit={edit} active={activeStage === 5}>
         <PreviewSubTitle>{t("fields.emergencyContactN").replace("{n}", "1")}</PreviewSubTitle>
         <PreviewRow label={t("preview.fullName")} value={fullName("ec1")} />
         <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s("ec1RelType"))} />
@@ -468,7 +536,7 @@ export default function StepPreviewDeclaration() {
       </PreviewSection>
 
       {/* ─── Step 6: Family ─── */}
-      <PreviewSection title={t("registry.s6Title")} step={6} onEdit={edit}>
+      <PreviewSection title={t("registry.s6Title")} step={6} onEdit={edit} active={activeStage === 6}>
         <PreviewRow label={t("preview.hasChildren")} value={hasChildren ? t("registry.yes") : t("registry.no")} />
         <PreviewRow label={t("preview.currentlyMarried")} value={isMarried ? t("registry.yes") : t("registry.no")} />
 
@@ -525,6 +593,34 @@ export default function StepPreviewDeclaration() {
             </div>
           ))}
       </PreviewSection>
+      </div>
+
+      {/* Walk left/right through the stages + review progress. */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={stageIdx === 0}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ArrowLeft size={14} aria-hidden="true" />
+          {t("registry.reviewPrev")}
+        </button>
+        <span className={`text-xs font-semibold ${allReviewed ? "text-success" : "text-muted"}`}>
+          {t("registry.reviewedCount")
+            .replace("{n}", String(reviewed.size))
+            .replace("{total}", String(STAGES.length))}
+        </span>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={stageIdx === STAGES.length - 1}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {t("registry.reviewNext")}
+          <ArrowRight size={14} aria-hidden="true" />
+        </button>
+      </div>
 
       {/* ─── Official Clause ─── */}
       <div className="rounded-xl border border-line bg-surface/60 p-6">
@@ -536,14 +632,25 @@ export default function StepPreviewDeclaration() {
         </p>
       </div>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input-line bg-card p-4">
+      {/* The declaration — and therefore the Submit button — stays disabled until
+          every stage has been reviewed. */}
+      <label
+        className={`flex items-start gap-3 rounded-lg border p-4 ${
+          allReviewed
+            ? "cursor-pointer border-input-line bg-card"
+            : "cursor-not-allowed border-line bg-surface/50 opacity-70"
+        }`}
+      >
         <input
           type="checkbox"
           checked={agreed}
+          disabled={!allReviewed}
           onChange={(e) => set("agree", e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-input-line accent-navy-700"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-input-line accent-navy-700 disabled:cursor-not-allowed"
         />
-        <span className="text-sm font-medium text-ink">{t("registry.agree")}</span>
+        <span className="text-sm font-medium text-ink">
+          {allReviewed ? t("registry.agree") : t("registry.reviewAllToAgree")}
+        </span>
       </label>
     </div>
   );

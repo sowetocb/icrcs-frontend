@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { loadSession, subscribeSession } from "@/lib/auth/session";
+import { isOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
 
 // Remembers, for the lifetime of the tab, that we've already confirmed a live
 // session. Because /dashboard, /registry, /registry/people, … are separate
@@ -23,8 +24,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(sessionVerified);
 
   useEffect(() => {
-    const session = loadSession();
-    if (!session) {
+    // A citizen session OR an officer session (government user) both grant access.
+    const loggedIn = !!loadSession() || isOfficer();
+    if (!loggedIn) {
       // Not logged in — redirect to login
       sessionVerified = false;
       setAuthorized(false);
@@ -39,13 +41,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // shared localStorage flag is cleared there, this fires here, and we drop the
   // user to /login so no tab keeps showing protected content after logout.
   useEffect(() => {
-    return subscribeSession((loggedIn) => {
-      if (!loggedIn) {
+    // Redirect to /login only when BOTH the citizen and officer sessions are
+    // gone (a sign-out in another tab), so an officer isn't dropped by a citizen
+    // flag change (and vice-versa).
+    const check = () => {
+      if (!loadSession() && !isOfficer()) {
         sessionVerified = false;
         setAuthorized(false);
         router.replace("/login");
       }
-    });
+    };
+    const unsubSession = subscribeSession(check);
+    const unsubOfficer = subscribeOfficer(check);
+    return () => {
+      unsubSession();
+      unsubOfficer();
+    };
   }, [router]);
 
   if (!authorized) {

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   if (!BYPASS && refreshToken) {
     try {
-      await fetch(`${USER_MGT}/auth/logout`, {
+      await fetch(`${USER_MGT}/v1/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

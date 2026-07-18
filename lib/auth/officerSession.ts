@@ -12,8 +12,13 @@ export type OfficerUser = {
   userId?: string;
   username?: string;
   fullName?: string;
+  email?: string;
+  pfNo?: string;
+  position?: string;
+  regionName?: string;
   stationId?: number;
   stationName?: string;
+  countryName?: string;
   roles: string[];
   permissions: string[];
 };
@@ -70,6 +75,23 @@ export function officerHasRole(role: string): boolean {
   if (!o) return false;
   const want = role.trim().toUpperCase();
   return o.roles.some((r) => r.trim().toUpperCase() === want);
+}
+
+// User Management authorization codes that grant ICRCS (migrant) registration —
+// the `ICRCS_REGISTRATION` action under the ICRCS module, or the ICRCS_OFFICER
+// role. These mirror the User Management contract (login response: Roles[].RoleCode
+// and PermissionsByModule[].Actions[].ActionCode).
+export const ICRCS_REGISTER_PERMISSION = "ICRCS_REGISTRATION";
+export const ICRCS_OFFICER_ROLE = "ICRCS_OFFICER";
+
+/** Whether the signed-in officer is authorized to register in ICRCS. A `.go.tz`
+ * account may authenticate for other modules (RSICN / WEBSITE / …) without any
+ * ICRCS right, so this must be checked before letting them into the registry. */
+export function officerCanRegisterIcrcs(): boolean {
+  return (
+    officerHasPermission(ICRCS_REGISTER_PERMISSION) ||
+    officerHasRole(ICRCS_OFFICER_ROLE)
+  );
 }
 
 /** Subscribe to cross-tab officer-session changes (log-in/out in another tab).

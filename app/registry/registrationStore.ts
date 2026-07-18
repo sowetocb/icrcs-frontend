@@ -39,8 +39,12 @@ export function loadRegistrationFor(
 ): RegistrationState | null {
   const state = loadRegistration();
   if (!state) return null;
+  // An unidentified caller (empty ownerId — e.g. an officer, who has no citizen
+  // profile) must never receive an owned draft: fail closed so it can't pick up
+  // a different user's cached registration.
+  if (!ownerId) return null;
   // A draft stamped with a different owner belongs to another person — ignore it.
-  if (ownerId && state.ownerId && state.ownerId !== ownerId) return null;
+  if (state.ownerId && state.ownerId !== ownerId) return null;
   // When a specific registration is expected, the draft must match it.
   if (subjectId && state.subjectId && state.subjectId !== subjectId) return null;
   return state;

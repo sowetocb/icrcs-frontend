@@ -1,0 +1,3866 @@
+{
+  "info": {
+    "_postman_id": "5e5bc9ef-9262-401e-bd4e-d6c9d23ae2ec",
+    "name": "ICRCS API — Full Collection",
+    "description": "Integrated Civil Registration and Citizenship System\nBase URL: http://localhost:8080/api (context-path /api)\n\n== Citizen flow ==\n1. Register → preAuthToken\n2. Verify-OTP ({{bearer_token_0gog}}) → token\n3. Stage1 domestic/foreign/migrant → subjectId\n   Migrant: also submit travel-history\n   Naturalization: submit naturalization block\n4. Stage2 → Stage3 → Stage4 → Stage5 → Stage6 → Stage7(GET) → Upload files → Stage8 → Stage9\n\n== Officer flow ==\n1. Login (*.go.tz email) → officerToken\n2. POST /v1/officer/registration/stage1/migrant → subjectId\n3. travel-history → stage2 → stage3 → stage4 → stage5 → stage6 → stage7 → files → stage8 → stage9\n\nAuto-set variables: token, preAuthToken, officerToken, subjectId, profileId",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "40697580"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "if(j.data){pm.collectionVariables.set('preAuthToken',j.data.preAuthToken||'');pm.collectionVariables.set('profileId',j.data.profileId||'');}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"middleName\": \"Paul\",\n  \"lastName\": \"Doe\",\n  \"sexId\": 1,\n  \"nationalityCode\": \"TZA\",\n  \"phoneNumber\": \"+255712345678\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"P@ssw0rd1!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "PUBLIC. Returns preAuthToken (use as Bearer for Verify-OTP) and profileId."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "if(j.data){pm.collectionVariables.set('token',j.data.accessToken||'');pm.collectionVariables.set('profileId',j.data.profileId||'');}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{preAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otpCode\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "verify-otp"
+              ]
+            },
+            "description": "Requires Bearer {{preAuthToken}}. Returns accessToken + refreshToken."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{preAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/resend-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "resend-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Citizen)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "if(j.data){pm.collectionVariables.set('token',j.data.accessToken||'');pm.collectionVariables.set('profileId',j.data.profileId||'');}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"john.doe@example.com\",\n  \"password\": \"P@ssw0rd1!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "PUBLIC. identifier = email or phone number."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Officer — .go.tz email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();",
+                  "var tok=(j.data&&j.data.accessToken)||j.token||j.accessToken||'';",
+                  "if(tok)pm.collectionVariables.set('officerToken',tok);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"officer@immigration.go.tz\",\n  \"password\": \"OfficerP@ss1!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "PUBLIC. Email must end in .go.tz — proxied to User Management API. Token saved as {{officerToken}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();if(j.data)pm.collectionVariables.set('token',j.data.accessToken||'');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"<paste-refresh-token-here>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"<paste-refresh-token-here>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profileId\": \"{{profileId}}\",\n  \"otpCode\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/verify-reset-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "verify-reset-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profileId\": \"{{profileId}}\",\n  \"newPassword\": \"N3wP@ssw0rd!\",\n  \"confirmPassword\": \"N3wP@ssw0rd!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unlock Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<one-time-token-from-email-link>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/unlock-account",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "unlock-account"
+              ]
+            },
+            "description": "Unlocks account after 5 failed login attempts."
+          },
+          "response": []
+        },
+        {
+          "name": "Claim Registration (child requests parent's registration)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": \"{{subjectId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Claim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimId\": \"<claim-uuid>\",\n  \"reason\": \"Approved — this is my child\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Claim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimId\": \"<claim-uuid>\",\n  \"reason\": \"This is not my child\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration",
+                "reject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Escalate Claim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimId\": \"<claim-uuid>\",\n  \"reason\": \"Parent is unreachable\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration/escalate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration",
+                "escalate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Pending Claims (parent view)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration",
+                "pending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Claims (child view)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/claim-registration/my-claims",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "claim-registration",
+                "my-claims"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/profile/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "profile",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"middleName\": \"Paul\",\n  \"lastName\": \"Doe\",\n  \"sexId\": 1,\n  \"nationalityCode\": \"TZA\",\n  \"phoneNumber\": \"+255712345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/profile/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "profile",
+                "update"
+              ]
+            },
+            "description": "Rate-limited: 30 requests/5 min."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Profile Picture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Image file (JPEG or PNG). Max 300 KB.",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/profile/picture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "profile",
+                "picture"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Profile Picture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/profile/picture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "profile",
+                "picture"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Lookup (Reference Data — PUBLIC, cached)",
+      "item": [
+        {
+          "name": "Countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/countries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "countries"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Country by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/countries/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "countries",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Regions by Country",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/countries/1/regions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "countries",
+                "1",
+                "regions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Region by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/regions/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "regions",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Districts by Region",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/regions/1/districts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "regions",
+                "1",
+                "districts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "District by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/districts/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "districts",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wards by District",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/districts/1/wards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "districts",
+                "1",
+                "wards"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ward by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/wards/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "wards",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ward Hierarchy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/wards/1/hierarchy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "wards",
+                "1",
+                "hierarchy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wards by District Council",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/wards/by-district-council/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "wards",
+                "by-district-council",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Streets by Ward",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/streets/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "streets",
+                "1"
+              ]
+            },
+            "description": "External Lookup Service. Returns streets/mtaa for a given ward ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Street Info (full hierarchy by street ID)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/street-info/500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "street-info",
+                "500"
+              ]
+            },
+            "description": "Returns street→ward→district→region→country for a given streetId."
+          },
+          "response": []
+        },
+        {
+          "name": "Citizenship Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/citizenship-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "citizenship-types"
+              ]
+            },
+            "description": "Use citizenshipTypeId in Stage 1 requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Marital Statuses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/marital-statuses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "marital-statuses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Education Levels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/education-levels",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "education-levels"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Employment Statuses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/employment-statuses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "employment-statuses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Occupation Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/occupation-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "occupation-types"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Relationship Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/relationship-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "relationship-types"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Document Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/document-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "document-types"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Person Document Types (grouped)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/person-document-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "person-document-types"
+              ]
+            },
+            "description": "Returns document types grouped: applicant / father / mother."
+          },
+          "response": []
+        },
+        {
+          "name": "Attachment Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lookup/attachment-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lookup",
+                "attachment-types"
+              ]
+            },
+            "description": "Use attachmentTypeId in Stage 8. Mandatory: BIRTH_CERTIFICATE, FATHER_BIRTH_CERT, MOTHER_BIRTH_CERT, WEO_VEO_LETTER."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Citizen Registration",
+      "item": [
+        {
+          "name": "Stage 1 — Personal Details",
+          "item": [
+            {
+              "name": "Stage 1 — Domestic (born in Tanzania)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var j=pm.response.json();if(j.data&&j.data.subjectId)pm.collectionVariables.set('subjectId',j.data.subjectId);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"registrationType\": null,\n  \"firstName\": \"Juma\",\n  \"middleName\": \"Ali\",\n  \"lastName\": \"Mbwana\",\n  \"otherNames\": null,\n  \"sexId\": 1,\n  \"dateOfBirth\": \"1990-05-15\",\n  \"maritalStatusId\": 1,\n  \"nationalityCode\": \"TZA\",\n  \"citizenshipTypeId\": 1,\n  \"placeOfBirthStreetId\": 500,\n  \"tribe\": \"Chagga\",\n  \"eyeColor\": \"Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 172,\n  \"specialMark\": null,\n  \"languageSpoken\": \"Swahili\",\n  \"documents\": [\n    { \"documentTypeId\": 1, \"documentNumber\": \"BIRTH-TZ-001\" }\n  ],\n  \"phoneNumber\": \"+255712345678\",\n  \"email\": \"juma@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/stage1/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "stage1",
+                    "domestic"
+                  ]
+                },
+                "description": "placeOfBirthStreetId from /v1/lookup/streets/{wardId}. Returns subjectId."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 1 — Foreign (born outside Tanzania)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var j=pm.response.json();if(j.data&&j.data.subjectId)pm.collectionVariables.set('subjectId',j.data.subjectId);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"registrationType\": null,\n  \"firstName\": \"Amina\",\n  \"middleName\": \"Hassan\",\n  \"lastName\": \"Omar\",\n  \"otherNames\": null,\n  \"sexId\": 2,\n  \"dateOfBirth\": \"1988-11-20\",\n  \"maritalStatusId\": 2,\n  \"nationalityCode\": \"TZA\",\n  \"citizenshipTypeId\": 2,\n  \"countryOfBirthCode\": \"KEN\",\n  \"cityOfBirth\": \"Nairobi\",\n  \"tribe\": null,\n  \"eyeColor\": \"Dark Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 165,\n  \"specialMark\": null,\n  \"languageSpoken\": \"Swahili\",\n  \"documents\": [\n    { \"documentTypeId\": 2, \"documentNumber\": \"KE-BIRTH-002\" }\n  ],\n  \"phoneNumber\": \"+255789000001\",\n  \"email\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/stage1/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "stage1",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 1 — Migrant (refugee / asylum seeker / illegal migrant)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var j=pm.response.json();if(j.data&&j.data.subjectId)pm.collectionVariables.set('subjectId',j.data.subjectId);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"registrationType\": \"REFUGEE\",\n  \"firstName\": \"Ahmed\",\n  \"middleName\": \"Mohamed\",\n  \"lastName\": \"Farah\",\n  \"otherNames\": null,\n  \"sexId\": 1,\n  \"dateOfBirth\": \"1985-03-12\",\n  \"maritalStatusId\": 1,\n  \"nationalityCode\": \"SOM\",\n  \"citizenshipTypeId\": null,\n  \"countryOfBirthCode\": \"SOM\",\n  \"cityOfBirth\": \"Mogadishu\",\n  \"tribe\": null,\n  \"eyeColor\": \"Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 175,\n  \"specialMark\": \"Scar on left hand\",\n  \"languageSpoken\": \"Somali\",\n  \"documents\": [],\n  \"phoneNumber\": null,\n  \"email\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/stage1/migrant",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "stage1",
+                    "migrant"
+                  ]
+                },
+                "description": "registrationType: REFUGEE | MIGRANT | ASYLUM_SEEKER | ILLEGAL_MIGRANT | LEGAL_MIGRANT\nAfter this: submit Travel History before Stage 2."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 1 — Domestic",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Juma\",\n  \"middleName\": \"Ali\",\n  \"lastName\": \"Mbwana\",\n  \"sexId\": 1,\n  \"dateOfBirth\": \"1990-05-15\",\n  \"maritalStatusId\": 1,\n  \"nationalityCode\": \"TZA\",\n  \"citizenshipTypeId\": 1,\n  \"placeOfBirthStreetId\": 500,\n  \"tribe\": \"Chagga\",\n  \"eyeColor\": \"Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 172,\n  \"languageSpoken\": \"Swahili\",\n  \"documents\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage1/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage1",
+                    "domestic"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 1 — Foreign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Amina\",\n  \"sexId\": 2,\n  \"dateOfBirth\": \"1988-11-20\",\n  \"maritalStatusId\": 2,\n  \"nationalityCode\": \"TZA\",\n  \"citizenshipTypeId\": 2,\n  \"countryOfBirthCode\": \"KEN\",\n  \"cityOfBirth\": \"Nairobi\",\n  \"eyeColor\": \"Dark Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 165,\n  \"languageSpoken\": \"Swahili\",\n  \"documents\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage1/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage1",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 1 — Migrant",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"registrationType\": \"REFUGEE\",\n  \"firstName\": \"Ahmed\",\n  \"middleName\": \"Mohamed\",\n  \"lastName\": \"Farah\",\n  \"sexId\": 1,\n  \"dateOfBirth\": \"1985-03-12\",\n  \"maritalStatusId\": 1,\n  \"nationalityCode\": \"SOM\",\n  \"countryOfBirthCode\": \"SOM\",\n  \"cityOfBirth\": \"Mogadishu\",\n  \"eyeColor\": \"Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 175,\n  \"languageSpoken\": \"Somali\",\n  \"documents\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage1/migrant",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage1",
+                    "migrant"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 1",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage1"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Naturalization (after Stage 1, before Stage 2)",
+          "item": [
+            {
+              "name": "Submit Naturalization",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"certificateNumber\": \"CERT-TZ-001-2010\",\n  \"issuePlace\": \"Immigration Headquarters Dar es Salaam\",\n  \"issueDate\": \"2010-06-15\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/naturalization",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "naturalization"
+                  ]
+                },
+                "description": "Only required when citizenshipTypeId in Stage 1 = NATURALIZATION type."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Travel History (migrant only — after Stage 1 migrant, before Stage 2)",
+          "item": [
+            {
+              "name": "Submit Travel History",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasDocument\": true,\n  \"firstDateOfEntry\": \"2020-03-01\",\n  \"pointOfEntry\": \"Namanga Border\",\n  \"transitCountry\": \"KEN\",\n  \"documentType\": \"PASSPORT\",\n  \"documentNo\": \"A1234567\",\n  \"issuedDate\": \"2018-01-01\",\n  \"expiryDate\": \"2028-01-01\",\n  \"issueCountryCode\": \"SOM\",\n  \"issueAuthority\": \"Somali Immigration Authority\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/travel-history",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "travel-history"
+                  ]
+                },
+                "description": "hasDocument=false → undocumented migrant, all document fields become optional."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Travel History",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasDocument\": false,\n  \"firstDateOfEntry\": \"2020-03-01\",\n  \"pointOfEntry\": \"Namanga Border\",\n  \"transitCountry\": \"KEN\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/travel-history",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "travel-history"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Travel History",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/travel-history",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "travel-history"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 2 — Address",
+          "item": [
+            {
+              "name": "Stage 2 — Domestic Address",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentStreetId\": 500,\n  \"currentCountryCode\": \"TZA\",\n  \"currentCity\": \"Dar es Salaam\",\n  \"currentHouseNo\": \"14B\",\n  \"currentPostalAddress\": \"P.O. Box 1234\",\n  \"permanentSameAsCurrent\": false,\n  \"permanentStreetId\": 600,\n  \"permanentCountryCode\": \"TZA\",\n  \"permanentCity\": \"Arusha\",\n  \"permanentHouseNo\": \"5A\",\n  \"permanentPostalAddress\": null,\n  \"campName\": null,\n  \"properties\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage2/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage2",
+                    "domestic"
+                  ]
+                },
+                "description": "permanentSameAsCurrent=true copies current address to permanent. campName for refugee camp residents."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 2 — Foreign Address",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentStreetId\": null,\n  \"currentCountryCode\": \"KEN\",\n  \"currentCity\": \"Nairobi\",\n  \"currentHouseNo\": \"Apt 3\",\n  \"permanentSameAsCurrent\": true,\n  \"campName\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage2/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage2",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 2 — Domestic",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentStreetId\": 500,\n  \"currentCountryCode\": \"TZA\",\n  \"currentCity\": \"Dar es Salaam\",\n  \"currentHouseNo\": \"14B\",\n  \"permanentSameAsCurrent\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage2/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage2",
+                    "domestic"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 2 — Foreign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentCountryCode\": \"KEN\",\n  \"currentCity\": \"Nairobi\",\n  \"permanentSameAsCurrent\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage2/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage2",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 2",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage2",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage2"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 3 — Parents",
+          "item": [
+            {
+              "name": "Stage 3 — Domestic Parents",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"father\": {\n    \"firstName\": \"James\",\n    \"middleName\": \"Robert\",\n    \"lastName\": \"Mbwana\",\n    \"gender\": 1,\n    \"phoneNumber\": \"+255711000001\",\n    \"nationalityCode\": \"TZA\",\n    \"dateOfBirth\": \"1960-03-10\",\n    \"residenceCountryCode\": \"TZA\",\n    \"residenceCity\": \"Dodoma\",\n    \"residenceStreetId\": 200,\n    \"documentFileUrl\": null,\n    \"documents\": [\n      { \"documentTypeId\": 2, \"documentNumber\": \"FATHER-NID-001\" }\n    ]\n  },\n  \"mother\": {\n    \"firstName\": \"Grace\",\n    \"middleName\": \"Mary\",\n    \"lastName\": \"Mbwana\",\n    \"gender\": 2,\n    \"phoneNumber\": \"+255711000002\",\n    \"nationalityCode\": \"TZA\",\n    \"dateOfBirth\": \"1965-07-22\",\n    \"residenceCountryCode\": \"TZA\",\n    \"residenceCity\": \"Dodoma\",\n    \"residenceStreetId\": 200,\n    \"documentFileUrl\": null,\n    \"documents\": []\n  },\n  \"guardian\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage3/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage3",
+                    "domestic"
+                  ]
+                },
+                "description": "father, mother, guardian — all optional but at least one should be provided."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 3 — Foreign Parents",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"father\": {\n    \"firstName\": \"Mohamed\",\n    \"middleName\": \"Hassan\",\n    \"lastName\": \"Farah\",\n    \"gender\": 1,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"SOM\",\n    \"residenceCity\": \"Mogadishu\",\n    \"documents\": []\n  },\n  \"mother\": {\n    \"firstName\": \"Halima\",\n    \"middleName\": \"Ahmed\",\n    \"lastName\": \"Farah\",\n    \"gender\": 2,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"SOM\",\n    \"residenceCity\": \"Mogadishu\",\n    \"documents\": []\n  },\n  \"guardian\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage3/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage3",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 3 — Domestic",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"father\": {\n    \"firstName\": \"James\",\n    \"middleName\": \"Robert\",\n    \"lastName\": \"Mbwana\",\n    \"gender\": 1,\n    \"nationalityCode\": \"TZA\",\n    \"residenceCountryCode\": \"TZA\",\n    \"residenceCity\": \"Dodoma\",\n    \"residenceStreetId\": 200,\n    \"documents\": []\n  },\n  \"mother\": null,\n  \"guardian\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage3/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage3",
+                    "domestic"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 3 — Foreign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"father\": {\n    \"firstName\": \"Mohamed\",\n    \"middleName\": \"Hassan\",\n    \"lastName\": \"Farah\",\n    \"gender\": 1,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"SOM\",\n    \"residenceCity\": \"Mogadishu\",\n    \"documents\": []\n  },\n  \"mother\": null,\n  \"guardian\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage3/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage3",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 3",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage3",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage3"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 4 — Education & Employment",
+          "item": [
+            {
+              "name": "Stage 4 — Submit",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"educationList\": [\n    {\n      \"educationLevelId\": 3,\n      \"countryCode\": \"TZA\",\n      \"city\": \"Dar es Salaam\",\n      \"schoolName\": \"University of Dar es Salaam\",\n      \"registrationNumber\": \"UDSM-2008-001\",\n      \"isCompleted\": true,\n      \"completionYear\": 2012\n    },\n    {\n      \"educationLevelId\": 2,\n      \"countryCode\": \"TZA\",\n      \"city\": \"Arusha\",\n      \"schoolName\": \"Arusha Secondary School\",\n      \"registrationNumber\": null,\n      \"isCompleted\": true,\n      \"completionYear\": 2008\n    }\n  ],\n  \"employmentStatusId\": 2,\n  \"organizationName\": \"Ministry of Health Tanzania\",\n  \"occupationTypeId\": 5,\n  \"otherOccupation\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage4",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage4"
+                  ]
+                },
+                "description": "educationLevelId from /lookup/education-levels. employmentStatusId from /lookup/employment-statuses. occupationTypeId from /lookup/occupation-types."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 4",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"educationList\": [\n    {\n      \"educationLevelId\": 1,\n      \"countryCode\": \"TZA\",\n      \"city\": \"Mwanza\",\n      \"schoolName\": \"Mwanza Primary School\",\n      \"isCompleted\": true,\n      \"completionYear\": 2002\n    }\n  ],\n  \"employmentStatusId\": 1,\n  \"organizationName\": null,\n  \"occupationTypeId\": null,\n  \"otherOccupation\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage4",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage4"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 4",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage4",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage4"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 5 — Emergency Contacts",
+          "item": [
+            {
+              "name": "Stage 5 — Domestic Contacts",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"occupationTypeId\": 2,\n      \"person\": {\n        \"firstName\": \"Mary\",\n        \"middleName\": \"Jane\",\n        \"lastName\": \"Doe\",\n        \"gender\": 2,\n        \"phoneNumber\": \"+255712000001\",\n        \"nationalityCode\": \"TZA\",\n        \"dateOfBirth\": \"1965-07-20\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Mwanza\",\n        \"residenceStreetId\": 300,\n        \"documentFileUrl\": null,\n        \"documents\": []\n      }\n    },\n    {\n      \"relationshipTypeId\": 4,\n      \"occupationTypeId\": null,\n      \"person\": {\n        \"firstName\": \"Peter\",\n        \"middleName\": \"John\",\n        \"lastName\": \"Mwangi\",\n        \"gender\": 1,\n        \"phoneNumber\": \"+255712000003\",\n        \"nationalityCode\": \"TZA\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Moshi\",\n        \"residenceStreetId\": 350,\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage5/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage5",
+                    "domestic"
+                  ]
+                },
+                "description": "At least 1 contact required. relationshipTypeId from /v1/lookup/relationship-types."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 5 — Foreign Contacts",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"occupationTypeId\": null,\n      \"person\": {\n        \"firstName\": \"Fatuma\",\n        \"middleName\": \"Ali\",\n        \"lastName\": \"Hassan\",\n        \"gender\": 2,\n        \"phoneNumber\": \"+252611000001\",\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"SOM\",\n        \"residenceCity\": \"Mogadishu\",\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage5/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage5",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 5 — Domestic",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"occupationTypeId\": 2,\n      \"person\": {\n        \"firstName\": \"Mary\",\n        \"middleName\": \"Jane\",\n        \"lastName\": \"Doe\",\n        \"gender\": 2,\n        \"phoneNumber\": \"+255712000001\",\n        \"nationalityCode\": \"TZA\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Mwanza\",\n        \"residenceStreetId\": 300,\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage5/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage5",
+                    "domestic"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 5 — Foreign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"person\": {\n        \"firstName\": \"Fatuma\",\n        \"middleName\": \"Ali\",\n        \"lastName\": \"Hassan\",\n        \"gender\": 2,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"SOM\",\n        \"residenceCity\": \"Mogadishu\",\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage5/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage5",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 5",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage5"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 6 — Family (Spouse, Children, Relatives)",
+          "item": [
+            {
+              "name": "Stage 6 — Domestic Family",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasChildren\": true,\n  \"children\": [\n    {\n      \"firstName\": \"Alice\",\n      \"middleName\": \"Grace\",\n      \"lastName\": \"Mbwana\",\n      \"sexId\": 2,\n      \"dateOfBirth\": \"2015-04-10\",\n      \"nationalityCode\": \"TZA\",\n      \"residenceStreetId\": 500,\n      \"residenceCountryCode\": \"TZA\"\n    }\n  ],\n  \"isMarried\": true,\n  \"spouses\": [\n    {\n      \"person\": {\n        \"firstName\": \"Sarah\",\n        \"middleName\": \"Anne\",\n        \"lastName\": \"Smith\",\n        \"gender\": 2,\n        \"phoneNumber\": \"+255712000002\",\n        \"nationalityCode\": \"TZA\",\n        \"dateOfBirth\": \"1992-08-05\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Dar es Salaam\",\n        \"residenceStreetId\": 400,\n        \"documents\": []\n      },\n      \"occupationTypeId\": 3,\n      \"spouseSubjectId\": null,\n      \"spouseNationalId\": null\n    }\n  ],\n  \"relatives\": [\n    {\n      \"relationshipTypeId\": 2,\n      \"occupationTypeId\": 1,\n      \"person\": {\n        \"firstName\": \"Tom\",\n        \"middleName\": \"James\",\n        \"lastName\": \"Mbwana\",\n        \"gender\": 1,\n        \"phoneNumber\": \"+255712000010\",\n        \"nationalityCode\": \"TZA\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Mbeya\",\n        \"residenceStreetId\": 450,\n        \"documents\": []\n      }\n    },\n    {\n      \"relationshipTypeId\": 4,\n      \"occupationTypeId\": null,\n      \"person\": {\n        \"firstName\": \"Rose\",\n        \"middleName\": \"Lucy\",\n        \"lastName\": \"Mbwana\",\n        \"gender\": 2,\n        \"phoneNumber\": \"+255712000011\",\n        \"nationalityCode\": \"TZA\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Iringa\",\n        \"residenceStreetId\": 460,\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage6/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage6",
+                    "domestic"
+                  ]
+                },
+                "description": "IMPORTANT: relatives array requires at least 2 entries. hasChildren=false → children=[]. isMarried=false → spouses=[]."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 6 — Foreign Family",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasChildren\": false,\n  \"children\": [],\n  \"isMarried\": false,\n  \"spouses\": [],\n  \"relatives\": [\n    {\n      \"relationshipTypeId\": 2,\n      \"person\": {\n        \"firstName\": \"Abdi\",\n        \"middleName\": \"Omar\",\n        \"lastName\": \"Farah\",\n        \"gender\": 1,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"SOM\",\n        \"residenceCity\": \"Mogadishu\",\n        \"documents\": []\n      }\n    },\n    {\n      \"relationshipTypeId\": 5,\n      \"person\": {\n        \"firstName\": \"Khadija\",\n        \"middleName\": \"Ali\",\n        \"lastName\": \"Hassan\",\n        \"gender\": 2,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"SOM\",\n        \"residenceCity\": \"Kismayo\",\n        \"documents\": []\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage6/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage6",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 6 — Domestic",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasChildren\": false,\n  \"children\": [],\n  \"isMarried\": false,\n  \"spouses\": [],\n  \"relatives\": [\n    {\n      \"relationshipTypeId\": 2,\n      \"person\": { \"firstName\": \"Tom\", \"middleName\": \"James\", \"lastName\": \"Mbwana\", \"gender\": 1, \"nationalityCode\": \"TZA\", \"residenceCountryCode\": \"TZA\", \"residenceCity\": \"Mbeya\", \"residenceStreetId\": 450, \"documents\": [] }\n    },\n    {\n      \"relationshipTypeId\": 4,\n      \"person\": { \"firstName\": \"Rose\", \"middleName\": \"Lucy\", \"lastName\": \"Mbwana\", \"gender\": 2, \"nationalityCode\": \"TZA\", \"residenceCountryCode\": \"TZA\", \"residenceCity\": \"Iringa\", \"residenceStreetId\": 460, \"documents\": [] }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage6/domestic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage6",
+                    "domestic"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 6 — Foreign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hasChildren\": false,\n  \"children\": [],\n  \"isMarried\": false,\n  \"spouses\": [],\n  \"relatives\": [\n    {\n      \"relationshipTypeId\": 2,\n      \"person\": { \"firstName\": \"Abdi\", \"middleName\": \"Omar\", \"lastName\": \"Farah\", \"gender\": 1, \"nationalityCode\": \"SOM\", \"residenceCountryCode\": \"SOM\", \"residenceCity\": \"Mogadishu\", \"documents\": [] }\n    },\n    {\n      \"relationshipTypeId\": 5,\n      \"person\": { \"firstName\": \"Khadija\", \"middleName\": \"Ali\", \"lastName\": \"Hassan\", \"gender\": 2, \"nationalityCode\": \"SOM\", \"residenceCountryCode\": \"SOM\", \"residenceCity\": \"Kismayo\", \"documents\": [] }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage6/foreign",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage6",
+                    "foreign"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 6",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage6",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage6"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 7 — Referees (read-only print form)",
+          "item": [
+            {
+              "name": "Stage 7 — Get Referees Form",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage7",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage7"
+                  ]
+                },
+                "description": "Read-only. No data saved. Form is printed and signed offline."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Files — Upload Attachments (before Stage 8)",
+          "item": [
+            {
+              "name": "Upload File",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "description": "Max 300 KB. Allowed: jpg, jpeg, png, pdf.",
+                      "value": null
+                    },
+                    {
+                      "key": "attachmentTypeId",
+                      "value": "1",
+                      "type": "text",
+                      "description": "Integer from /v1/lookup/attachment-types"
+                    },
+                    {
+                      "key": "subjectId",
+                      "value": "{{subjectId}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "documentId",
+                      "value": "",
+                      "type": "text",
+                      "description": "Optional UUID"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/files/upload",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "files",
+                    "upload"
+                  ]
+                },
+                "description": "Returns { fileUrl, fileSizeBytes, fileHash, mimeType, originalFilename }. Use fileUrl in Stage 8."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 8 — Attachments",
+          "item": [
+            {
+              "name": "Stage 8 — Submit",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"attachments\": [\n    {\n      \"attachmentTypeId\": 1,\n      \"fileUrl\": \"ICRCS000001ABCDEF/1/uuid-here.pdf\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSizeBytes\": 204800,\n      \"fileHash\": \"sha256:abc123def456\"\n    },\n    {\n      \"attachmentTypeId\": 2,\n      \"fileUrl\": \"ICRCS000001ABCDEF/2/uuid-here.jpg\",\n      \"mimeType\": \"image/jpeg\",\n      \"fileSizeBytes\": 102400,\n      \"fileHash\": \"sha256:xyz789\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage8",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage8"
+                  ]
+                },
+                "description": "Upload files first via POST /v1/files/upload then reference their fileUrl here. Mandatory: BIRTH_CERTIFICATE, FATHER_BIRTH_CERT, MOTHER_BIRTH_CERT, WEO_VEO_LETTER."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Stage 8",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"attachments\": [\n    {\n      \"attachmentTypeId\": 1,\n      \"fileUrl\": \"ICRCS000001ABCDEF/1/new-uuid.pdf\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSizeBytes\": 250000,\n      \"fileHash\": \"sha256:updated-hash\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage8",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage8"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Stage 8",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage8",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage8"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Stage 9 — Declaration",
+          "item": [
+            {
+              "name": "Stage 9 — Preview (full data review)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage9/preview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage9",
+                    "preview"
+                  ]
+                },
+                "description": "Returns complete ReviewResponse for citizen to review before declaring."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 9 — Download Preview PDF",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage9/preview/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage9",
+                    "preview",
+                    "pdf"
+                  ]
+                },
+                "description": "Returns application/pdf binary."
+              },
+              "response": []
+            },
+            {
+              "name": "Stage 9 — Final Declaration",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/stage9?confirmed=true",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "stage9"
+                  ],
+                  "query": [
+                    {
+                      "key": "confirmed",
+                      "value": "true"
+                    }
+                  ]
+                },
+                "description": "confirmed=true REQUIRED. Creates CaseAssignment for management workflow (status: PENDING_ENROLLMENT)."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Post-Declaration",
+          "item": [
+            {
+              "name": "Get Registration Status (PUBLIC)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "status"
+                  ]
+                },
+                "description": "PUBLIC — no auth. Returns status, finalStatus, documentType."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All My Registrations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "all"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Post-Declaration Review (PUBLIC)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/review",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "review"
+                  ]
+                },
+                "description": "PUBLIC. Full ReviewResponse after Stage 9 declared."
+              },
+              "response": []
+            },
+            {
+              "name": "Download Review PDF (PUBLIC)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registration/{{subjectId}}/review/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registration",
+                    "{{subjectId}}",
+                    "review",
+                    "pdf"
+                  ]
+                },
+                "description": "PUBLIC. PDF binary of completed registration form."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "All endpoints require Bearer {{token}}.\nFlow: Stage1 → [Naturalization] → [TravelHistory if migrant] → Stage2 → Stage3 → Stage4 → Stage5 → Stage6 → Stage7(GET) → Upload files → Stage8 → Stage9"
+    },
+    {
+      "name": "Officer Registration",
+      "item": [
+        {
+          "name": "Get Officer Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "profile"
+              ]
+            },
+            "description": "Returns { userId, username, stationId }."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Cases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/my-cases?page=0&size=20&status=&scope=mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "my-cases"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "PENDING | PENDING_ENROLLMENT | DECLARED | APPROVED | REJECTED | ESCALATED"
+                },
+                {
+                  "key": "scope",
+                  "value": "mine",
+                  "description": "mine = by this officer | station = all at this station"
+                }
+              ]
+            },
+            "description": "Paginated list of registrations created by this officer."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 1 — Stage 1 Migrant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j=pm.response.json();if(j.data&&j.data.subjectId)pm.collectionVariables.set('subjectId',j.data.subjectId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registrationType\": \"REFUGEE\",\n  \"firstName\": \"Ahmed\",\n  \"middleName\": \"Mohamed\",\n  \"lastName\": \"Farah\",\n  \"otherNames\": null,\n  \"sexId\": 1,\n  \"dateOfBirth\": \"1985-03-12\",\n  \"maritalStatusId\": 1,\n  \"nationalityCode\": \"SOM\",\n  \"citizenshipTypeId\": null,\n  \"countryOfBirthCode\": \"SOM\",\n  \"cityOfBirth\": \"Mogadishu\",\n  \"tribe\": null,\n  \"eyeColor\": \"Brown\",\n  \"hairColor\": \"Black\",\n  \"heightCm\": 175,\n  \"specialMark\": \"Scar on left hand\",\n  \"languageSpoken\": \"Somali\",\n  \"documents\": [],\n  \"phoneNumber\": null,\n  \"email\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/stage1/migrant",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "stage1",
+                "migrant"
+              ]
+            },
+            "description": "registrationType: REFUGEE | MIGRANT | ASYLUM_SEEKER | ILLEGAL_MIGRANT | LEGAL_MIGRANT. Returns subjectId."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2 — Travel History",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hasDocument\": true,\n  \"firstDateOfEntry\": \"2020-03-01\",\n  \"pointOfEntry\": \"Namanga Border\",\n  \"transitCountry\": \"KEN\",\n  \"documentType\": \"PASSPORT\",\n  \"documentNo\": \"A1234567\",\n  \"issuedDate\": \"2018-01-01\",\n  \"expiryDate\": \"2028-01-01\",\n  \"issueCountryCode\": \"SOM\",\n  \"issueAuthority\": \"Somali Immigration Authority\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/travel-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "travel-history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3 — Stage 2 Domestic Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentStreetId\": 500,\n  \"currentCountryCode\": \"TZA\",\n  \"currentCity\": \"Dar es Salaam\",\n  \"currentHouseNo\": \"Block C\",\n  \"currentPostalAddress\": null,\n  \"permanentSameAsCurrent\": true,\n  \"campName\": \"Nyarugusu Camp\",\n  \"properties\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage2/domestic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage2",
+                "domestic"
+              ]
+            },
+            "description": "Use campName for refugee camp residents."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3b — Stage 2 Foreign Address (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentCountryCode\": \"SOM\",\n  \"currentCity\": \"Mogadishu\",\n  \"permanentSameAsCurrent\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage2/foreign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage2",
+                "foreign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4 — Stage 3 Domestic Parents",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"father\": {\n    \"firstName\": \"Mohamed\",\n    \"middleName\": \"Hassan\",\n    \"lastName\": \"Farah\",\n    \"gender\": 1,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"TZA\",\n    \"residenceCity\": \"Dar es Salaam\",\n    \"residenceStreetId\": 200,\n    \"documentFileUrl\": null,\n    \"documents\": []\n  },\n  \"mother\": {\n    \"firstName\": \"Halima\",\n    \"middleName\": \"Ali\",\n    \"lastName\": \"Farah\",\n    \"gender\": 2,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"TZA\",\n    \"residenceCity\": \"Dar es Salaam\",\n    \"residenceStreetId\": 200,\n    \"documentFileUrl\": null,\n    \"documents\": []\n  },\n  \"guardian\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage3/domestic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage3",
+                "domestic"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4b — Stage 3 Foreign Parents (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"father\": {\n    \"firstName\": \"Mohamed\",\n    \"middleName\": \"Hassan\",\n    \"lastName\": \"Farah\",\n    \"gender\": 1,\n    \"nationalityCode\": \"SOM\",\n    \"residenceCountryCode\": \"SOM\",\n    \"residenceCity\": \"Mogadishu\",\n    \"documents\": []\n  },\n  \"mother\": null,\n  \"guardian\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage3/foreign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage3",
+                "foreign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 5 — Stage 4 Education & Employment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"educationList\": [\n    {\n      \"educationLevelId\": 2,\n      \"countryCode\": \"SOM\",\n      \"city\": \"Mogadishu\",\n      \"schoolName\": \"Mogadishu Secondary School\",\n      \"registrationNumber\": null,\n      \"isCompleted\": true,\n      \"completionYear\": 2003\n    }\n  ],\n  \"employmentStatusId\": 1,\n  \"organizationName\": null,\n  \"occupationTypeId\": null,\n  \"otherOccupation\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage4"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 6 — Stage 5 Domestic Emergency Contacts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"occupationTypeId\": null,\n      \"person\": {\n        \"firstName\": \"Abdullahi\",\n        \"middleName\": \"Omar\",\n        \"lastName\": \"Ahmed\",\n        \"gender\": 1,\n        \"phoneNumber\": \"+255712000099\",\n        \"nationalityCode\": \"SOM\",\n        \"dateOfBirth\": \"1970-01-01\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Dar es Salaam\",\n        \"residenceStreetId\": 300,\n        \"documents\": []\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage5/domestic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage5",
+                "domestic"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 6b — Stage 5 Foreign Contacts (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contacts\": [\n    {\n      \"relationshipTypeId\": 3,\n      \"person\": {\n        \"firstName\": \"Fatuma\",\n        \"middleName\": \"Ali\",\n        \"lastName\": \"Hassan\",\n        \"gender\": 2,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"SOM\",\n        \"residenceCity\": \"Mogadishu\",\n        \"documents\": []\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage5/foreign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage5",
+                "foreign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 7 — Stage 6 Domestic Family",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hasChildren\": false,\n  \"children\": [],\n  \"isMarried\": false,\n  \"spouses\": [],\n  \"relatives\": [\n    {\n      \"relationshipTypeId\": 2,\n      \"person\": {\n        \"firstName\": \"Abdi\",\n        \"middleName\": \"Omar\",\n        \"lastName\": \"Farah\",\n        \"gender\": 1,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Dar es Salaam\",\n        \"residenceStreetId\": 500,\n        \"documents\": []\n      }\n    },\n    {\n      \"relationshipTypeId\": 5,\n      \"person\": {\n        \"firstName\": \"Khadija\",\n        \"middleName\": \"Mohamud\",\n        \"lastName\": \"Farah\",\n        \"gender\": 2,\n        \"nationalityCode\": \"SOM\",\n        \"residenceCountryCode\": \"TZA\",\n        \"residenceCity\": \"Dar es Salaam\",\n        \"residenceStreetId\": 500,\n        \"documents\": []\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage6/domestic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage6",
+                "domestic"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 7b — Stage 6 Foreign Family (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hasChildren\": false,\n  \"children\": [],\n  \"isMarried\": false,\n  \"spouses\": [],\n  \"relatives\": [\n    { \"relationshipTypeId\": 2, \"person\": { \"firstName\": \"Abdi\", \"middleName\": \"Omar\", \"lastName\": \"Farah\", \"gender\": 1, \"nationalityCode\": \"SOM\", \"residenceCountryCode\": \"SOM\", \"residenceCity\": \"Mogadishu\", \"documents\": [] } },\n    { \"relationshipTypeId\": 5, \"person\": { \"firstName\": \"Khadija\", \"middleName\": \"Ali\", \"lastName\": \"Hassan\", \"gender\": 2, \"nationalityCode\": \"SOM\", \"residenceCountryCode\": \"SOM\", \"residenceCity\": \"Kismayo\", \"documents\": [] } }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage6/foreign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage6",
+                "foreign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 8 — Stage 7 Referees Form (print only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage7"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 9 — Upload File (officer context)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Max 300 KB. jpg, jpeg, png, pdf.",
+                  "value": null
+                },
+                {
+                  "key": "attachmentTypeId",
+                  "value": "1",
+                  "type": "text",
+                  "description": "From /v1/lookup/attachment-types"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{subjectId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/files/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "files",
+                "upload"
+              ]
+            },
+            "description": "Returns fileUrl — use in Step 10."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 10 — Stage 8 Attachments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attachments\": [\n    {\n      \"attachmentTypeId\": 1,\n      \"fileUrl\": \"ICRCS000001ABCDEF/1/uuid-here.pdf\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSizeBytes\": 204800,\n      \"fileHash\": \"sha256:abc123def456\"\n    },\n    {\n      \"attachmentTypeId\": 3,\n      \"fileUrl\": \"ICRCS000001ABCDEF/3/uuid-here.jpg\",\n      \"mimeType\": \"image/jpeg\",\n      \"fileSizeBytes\": 150000,\n      \"fileHash\": \"sha256:def789\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage8"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Step 11 — Stage 9 Final Declaration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/stage9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "stage9"
+              ]
+            },
+            "description": "confirmed must be true. Creates CaseAssignment (PENDING_ENROLLMENT) in management workflow."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Registration Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{officerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/officer/registration/{{subjectId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "officer",
+                "registration",
+                "{{subjectId}}",
+                "status"
+              ]
+            },
+            "description": "Returns RegistrationStatusResponse: status, finalStatus, documentType."
+          },
+          "response": []
+        }
+      ],
+      "description": "Officer-driven flow for migrants / refugees / asylum seekers.\nAll endpoints require Bearer {{officerToken}}.\nFlow: Stage1 migrant → travel-history → stage2 → stage3 → stage4 → stage5 → stage6 → stage7(GET) → upload files → stage8 → stage9"
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload File (Citizen)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Max 300 KB. Allowed MIME: image/jpeg, image/png, application/pdf.",
+                  "value": null
+                },
+                {
+                  "key": "attachmentTypeId",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Integer from /v1/lookup/attachment-types"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{subjectId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "documentId",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional UUID"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/files/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "files",
+                "upload"
+              ]
+            },
+            "description": "Returns { fileUrl, fileSizeBytes, fileHash, mimeType, originalFilename }."
+          },
+          "response": []
+        },
+        {
+          "name": "View File — query param (PUBLIC)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/files/view?path=ICRCS000001ABCDEF/1/filename.pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "files",
+                "view"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "ICRCS000001ABCDEF/1/filename.pdf"
+                }
+              ]
+            },
+            "description": "PUBLIC — no auth. Returns file binary. Path traversal blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "View File — path segments (PUBLIC)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/files/view/ICRCS000001ABCDEF/1/filename.pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "files",
+                "view",
+                "ICRCS000001ABCDEF",
+                "1",
+                "filename.pdf"
+              ]
+            },
+            "description": "PUBLIC. Alternative URL style."
+          },
+          "response": []
+        },
+        {
+          "name": "Default Avatar (PUBLIC)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/files/avatars/default-male.png",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "files",
+                "avatars",
+                "default-male.png"
+              ]
+            },
+            "description": "PUBLIC. Serves static avatars from classpath."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Mock (Dev & Testing Only — PUBLIC)",
+      "item": [
+        {
+          "name": "Mock Approve Registration",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/mock/registration/{{subjectId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "mock",
+                "registration",
+                "{{subjectId}}",
+                "approve"
+              ]
+            },
+            "description": "Sets status to APPROVED and activates person account. No auth required."
+          },
+          "response": []
+        },
+        {
+          "name": "Mock Set Pending Enrollment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/mock/registration/{{subjectId}}/pending-enrollment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "mock",
+                "registration",
+                "{{subjectId}}",
+                "pending-enrollment"
+              ]
+            },
+            "description": "Sets status to PENDING_ENROLLMENT. Useful for testing management biometric enrollment flow."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health & Docs",
+      "item": [
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "PUBLIC."
+          },
+          "response": []
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/swagger-ui",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "swagger-ui"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "OpenAPI Spec",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "api-docs"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "preAuthToken",
+      "value": ""
+    },
+    {
+      "key": "officerToken",
+      "value": ""
+    },
+    {
+      "key": "subjectId",
+      "value": ""
+    },
+    {
+      "key": "profileId",
+      "value": ""
+    },
+    {
+      "key": "bearer_token_0gog",
+      "secret": true
+    }
+  ]
+}

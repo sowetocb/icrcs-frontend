@@ -6,6 +6,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { useMobileNav } from "@/components/layout/mobileNav";
 import { logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
+import { isOfficer, clearOfficer } from "@/lib/auth/officerSession";
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
 import {
@@ -31,6 +32,17 @@ export default function CitizenSidebar() {
   ] as const;
 
   async function handleLogout() {
+    // Officer session (government user) — clear it via its own proxy + store.
+    if (isOfficer()) {
+      try {
+        await fetch("/api/officer/logout", { method: "POST", credentials: "include" });
+      } catch {
+        // ignore — clear the local officer session regardless
+      }
+      clearOfficer();
+      router.push("/login");
+      return;
+    }
     const session = loadSession();
     if (session?.refreshToken) {
       try {

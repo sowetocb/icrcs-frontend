@@ -8,6 +8,7 @@ import RegistryLanding from "./registryLanding";
 import CategoryGate from "./categoryGate";
 import CitizenshipGate from "./citizenshipGate";
 import RegistryWizard from "./registryWizard";
+import OfficerCases from "./officerCases";
 import {
   CATEGORY_REGISTRATION_TYPE,
   isMigrantCategory,
@@ -20,12 +21,13 @@ import { clearRegistration, loadRegistrationFor, saveRegistration } from "./regi
 import { addPerson, loadPeople, isSubmitted } from "./peopleStore";
 import { generateApplicationId, formatSubmittedDate } from "./applicationId";
 import { loadProfile } from "@/lib/auth/profile";
+import { isOfficer } from "@/lib/auth/officerSession";
 import { getRegisteredPeople } from "@/lib/api/registry";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { RULES } from "@/lib/validation/rules";
 
-type Mode = "landing" | "category" | "gate" | "wizard" | "success";
+type Mode = "landing" | "officer-cases" | "category" | "gate" | "wizard" | "success";
 
 // Persisted per-tab (sessionStorage) so a page refresh returns to the same view.
 const REGISTRY_MODE_KEY = "icrcs-registry-mode";
@@ -41,8 +43,14 @@ export default function RegistryClient() {
   // On a hard refresh, restore the view the user was on; on a client-side
   // navigation (e.g. a sidebar click), always open the landing page. "wizard"
   // is only restored when an in-progress draft still exists.
+  // A government officer registering immigrants — migrant-only categories, and
+  // no citizen landing/progress sync (their own citizen concepts don't apply).
+  const [officerMode] = useState(() => typeof window !== "undefined" && isOfficer());
+
   const [mode, setMode] = useState<Mode>(() => {
     if (typeof window === "undefined" || hasMountedInSession) return "landing";
+    // Officers start at their case list (server is source of truth).
+    if (isOfficer()) return "officer-cases";
     let saved: string | null = null;
     try {
       saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
@@ -114,10 +122,13 @@ export default function RegistryClient() {
   }, []);
 
   useEffect(() => {
+    // Officers have no citizen profile/registrations — skip the citizen progress
+    // sync entirely (their resume is backend-as-truth, handled separately).
+    if (officerMode) return;
     // Only this account holder's own draft counts as "in progress".
     const ownerId = loadProfile()?.profileId ?? "";
     const draft = loadRegistrationFor(ownerId);
-    
+
     // Check local storage first (synchronous/fallback)
     const localPeople = loadPeople();
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -346,10 +357,44 @@ export default function RegistryClient() {
     setMode("wizard");
   }
 
+  // Resume an officer's case from server data: seed a local draft from the
+  // subjectId + currentStage the backend reported, then open the wizard.
+  function officerResume(
+    subjectId: string,
+    stage: number,
+    regType: RegistrationType | undefined,
+  ) {
+    if (regType) setRegistrationType(regType);
+    // Seed a draft so the wizard opens at the right step. Using "" as ownerId
+    // because officers have no citizen profile; the wizard identifies the
+    // registration by subjectId.
+    const submittedStages = Array.from({ length: stage - 1 }, (_, i) => i + 1);
+    saveRegistration({
+      step: stage,
+      maxStep: stage,
+      completed: false,
+      ownerId: undefined,
+      subjectId,
+      submittedStages,
+      data: { registrationType: regType ?? "" },
+    });
+    setMode("wizard");
+  }
+
   return (
     <AuthGuard>
       <div className="flex min-h-screen flex-col bg-surface">
         <DashboardTopbar />
+
+        {mode === "officer-cases" && (
+          <div className="flex flex-1">
+            <CitizenSidebar />
+            <OfficerCases
+              onResume={officerResume}
+              onStartNew={() => setMode("category")}
+            />
+          </div>
+        )}
 
         {mode === "landing" && (
           <div className="flex flex-1">
@@ -377,8 +422,10 @@ export default function RegistryClient() {
               // The owner registering again (after their own is done) = a
               // dependent (minor) registration.
               isDependent={selfDone}
+              // Government officer → migrant categories only.
+              officerMode={officerMode}
               onSelect={chooseCategory}
-              onExit={() => setMode("landing")}
+              onExit={() => setMode(officerMode ? "officer-cases" : "landing")}
             />
           </div>
         )}
@@ -404,7 +451,7 @@ export default function RegistryClient() {
             registeringMinor={registeringMinor}
             minorRelationship={minorRelationship}
             registrationType={registrationType ?? undefined}
-            onExit={() => setMode("landing")}
+            onExit={() => setMode(officerMode ? "officer-cases" : "landing")}
             onComplete={handleComplete}
           />
         )}

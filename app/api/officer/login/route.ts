@@ -1,12 +1,16 @@
-// Officer login — proxies the User Management API and stores the officer's
+// Officer login — authenticates .go.tz officers against the SAME backend as
+// citizens (/v1/auth/login with `identifier`) and stores the officer's
 // access/refresh tokens in HttpOnly cookies (icrcs-officer-*), exactly like the
-// citizen /api/auth/login route, so tokens never reach the browser. Officer
-// auth is a SEPARATE, username-based service; its base URL is USER_MGT_API_BASE_URL.
+// citizen /api/auth/login route, so tokens never reach the browser.
 
 import { cookies } from "next/headers";
 import { authCookieOptions, ACCESS_TTL, REFRESH_TTL } from "@/lib/auth/cookieOptions";
 
-const USER_MGT = process.env.USER_MGT_API_BASE_URL ?? "";
+const BACKEND =
+  process.env.BACKEND_API_BASE_URL ||
+  process.env.AUTH_API_BASE_URL ||
+  process.env.USER_MGT_API_BASE_URL ||
+  "";
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 
 export async function POST(request: Request) {
@@ -21,19 +25,28 @@ export async function POST(request: Request) {
       success: true,
       user: {
         userId: "mock-officer",
-        username: body.username ?? "OFFICER",
+        username: body.username ?? "officer@immigration.go.tz",
         fullName: "Mock Officer",
-        roles: ["OFFICER"],
-        permissions: [],
+        stationName: "HQ",
+        roles: ["ICRCS_OFFICER"],
+        permissions: ["ICRCS_REGISTRATION"],
       },
     });
   }
 
-  const res = await fetch(`${USER_MGT}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: body.username, password: body.password }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BACKEND}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: body.username, password: body.password }),
+    });
+  } catch {
+    return Response.json(
+      { error: "Unable to reach the authentication server", code: "CONNECTION" },
+      { status: 503 },
+    );
+  }
   const data = await res.json().catch(() => null);
 
   // The User Management API wraps results as { code, message, data }. Treat a
@@ -85,24 +98,47 @@ function extractTokens(raw: unknown): { accessToken: string; refreshToken: strin
   return { accessToken, refreshToken };
 }
 
-/** Map the User Management `data.user` (+ roles/permissions) to the shape the
- * frontend officer session caches. Role/permission field names in the login
- * response are still being confirmed, so several likely keys are checked. */
+/** Map the User Management `data.user` to the shape the frontend officer session
+ * caches. The login response nests:
+ *   Roles:               [{ RoleCode, RoleID, RoleName }, …]      → RoleCode[]
+ *   PermissionsByModule: [{ Module, Actions: [{ ActionCode }] }]  → ActionCode[]
+ * (the ICRCS registration right is the ActionCode "ICRCS_REGISTRATION"). */
 function extractOfficer(raw: unknown): Record<string, unknown> {
   const data =
     typeof raw === "object" && raw !== null && "data" in raw
       ? ((raw as { data?: unknown }).data as Record<string, unknown>)
       : (raw as Record<string, unknown>);
   const user = (data?.user ?? {}) as Record<string, unknown>;
-  const arr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : [];
+  const obj = (v: unknown): Record<string, unknown> =>
+    v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  const s = (v: unknown): string => (typeof v === "string" ? v : v == null ? "" : String(v));
+
+  // Roles → RoleCode strings.
+  const roles = Array.isArray(user.Roles)
+    ? user.Roles.map((r) => s(obj(r).RoleCode ?? obj(r).roleCode)).filter(Boolean)
+    : [];
+  // PermissionsByModule → flat ActionCode strings.
+  const permissions = Array.isArray(user.PermissionsByModule)
+    ? user.PermissionsByModule.flatMap((m) => {
+        const actions = obj(m).Actions;
+        return Array.isArray(actions)
+          ? actions.map((a) => s(obj(a).ActionCode ?? obj(a).actionCode))
+          : [];
+      }).filter(Boolean)
+    : [];
+
   return {
     userId: user.UserID ?? user.userId,
-    username: user.Username ?? user.username,
+    username: user.Username ?? user.username ?? user.Email,
     fullName: user.FullName ?? user.fullName,
+    email: s(user.Email ?? user.email),
+    pfNo: s(user.PFNo ?? user.pfNo),
+    position: s(user.Position ?? user.position),
+    regionName: s(user.RegionName ?? user.regionName),
     stationId: user.StationID ?? user.stationId,
     stationName: user.StationName ?? user.stationName,
-    roles: arr(data?.roles ?? user.Roles),
-    permissions: arr(data?.permissions ?? user.PermissionsByModule),
+    countryName: s(user.CountryName ?? user.countryName),
+    roles,
+    permissions,
   };
 }

@@ -24,11 +24,19 @@ export async function POST(request: Request) {
     return Response.json({ error: "No refresh token" }, { status: 401 });
   }
 
-  const res = await fetch(`${USER_MGT}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${USER_MGT}/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  } catch {
+    return Response.json(
+      { error: "Unable to reach the authentication server" },
+      { status: 503 },
+    );
+  }
   const data = await res.json().catch(() => null);
 
   const ok = res.ok && Number((data as { code?: number } | null)?.code ?? 0) === 1;

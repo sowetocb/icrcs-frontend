@@ -17,6 +17,19 @@ import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
 import { RULES } from "@/lib/validation/rules";
 
+// ── Officer vs citizen routing ───────────────────────────────────────────────
+// A government officer registers migrants under /v1/officer/registration/*; a
+// citizen uses /v1/registration/*. The payloads are identical — only the base
+// path differs. Auth needs no change: neither caller sends a real Bearer token
+// (the citizen token is the __httponly__ stub, the officer has none), so the
+// proxy attaches the correct cookie (icrcs-officer-access for /v1/officer/**).
+// The wizard sets this once on mount via setRegistrationOfficerMode().
+let REG_OFFICER = false;
+export function setRegistrationOfficerMode(officer: boolean): void {
+  REG_OFFICER = officer;
+}
+const regRoot = () => (REG_OFFICER ? "/v1/officer/registration" : "/v1/registration");
+
 /** Decode a base64 data URL into a Blob (for multipart upload). */
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } | null {
   const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
@@ -154,7 +167,7 @@ export async function fetchForeignerDetails(input: {
       documentTypeId: input.documentTypeId,
       documentNumber: input.documentNumber,
     });
-    const raw = await apiGet(`/v1/registration/travel-document?${params.toString()}`);
+    const raw = await apiGet(`${regRoot()}/travel-document?${params.toString()}`);
     const record = (raw as { data?: ForeignerDetails | null })?.data ?? null;
     return record && Object.keys(record).length > 0 ? record : null;
   } catch {
@@ -304,7 +317,7 @@ async function submitNaturalization(subjectId: string, data: Data): Promise<void
   };
   try {
     await withFreshAuth((at) =>
-      apiPost(`/v1/registration/${subjectId}/naturalization`, payload, at),
+      apiPost(`${regRoot()}/${subjectId}/naturalization`, payload, at),
     );
   } catch {
     // Non-fatal — surfaced via the registration's status, not by failing Stage 1.
@@ -332,8 +345,8 @@ export async function submitStage1(
   // Stage 1 is split by place of birth: born in Tanzania → /domestic, born
   // abroad → /foreign. There is no bare /stage1 endpoint.
   const path = isTanzania(str(data, "pobCountry"))
-    ? "/v1/registration/stage1/domestic"
-    : "/v1/registration/stage1/foreign";
+    ? `${regRoot()}/stage1/domestic`
+    : `${regRoot()}/stage1/foreign`;
   const response = extractStage1Response(
     await withFreshAuth((at) => apiPost(path, payload, at)),
   );
@@ -367,7 +380,7 @@ export async function editStage1(
   }
   const suffix = isTanzania(str(data, "pobCountry")) ? "/domestic" : "/foreign";
   const result = await withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage1${suffix}`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage1${suffix}`, payload, at),
   );
   await submitNaturalization(subjectId, data);
   return result;
@@ -498,7 +511,7 @@ export async function submitStage1Migrant(
     return { subjectId: "mock-migrant-id", applicationId: "MOCK-ALN000000000000", photoUploaded: true };
   }
   const response = extractStage1Response(
-    await withFreshAuth((at) => apiPost("/v1/registration/stage1/migrant", payload, at)),
+    await withFreshAuth((at) => apiPost(`${regRoot()}/stage1/migrant`, payload, at)),
   );
   // Passport photo upload mirrors the citizen flow: non-fatal, keyed by subjectId.
   const photo =
@@ -521,7 +534,7 @@ export async function editStage1Migrant(
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage1/migrant`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage1/migrant`, payload, at),
   );
 }
 
@@ -569,7 +582,7 @@ export async function submitTravelHistory(subjectId: string, data: Data): Promis
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/travel-history`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/travel-history`, payload, at),
   );
 }
 
@@ -580,7 +593,7 @@ export async function editTravelHistory(subjectId: string, data: Data): Promise<
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/travel-history`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/travel-history`, payload, at),
   );
 }
 
@@ -591,7 +604,7 @@ export async function getTravelHistory(subjectId: string): Promise<TravelHistory
   }
   try {
     const raw = await withFreshAuth((at) =>
-      apiGet(`/v1/registration/${subjectId}/travel-history`, at),
+      apiGet(`${regRoot()}/${subjectId}/travel-history`, at),
     );
     const d =
       typeof raw === "object" && raw !== null && "data" in raw
@@ -610,7 +623,7 @@ export async function submitStage2(subjectId: string, data: Data): Promise<unkno
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
   );
 }
 
@@ -621,7 +634,7 @@ export async function editStage2(subjectId: string, data: Data): Promise<unknown
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage2${stage2Suffix(data)}`, payload, at),
   );
 }
 
@@ -677,7 +690,7 @@ export async function submitStage3(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage3Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
   );
 }
 
@@ -688,7 +701,7 @@ export async function editStage3(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage3Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage3${stage3Suffix(data)}`, payload, at),
   );
 }
 
@@ -805,7 +818,7 @@ export async function submitStage4(
   }
   const payload = await buildStage4Payload(data, isSelf);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage4`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/stage4`, payload, at),
   );
 }
 
@@ -820,7 +833,7 @@ export async function editStage4(
   }
   const payload = await buildStage4Payload(data, isSelf);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage4`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage4`, payload, at),
   );
 }
 
@@ -887,7 +900,7 @@ export async function submitStage5(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage5Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
   );
 }
 
@@ -898,7 +911,7 @@ export async function editStage5(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage5Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage5${stage5Suffix(data)}`, payload, at),
   );
 }
 
@@ -1003,7 +1016,7 @@ export async function submitStage6(subjectId: string, data: Data): Promise<unkno
   }
   const payload = await buildStage6Payload(data);
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
+    apiPost(`${regRoot()}/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
   );
 }
 
@@ -1014,7 +1027,7 @@ export async function editStage6(subjectId: string, data: Data): Promise<unknown
   }
   const payload = await buildStage6Payload(data);
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
+    apiPut(`${regRoot()}/${subjectId}/stage6${stage6Suffix(data)}`, payload, at),
   );
 }
 
@@ -1028,7 +1041,7 @@ export async function submitStage7(subjectId: string): Promise<unknown> {
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiGet(`/v1/registration/${subjectId}/stage7`, at),
+    apiGet(`${regRoot()}/${subjectId}/stage7`, at),
   );
 }
 
@@ -1156,7 +1169,7 @@ export async function submitStage8(subjectId: string, data: Data): Promise<unkno
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage8`, buildStage8Payload(data), at),
+    apiPost(`${regRoot()}/${subjectId}/stage8`, buildStage8Payload(data), at),
   );
 }
 
@@ -1166,7 +1179,7 @@ export async function editStage8(subjectId: string, data: Data): Promise<unknown
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPut(`/v1/registration/${subjectId}/stage8`, buildStage8Payload(data), at),
+    apiPut(`${regRoot()}/${subjectId}/stage8`, buildStage8Payload(data), at),
   );
 }
 
@@ -1179,7 +1192,7 @@ export async function getStageData(subjectId: string, stage: number): Promise<un
   if (BYPASS || !subjectId || stage === 7 || stage === 9) return null;
   try {
     const raw = await withFreshAuth((at) =>
-      apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/stage${stage}`, at),
+      apiGet<Record<string, unknown>>(`${regRoot()}/${subjectId}/stage${stage}`, at),
     );
     return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
   } catch {
@@ -1201,7 +1214,7 @@ export async function getRegistrationReview(subjectId: string): Promise<unknown>
     return null;
   }
   const raw = await withFreshAuth((at) =>
-    apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/review`, at),
+    apiGet<Record<string, unknown>>(`${regRoot()}/${subjectId}/review`, at),
   );
   return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
 }
@@ -1216,7 +1229,7 @@ export async function getStage9Preview(subjectId: string): Promise<unknown> {
     return null;
   }
   const raw = await withFreshAuth((at) =>
-    apiGet<Record<string, unknown>>(`/v1/registration/${subjectId}/stage9/preview`, at),
+    apiGet<Record<string, unknown>>(`${regRoot()}/${subjectId}/stage9/preview`, at),
   );
   return raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
 }
@@ -1227,6 +1240,6 @@ export async function submitStage9(subjectId: string): Promise<unknown> {
     return { mock: true };
   }
   return withFreshAuth((at) =>
-    apiPost(`/v1/registration/${subjectId}/stage9?confirmed=true`, {}, at),
+    apiPost(`${regRoot()}/${subjectId}/stage9?confirmed=true`, {}, at),
   );
 }

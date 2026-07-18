@@ -88,10 +88,16 @@ async function forward(
   // Prefer an explicit Authorization header (e.g. pre-auth tokens during
   // registration). If absent, read the HttpOnly access-token cookie the login
   // route set — the browser sends it automatically but JavaScript cannot read it.
+  // Officer endpoints (/v1/officer/**) are protected by the OFFICER token, so use
+  // the icrcs-officer-access cookie for those; everything else uses the citizen
+  // icrcs-access cookie.
   let auth = request.headers.get("authorization");
   if (!auth) {
     const jar = await cookies();
-    const accessToken = jar.get("icrcs-access")?.value;
+    const isOfficerPath = path[0] === "v1" && path[1] === "officer";
+    const accessToken = isOfficerPath
+      ? jar.get("icrcs-officer-access")?.value
+      : jar.get("icrcs-access")?.value;
     if (accessToken) auth = `Bearer ${accessToken}`;
   }
   if (auth) headers.set("authorization", auth);
