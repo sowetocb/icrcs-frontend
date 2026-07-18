@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../i18n/localeProvider";
 import { loadOfficer } from "@/lib/auth/officerSession";
 import { getOfficerCases, type OfficerCase } from "@/lib/api/officer";
@@ -14,6 +14,7 @@ import {
   AlertCircle,
   FileText,
   LoaderCircle,
+  Search,
 } from "lucide-react";
 
 // Status → badge color map
@@ -62,6 +63,7 @@ export default function OfficerCases({
   const [cases, setCases] = useState<OfficerCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   async function fetchCases() {
     setLoading(true);
@@ -81,10 +83,12 @@ export default function OfficerCases({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-resume when exactly one active (in-progress) case
+  // Active (in-progress) cases — PENDING with stages < 9
   const activeCases = cases.filter(
     (c) => c.status.toUpperCase() === "PENDING" && c.currentStage < 9,
   );
+
+  // Auto-resume when exactly one active (in-progress) case
   useEffect(() => {
     if (!loading && !error && activeCases.length === 1) {
       const c = activeCases[0];
@@ -98,17 +102,32 @@ export default function OfficerCases({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, error]);
 
-  // If auto-resume will fire, show a loading state instead of the list
+  // Filter cases by search query
+  const filteredCases = useMemo(() => {
+    if (!search.trim()) return cases;
+    const q = search.toLowerCase();
+    return cases.filter(
+      (c) =>
+        (c.fullName || "").toLowerCase().includes(q) ||
+        (c.registrationType || "").toLowerCase().includes(q) ||
+        (c.subjectId || "").toLowerCase().includes(q),
+    );
+  }, [cases, search]);
+
+  // If auto-resume will fire (exactly 1 active case), show a loading state
   if (!loading && !error && activeCases.length === 1) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="flex flex-col items-center gap-4">
           <LoaderCircle className="h-8 w-8 animate-spin text-navy-500" />
-          <p className="text-sm text-muted">{t("officer.resume")}…</p>
+          <p className="text-sm text-muted">{t("officer.resuming")}</p>
         </div>
       </main>
     );
   }
+
+  // Multiple cases → table view; otherwise cards/empty
+  const showTable = cases.length > 1;
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8 lg:px-8 lg:py-10">
@@ -143,6 +162,24 @@ export default function OfficerCases({
             {t("officer.startNew")}
           </button>
         </div>
+
+        {/* Search bar — visible when there are cases to search */}
+        {!loading && !error && cases.length > 0 && (
+          <div className="relative mb-6">
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("officer.searchPlaceholder")}
+              className="w-full rounded-lg border border-line bg-card py-2.5 pl-10 pr-4 text-sm text-navy-700 outline-none transition placeholder:text-muted focus:border-gold focus:ring-2 focus:ring-gold/30"
+            />
+          </div>
+        )}
 
         {/* Loading */}
         {loading && (
@@ -189,8 +226,88 @@ export default function OfficerCases({
           </div>
         )}
 
-        {/* Case cards */}
-        {!loading && !error && cases.length > 0 && (
+        {/* Table view — for multiple cases */}
+        {!loading && !error && showTable && (
+          <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line bg-navy-50/60">
+                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colName")}</th>
+                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colType")}</th>
+                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStage")}</th>
+                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStatus")}</th>
+                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colDate")}</th>
+                    <th className="px-5 py-3.5 text-right font-semibold text-navy-700">{t("officer.colActions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {filteredCases.map((c) => {
+                    const isActive = c.status.toUpperCase() === "PENDING" && c.currentStage < 9;
+                    const regType = toMigrantRegistrationType(c.registrationType);
+                    return (
+                      <tr
+                        key={c.subjectId}
+                        className="transition hover:bg-surface/60"
+                      >
+                        {/* Name */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
+                              <UserCheck size={16} strokeWidth={1.8} aria-hidden="true" />
+                            </span>
+                            <span className="font-semibold text-navy-700">{c.fullName || "—"}</span>
+                          </div>
+                        </td>
+                        {/* Type */}
+                        <td className="px-5 py-3.5 text-muted">{c.registrationType || "—"}</td>
+                        {/* Stage progress */}
+                        <td className="px-5 py-3.5" style={{ minWidth: 160 }}>
+                          <StageBar current={c.currentStage} />
+                        </td>
+                        {/* Status badge */}
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[c.status.toUpperCase()] ?? STATUS_STYLE.PENDING}`}
+                          >
+                            {t(statusKey(c.status))}
+                          </span>
+                        </td>
+                        {/* Date */}
+                        <td className="px-5 py-3.5 text-xs text-muted">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}
+                        </td>
+                        {/* Actions */}
+                        <td className="px-5 py-3.5 text-right">
+                          {isActive && (
+                            <button
+                              type="button"
+                              onClick={() => onResume(c.subjectId, c.currentStage + 1, regType ?? undefined)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20 focus-visible:ring-2 focus-visible:ring-gold"
+                            >
+                              {t("officer.resume")}
+                              <ArrowRightIcon size={12} aria-hidden="true" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredCases.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-sm text-muted">
+                        {t("people.noResults")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Single card view — for exactly one (non-active) case */}
+        {!loading && !error && cases.length === 1 && !showTable && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {cases.map((c) => {
               const isActive = c.status.toUpperCase() === "PENDING" && c.currentStage < 9;

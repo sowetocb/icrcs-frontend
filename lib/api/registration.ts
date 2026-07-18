@@ -651,6 +651,8 @@ async function buildParentPayload(data: Data, prefix: string): Promise<Record<st
     firstName: str(data, `${prefix}First`),
     middleName: str(data, `${prefix}Middle`) || null, // optional
     lastName: str(data, `${prefix}Last`),
+    // The backend expects the numeric gender lookup id (1 = MALE, 2 = FEMALE).
+    gender: await resolveGenderId(str(data, `${prefix}Gender`)),
     dateOfBirth: str(data, `${prefix}Dob`) || null,
     phoneNumber: phone(data, `${prefix}Phone`),
     // API expects the ISO country CODE (e.g. "TZA"), not the lookup id.
@@ -669,9 +671,16 @@ async function buildParentPayload(data: Data, prefix: string): Promise<Record<st
 }
 
 async function buildStage3Payload(data: Data): Promise<Record<string, unknown>> {
+  // The backend expects a guardian key — null when no guardian is being submitted
+  // (the normal father + mother path); populated only when a guardian-only flow
+  // is active (minor registered by a guardian who doesn't know the parents).
+  const guardianOnly =
+    str(data, "minorRelationship") === "guardian" &&
+    str(data, "knowsParents") === "no";
   return {
-    father: await buildParentPayload(data, "father"),
-    mother: await buildParentPayload(data, "mother"),
+    father: guardianOnly ? null : await buildParentPayload(data, "father"),
+    mother: guardianOnly ? null : await buildParentPayload(data, "mother"),
+    guardian: guardianOnly ? await buildParentPayload(data, "guardian") : null,
   };
 }
 
@@ -681,7 +690,12 @@ async function buildStage3Payload(data: Data): Promise<Record<string, unknown>> 
 const peopleSuffix = (data: Data, prefixes: string[]) =>
   prefixes.some((p) => !isTanzania(str(data, `${p}ResCountry`))) ? "/foreign" : "/domestic";
 
-const stage3Suffix = (data: Data) => peopleSuffix(data, ["father", "mother"]);
+const stage3Suffix = (data: Data) => {
+  const guardianOnly =
+    str(data, "minorRelationship") === "guardian" &&
+    str(data, "knowsParents") === "no";
+  return peopleSuffix(data, guardianOnly ? ["guardian"] : ["father", "mother"]);
+};
 
 export async function submitStage3(subjectId: string, data: Data): Promise<unknown> {
   if (BYPASS) {

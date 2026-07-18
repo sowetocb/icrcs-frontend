@@ -989,6 +989,9 @@ const en = {
     welcome: "Welcome, {name}",
     station: "Station: {station}",
     casesRetry: "Retry",
+    searchPlaceholder: "Search by name or type…",
+    resuming: "Resuming your registration…",
+    colDate: "Date",
   },
   footer: "© 2026 All rights reserved.",
 };
@@ -1971,6 +1974,9 @@ const sw: typeof en = {
     welcome: "Karibu, {name}",
     station: "Kituo: {station}",
     casesRetry: "Jaribu tena",
+    searchPlaceholder: "Tafuta kwa jina au aina…",
+    resuming: "Inaendelea na usajili wako…",
+    colDate: "Tarehe",
   },
   footer: "© 2026 Haki zote zimehifadhiwa.",
 };
