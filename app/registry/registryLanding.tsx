@@ -32,6 +32,7 @@ export default function RegistryLanding({
   selfDone,
   hasIncomplete,
   ownerApproved,
+  officerMode = false,
 }: {
   onStart: () => void;
   onResume: () => void;
@@ -39,6 +40,8 @@ export default function RegistryLanding({
   hasIncomplete: boolean;
   /** The account holder's own registration has been APPROVED by an officer. */
   ownerApproved: boolean;
+  /** Officer mode — hides citizen-specific cards and adjusts labels. */
+  officerMode?: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -52,14 +55,19 @@ export default function RegistryLanding({
       key: "start",
       Icon: FormIcon,
       // Before the profile owner is done, "start" means register yourself;
-      // afterwards it means register a dependent.
-      title: selfDone ? t("registry.startDependentTitle") : t("registry.startOwnerTitle"),
-      desc: selfDone ? t("registry.startDependentDesc") : t("registry.startOwnerDesc"),
+      // afterwards it means register a dependent. Officers always see a generic title.
+      title: officerMode
+        ? t("registry.startTitle")
+        : selfDone ? t("registry.startDependentTitle") : t("registry.startOwnerTitle"),
+      desc: officerMode
+        ? t("registry.startDesc")
+        : selfDone ? t("registry.startDependentDesc") : t("registry.startOwnerDesc"),
       action: t("registry.startAction"),
       onClick: onStart,
-      // Rule 2: can't start a new one while a registration is incomplete.
-      // Rule 3: can't register a dependent until the holder is APPROVED.
-      disabled: hasIncomplete || dependentBlocked,
+      // Officers: can't start a new one while a case is active.
+      // Citizens: can't start a new one while a registration is incomplete.
+      //           can't register a dependent until the holder is APPROVED.
+      disabled: hasIncomplete || (!officerMode && dependentBlocked),
       note: hasIncomplete
         ? t("registry.finishFirstNote")
         : dependentBlocked
@@ -76,6 +84,7 @@ export default function RegistryLanding({
       disabled: !hasIncomplete,
       note: !hasIncomplete ? t("registry.nothingToResume") : undefined,
     },
+    // Status card — always available for both officers and citizens.
     {
       key: "status",
       Icon: StatusIcon,

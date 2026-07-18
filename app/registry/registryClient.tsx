@@ -22,6 +22,7 @@ import { addPerson, loadPeople, isSubmitted } from "./peopleStore";
 import { generateApplicationId, formatSubmittedDate } from "./applicationId";
 import { loadProfile } from "@/lib/auth/profile";
 import { isOfficer } from "@/lib/auth/officerSession";
+import { getOfficerCases } from "@/lib/api/officer";
 import { getRegisteredPeople } from "@/lib/api/registry";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
@@ -49,8 +50,8 @@ export default function RegistryClient() {
 
   const [mode, setMode] = useState<Mode>(() => {
     if (typeof window === "undefined" || hasMountedInSession) return "landing";
-    // Officers start at their case list (server is source of truth).
-    if (isOfficer()) return "officer-cases";
+    // Officers always start at the landing page; server determines card state.
+    if (isOfficer()) return "landing";
     let saved: string | null = null;
     try {
       saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
@@ -122,10 +123,25 @@ export default function RegistryClient() {
   }, []);
 
   useEffect(() => {
-    // Officers have no citizen profile/registrations — skip the citizen progress
-    // sync entirely (their resume is backend-as-truth, handled separately).
-    if (officerMode) return;
-    // Only this account holder's own draft counts as "in progress".
+    // Officers: call the backend to determine if there are active cases.
+    // This drives the Register/Resume card activation — no localStorage.
+    if (officerMode) {
+      async function syncOfficerCases() {
+        try {
+          const page = await getOfficerCases({ scope: "mine" });
+          const active = page.items.filter(
+            (c: { status: string; currentStage: number }) =>
+              c.status.toUpperCase() === "PENDING" && c.currentStage < 9,
+          );
+          setHasIncomplete(active.length > 0);
+        } catch {
+          // On error, leave hasIncomplete as false (Register enabled)
+        }
+      }
+      syncOfficerCases();
+      return;
+    }
+    // Citizens: sync from backend + localStorage (existing logic).
     const ownerId = loadProfile()?.profileId ?? "";
     const draft = loadRegistrationFor(ownerId);
 
@@ -314,7 +330,14 @@ export default function RegistryClient() {
   }
 
   function startFresh() {
-    // Rule 2: cannot start a new registration while one is incomplete.
+    // Officers: skip citizen-specific localStorage checks; go straight to category.
+    if (officerMode) {
+      clearRegistration();
+      setRegistrationType(null);
+      setMode("category");
+      return;
+    }
+    // Citizens: cannot start a new registration while one is incomplete.
     if (hasIncomplete) return;
     // Rule 2b: enforce the per-profile registration ceiling.
     const people = loadPeople();
@@ -401,10 +424,11 @@ export default function RegistryClient() {
             <CitizenSidebar />
             <RegistryLanding
               onStart={startFresh}
-              onResume={() => setMode("wizard")}
+              onResume={() => setMode(officerMode ? "officer-cases" : "wizard")}
               selfDone={selfDone}
               hasIncomplete={hasIncomplete}
               ownerApproved={ownerApproved}
+              officerMode={officerMode}
             />
           </div>
         )}
@@ -425,7 +449,7 @@ export default function RegistryClient() {
               // Government officer → migrant categories only.
               officerMode={officerMode}
               onSelect={chooseCategory}
-              onExit={() => setMode(officerMode ? "officer-cases" : "landing")}
+              onExit={() => setMode("landing")}
             />
           </div>
         )}
@@ -451,7 +475,7 @@ export default function RegistryClient() {
             registeringMinor={registeringMinor}
             minorRelationship={minorRelationship}
             registrationType={registrationType ?? undefined}
-            onExit={() => setMode(officerMode ? "officer-cases" : "landing")}
+            onExit={() => setMode("landing")}
             onComplete={handleComplete}
           />
         )}

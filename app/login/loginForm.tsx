@@ -120,7 +120,7 @@ export default function LoginForm() {
         return;
       }
       notify(t("toast.loginSuccess"));
-      router.push("/registry");
+      router.push("/dashboard");
       return;
     }
 

@@ -152,7 +152,7 @@ const en = {
   },
   nav: {
     dashboard: "Dashboard",
-    registry: "Citizen Registry",
+    registry: "Registry",
     people: "Registered People",
     visa: "Visa Processing",
     security: "Security Audit",
@@ -453,7 +453,7 @@ const en = {
     clauseText:
       "I, {name}, hereby declare that all information provided in this registration form is true, complete, and accurate to the best of my knowledge. I understand that any false statements or omission of material facts may result in the rejection of my application or criminal prosecution under the National Security and Digital Identity Act.",
     agree: "I agree to the terms and conditions and the legal declaration above.",
-    landingTitle: "Citizen Registry",
+    landingTitle: "Registry",
     landingTitleAccent: "Tanzania",
     landingIntro:
       "This service lets you complete the Citizen Registry application form electronically from anywhere. After filling in the form, you will need to visit the nearest Immigration Office with your supporting documents to finalize your application.",
@@ -1141,7 +1141,7 @@ const sw: typeof en = {
   },
   nav: {
     dashboard: "Dashibodi",
-    registry: "Usajili wa Raia",
+    registry: "Usajili",
     people: "Watu Waliosajiliwa",
     visa: "Uchakataji wa Viza",
     security: "Ukaguzi wa Usalama",
