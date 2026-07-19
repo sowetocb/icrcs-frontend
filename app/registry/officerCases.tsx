@@ -259,8 +259,8 @@ export default function OfficerCases({
                             <span className="font-semibold text-navy-700">{c.fullName || "—"}</span>
                           </div>
                         </td>
-                        {/* Type */}
-                        <td className="px-5 py-3.5 text-muted">{c.registrationType || "—"}</td>
+                        {/* Type — humanized (ASYLUM_SEEKER → ASYLUM SEEKER). */}
+                        <td className="px-5 py-3.5 text-muted">{c.registrationType ? c.registrationType.replace(/_/g, " ") : "—"}</td>
                         {/* Stage progress */}
                         <td className="px-5 py-3.5" style={{ minWidth: 160 }}>
                           <StageBar current={c.currentStage} />

@@ -1257,3 +1257,40 @@ export async function submitStage9(subjectId: string): Promise<unknown> {
     apiPost(`${regRoot()}/${subjectId}/stage9?confirmed=true`, {}, at),
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Registration status
+// ──────────────────────────────────────────────────────────────────────────────
+
+export type RegistrationStatus = {
+  subjectId?: string;
+  status?: string;
+  currentStage?: number;
+  registrationType?: string;
+  applicationId?: string;
+  fullName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/** GET /v1/registration/{subjectId}/status — current processing status of a
+ * registration. Returns the `data` payload (or the raw response when there's no
+ * `data` wrapper), or null when unavailable. */
+export async function getRegistrationStatus(
+  subjectId: string,
+): Promise<RegistrationStatus | null> {
+  if (BYPASS || !subjectId) {
+    await delay(200);
+    return null;
+  }
+  try {
+    const raw = await withFreshAuth((at) =>
+      apiGet<Record<string, unknown>>(`${regRoot()}/${subjectId}/status`, at),
+    );
+    const d =
+      raw && typeof raw === "object" && "data" in raw ? raw.data : raw;
+    return d && typeof d === "object" ? (d as RegistrationStatus) : null;
+  } catch {
+    return null;
+  }
+}

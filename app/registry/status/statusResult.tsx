@@ -14,7 +14,14 @@ import { Check, ArrowRight } from "lucide-react";
 // The first three form the forward progress timeline. REJECTED is a terminal
 // outcome, not a milestone, so it is rendered on its own without a timeline.
 const PROCESS_STAGES = ["stageSubmitted", "stagePendingEnrollment", "stageApproved"] as const;
-const FORM_STEPS = ["s1Title", "s2Title", "s3Title", "s4Title", "s5Title", "s6Title"] as const;
+// The full registration journey (backend stages 1–9), so an incomplete
+// registration's progress and "next step" stay consistent — a case at stage 6
+// isn't shown as fully done. Stage 7 (Referees) is a backend stage the applicant
+// passes through, so it appears here even though the wizard auto-handles it.
+const FORM_STEPS = [
+  "s1Title", "s2Title", "s3Title", "s4Title", "s5Title",
+  "s6Title", "s7Title", "s8Title", "s9Title",
+] as const;
 
 type StatusResultData = LookupResult | ApplicationStatus;
 
@@ -108,7 +115,11 @@ export default function StatusResult({
   const isBackendStatus = !("kind" in result);
 
   if (isBackendStatus) {
-    const isIncomplete = result.status === "PENDING" && result.currentStage < 6;
+    // A registration is only "submitted" once EVERY stage is done — including
+    // Uploads (8) and Preview & Declaration (9). While it's PENDING with any
+    // stage still outstanding (currentStage < 9), it's incomplete: tell the user
+    // the next step to complete, NOT that they've submitted.
+    const isIncomplete = result.status === "PENDING" && result.currentStage < 9;
 
     if (isIncomplete) {
       const nextStep = result.currentStage + 1;

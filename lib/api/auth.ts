@@ -1,6 +1,7 @@
 import { apiPost, apiGet, apiPut, apiDelete, apiUpload, ApiError } from "./client";
 import { resolveGenderId, resolveGenderCode } from "./lookup";
 import { loadSession, saveSession, clearSession } from "@/lib/auth/session";
+import { isOfficer as _isOfficer, clearOfficer as _clearOfficer } from "@/lib/auth/officerSession";
 import { loadProfile, toProxyUrl, type Profile } from "@/lib/auth/profile";
 import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
@@ -340,7 +341,11 @@ function token(): string | undefined {
 
 /** Runs an authorized call with the current access token. If it fails with 401/
  * 403, tries a one-time token refresh and retries. If refresh isn't possible or
- * also fails, clears the session and throws SessionExpiredError. */
+ * also fails, clears the session and throws SessionExpiredError.
+ *
+ * Officer callers use a SEPARATE refresh endpoint (/api/officer/refresh) and
+ * their own cookies (icrcs-officer-*); the citizen flow uses /api/auth/refresh
+ * and the icrcs-* cookies. The right path is chosen automatically. */
 export async function withFreshAuth<T>(
   call: (accessToken: string | undefined) => Promise<T>,
 ): Promise<T> {
@@ -362,42 +367,65 @@ export async function withFreshAuth<T>(
       err instanceof ApiError && (err.status === 401 || err.status === 403);
     if (!unauthorized) throw err;
 
+    // Officers have NO citizen session (clearSession() is called on officer
+    // login). Check the officer session first; fall back to the citizen one.
+    const officerMode = _isOfficer();
     const session = loadSession();
-    if (!session?.refreshToken) {
+    if (!officerMode && !session?.refreshToken) {
       clearSession();
       throw new SessionExpiredError();
     }
+
     // Refresh, then retry once. Only a definitive 401/403 (dead refresh token /
     // still-unauthorized retry) ends the session. A network error, timeout, or
     // 5xx from a flaky backend is transient — keep the session and surface the
     // error so the caller can show "try again" instead of forcing a logout.
     let tokens: Tokens;
     try {
-      tokens = await refresh(session.refreshToken);
+      tokens = officerMode
+        ? await refreshOfficer()
+        : await refresh(session!.refreshToken);
     } catch (refreshErr) {
       if (
         refreshErr instanceof ApiError &&
         (refreshErr.status === 401 || refreshErr.status === 403)
       ) {
-        clearSession();
+        if (officerMode) _clearOfficer();
+        else clearSession();
         throw new SessionExpiredError();
       }
       throw refreshErr; // transient — don't log the user out
     }
-    saveSession(tokens);
+    if (!officerMode) saveSession(tokens);
     try {
-      return await call(tokens.accessToken);
+      return await call(officerMode ? token() : tokens.accessToken);
     } catch (retryErr) {
       if (
         retryErr instanceof ApiError &&
         (retryErr.status === 401 || retryErr.status === 403)
       ) {
-        clearSession();
+        if (officerMode) _clearOfficer();
+        else clearSession();
         throw new SessionExpiredError();
       }
       throw retryErr; // transient — don't log the user out
     }
   }
+}
+
+/** Officer-specific refresh — hits the /api/officer/refresh server-side route
+ * which reads the icrcs-officer-refresh cookie, exchanges it with the User
+ * Management API, and writes fresh cookies. */
+async function refreshOfficer(): Promise<Tokens> {
+  const res = await fetch("/api/officer/refresh", {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, "Officer session expired");
+  }
+  // Tokens are in HttpOnly cookies; return stubs.
+  return { accessToken: "__httponly__", refreshToken: "__httponly__" };
 }
 
 /** GET /v1/profile/me — the full profile for the signed-in account. Call once

@@ -28,13 +28,27 @@ export type OfficerProfile = {
   userId: string;
   username: string;
   stationId: number;
+  stationName: string;
+  email: string;
+  fullName: string;
+  mobileNo: string;
+  pfNo: string;
 };
 
 /** GET /v1/officer/profile — the signed-in officer's identity + station. */
 export async function getOfficerProfile(): Promise<OfficerProfile> {
   if (BYPASS) {
     await delay(150);
-    return { userId: "mock-officer", username: "officer@immigration.go.tz", stationId: 189 };
+    return {
+      userId: "mock-officer",
+      username: "officer@immigration.go.tz",
+      stationId: 189,
+      stationName: "HQ",
+      email: "officer@immigration.go.tz",
+      fullName: "Mock Officer",
+      mobileNo: "",
+      pfNo: "",
+    };
   }
   const raw = await apiGet<Row>("/v1/officer/profile");
   const d = obj(raw.data ?? raw);
@@ -42,6 +56,11 @@ export async function getOfficerProfile(): Promise<OfficerProfile> {
     userId: str(d.userId ?? d.UserID),
     username: str(d.username ?? d.Username ?? d.Email),
     stationId: num(d.stationId ?? d.StationID),
+    stationName: str(d.stationName ?? d.StationName),
+    email: str(d.email ?? d.Email ?? d.username ?? d.Username),
+    fullName: str(d.fullName ?? d.FullName),
+    mobileNo: str(d.mobileNo ?? d.MobileNo ?? d.phoneNumber),
+    pfNo: str(d.pfNo ?? d.PFNo ?? d.pf_no),
   };
 }
 

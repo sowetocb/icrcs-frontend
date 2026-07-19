@@ -476,6 +476,18 @@ const en = {
     resumeDesc:
       "Continue an application you started earlier and pick up where you left off to receive your Application Number.",
     resumeAction: "Resume application",
+    // Officer registration — officers register MIGRANTS on an applicant's behalf,
+    // never themselves or citizens. Each registration is a separate server case.
+    officerLandingTitle: "Migrant",
+    officerLandingTitleAccent: "Registration",
+    officerLandingIntro:
+      "Register migrants — refugees, asylum seekers, aliens, and other non-citizens — on their behalf. Each registration is a separate case tracked by the server; start as many as you need.",
+    officerStartTitle: "New Migrant Registration",
+    officerStartDesc:
+      "Start a new registration for a migrant (refugee, asylum seeker, alien, undocumented migrant, or voluntary returnee).",
+    officerResumeTitle: "Resume a Registration",
+    officerResumeDesc:
+      "Continue a migrant registration you started earlier and pick up at the stage you left off.",
     statusTitle: "Registration Status",
     statusDesc:
       "Track the progress of your submitted application and view the status of your Registration Certificate.",
@@ -1465,6 +1477,16 @@ const sw: typeof en = {
     resumeDesc:
       "Kwa Mwombaji ambaye alishajaza fomu ya maombi ya Usajili na kufikia hatua ya kupatiwa Namba ya Ombi.",
     resumeAction: "Endeleza Ombi",
+    officerLandingTitle: "Usajili wa",
+    officerLandingTitleAccent: "Wahamiaji",
+    officerLandingIntro:
+      "Sajili wahamiaji — wakimbizi, watafuta hifadhi, wageni, na wasio raia — kwa niaba yao. Kila usajili ni kesi tofauti inayofuatiliwa na seva; anzisha kadri unavyohitaji.",
+    officerStartTitle: "Usajili Mpya wa Mhamiaji",
+    officerStartDesc:
+      "Anzisha usajili mpya wa mhamiaji (mkimbizi, mtafuta hifadhi, mgeni, mhamiaji asiye na nyaraka, au anayerejea kwa hiari).",
+    officerResumeTitle: "Endeleza Usajili",
+    officerResumeDesc:
+      "Endeleza usajili wa mhamiaji uliouanza awali na uendelee kutoka hatua uliyoishia.",
     statusTitle: "Ufuatiliaji Ombi",
     statusDesc:
       "Angalia hali na maendeleo ya ombi lako la kupatiwa Cheti cha Usajili ulilowasilisha.",

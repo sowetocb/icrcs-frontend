@@ -226,9 +226,15 @@ export default function DashboardTopbar() {
   }, []);
 
   // Officer identity takes precedence over the (absent) citizen profile.
-  const officerName = officer ? (officer.fullName || officer.username || "") : "";
-  const name = officer ? officerName : fullName(profile);
-  const avatarInitials = officer ? initialsFromName(officerName) : initials(profile);
+  // Show only first name + surname to keep the topbar compact.
+  const officerFullName = officer ? (officer.fullName || officer.username || "") : "";
+  const officerShortName = (() => {
+    const parts = officerFullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 2) return officerFullName;
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  })();
+  const name = officer ? officerShortName : fullName(profile);
+  const avatarInitials = officer ? initialsFromName(officerFullName) : initials(profile);
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">

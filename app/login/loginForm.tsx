@@ -199,7 +199,7 @@ export default function LoginForm() {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate autoComplete="off">
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-navy-700">
             {t("form.email")}
@@ -208,7 +208,7 @@ export default function LoginForm() {
             id="email"
             name="email"
             type="email"
-            autoComplete="email"
+            autoComplete="off"
             required
             maxLength={RULES.UI_EMAIL_MAX}
             value={email}
@@ -248,7 +248,7 @@ export default function LoginForm() {
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               value={password}
               onChange={(e) => {

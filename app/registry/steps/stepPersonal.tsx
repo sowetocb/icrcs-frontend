@@ -119,9 +119,12 @@ export default function StepPersonal() {
   // For the account holder's OWN registration it is their profile nationality
   // (migrants / refugees / asylum seekers keep their foreign nationality), seeded
   // by the wizard — leave it as-is. Dependents and Tanzanian-origin minors are
-  // Tanzanian, so force Tanzania only for them.
+  // Tanzanian, so force Tanzania only for them. Migrant-track dependents (minors
+  // of a migrant account holder) and officer-registered migrants keep an open
+  // nationality picker — their nationality is NOT forced to Tanzania.
   useEffect(() => {
     if (isFirstPerson) return;
+    if (isMigrant) return; // migrant-track: nationality is freely selectable
     if (data.nationalityCountry !== "Tanzania") setQuiet("nationalityCountry", "Tanzania");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -242,7 +245,7 @@ export default function StepPersonal() {
       {/* Nationality. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
-          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled />
+          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled={!isMigrant} />
         </Field>
       </div>
 

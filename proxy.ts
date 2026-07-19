@@ -158,7 +158,10 @@ export function proxy(request: NextRequest): Response {
     }
 
     if (!isPublicProxyPath(segs)) {
-      const hasCookie = Boolean(request.cookies.get("icrcs-access")?.value);
+      const isOfficerPath = segs[0] === "v1" && segs[1] === "officer";
+      const hasCookie = isOfficerPath
+        ? Boolean(request.cookies.get("icrcs-officer-access")?.value)
+        : Boolean(request.cookies.get("icrcs-access")?.value);
       const hasBearer = (request.headers.get("authorization") ?? "").startsWith(
         "Bearer ",
       );

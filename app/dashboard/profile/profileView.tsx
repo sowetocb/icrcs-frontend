@@ -27,6 +27,8 @@ import {
 } from "@/lib/auth/profile";
 import ProfilePhoneInput from "@/app/create-profile/profilePhoneInput";
 import { isPhoneComplete } from "@/lib/phoneLengths";
+import { isOfficer, loadOfficer, type OfficerUser } from "@/lib/auth/officerSession";
+import { getOfficerProfile } from "@/lib/api/officer";
 
 const MAX_PHOTO = 300 * 1024; // 300KB
 const PHOTO_TYPES: readonly string[] = RULES.PHOTO_ALLOWED_MIME;
@@ -53,7 +55,133 @@ function initials(p: Profile | null): string {
   return (f + l).toUpperCase() || "?";
 }
 
+/** Read-only officer identity panel — fetches from GET /v1/officer/profile
+ * and displays only what the API returns. Falls back to the cached login
+ * session if the endpoint is unreachable. */
+function OfficerProfileView({
+  officer: cachedOfficer,
+  onClose,
+}: {
+  officer: OfficerUser;
+  onClose?: () => void;
+}) {
+  const { t } = useI18n();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<{
+    fullName: string;
+    email: string;
+    stationName: string;
+    mobileNo: string;
+    pfNo: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const p = await getOfficerProfile();
+        if (!alive) return;
+        setProfile({
+          fullName: p.fullName || cachedOfficer.fullName || "",
+          email: p.email || p.username || cachedOfficer.email || "",
+          // Prefer the station NAME ("HQ"); fall back to the id.
+          stationName: p.stationName || cachedOfficer.stationName || (p.stationId ? String(p.stationId) : ""),
+          mobileNo: p.mobileNo || "",
+          pfNo: p.pfNo || cachedOfficer.pfNo || "",
+        });
+      } catch {
+        // Fallback to cached login data if the API fails.
+        if (!alive) return;
+        setProfile({
+          fullName: cachedOfficer.fullName || cachedOfficer.username || "",
+          email: cachedOfficer.email || cachedOfficer.username || "",
+          stationName: cachedOfficer.stationName || (cachedOfficer.stationId ? String(cachedOfficer.stationId) : ""),
+          mobileNo: "",
+          pfNo: cachedOfficer.pfNo || "",
+        });
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [cachedOfficer]);
+
+  const name = profile?.fullName || cachedOfficer.fullName || cachedOfficer.username || "";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const avatar =
+    ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+
+  // Position, Region and Roles come only from the login session (not the
+  // /v1/officer/profile response), so read them from the cached officer.
+  const rows: [string, string | undefined][] = profile
+    ? [
+        ["Full name", profile.fullName],
+        ["Email", profile.email],
+        ["Mobile", profile.mobileNo],
+        ["PF No.", profile.pfNo],
+        ["Position", cachedOfficer.position],
+        ["Station", profile.stationName],
+        ["Region", cachedOfficer.regionName],
+        ["Roles", cachedOfficer.roles?.length ? cachedOfficer.roles.map((r) => r.replace(/_/g, " ")).join(", ") : undefined],
+      ]
+    : [];
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="font-display text-xl font-bold text-navy-700">{t("nav.viewProfile")}</h2>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1.5 text-muted transition hover:bg-navy-50 hover:text-navy-700"
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      <div className="mb-6 flex items-center gap-4 rounded-xl border border-line bg-card p-5">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-navy-700 text-xl font-bold text-white">
+          {avatar}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-bold text-navy-700">{name || "—"}</p>
+          {(profile?.email || cachedOfficer.email) && (
+            <p className="truncate text-sm text-muted">{profile?.email || cachedOfficer.email}</p>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <LoaderCircle className="h-6 w-6 animate-spin text-navy-500" aria-hidden="true" />
+        </div>
+      ) : (
+        <dl className="divide-y divide-line rounded-xl border border-line">
+          {rows
+            .filter(([, v]) => v && v.trim())
+            .map(([label, v]) => (
+              <div key={label} className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
+                <dt className="text-sm font-medium text-muted">{label}</dt>
+                <dd className="text-sm text-ink sm:col-span-2">{v}</dd>
+              </div>
+            ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
 export default function ProfileView({ onClose }: { onClose?: () => void } = {}) {
+  // Officers get a read-only officer panel; citizens get the editable profile.
+  const [officer] = useState(() => (isOfficer() ? loadOfficer() : null));
+  if (officer) return <OfficerProfileView officer={officer} onClose={onClose} />;
+  return <CitizenProfileView onClose={onClose} />;
+}
+
+function CitizenProfileView({ onClose }: { onClose?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
   const { notify } = useToast();
@@ -107,6 +235,28 @@ export default function ProfileView({ onClose }: { onClose?: () => void } = {}) 
         phoneNumber: p.phoneNumber ?? "",
         nationality: p.nationality ?? "",
       });
+
+    // Officers have NO citizen profile — never call /v1/profile/me.
+    // Show the cached officer identity in read-only mode.
+    if (isOfficer()) {
+      const o = loadOfficer();
+      if (o) {
+        const officerProfile: Profile = {
+          profileId: "",
+          firstName: o.fullName?.split(" ")[0] ?? o.username ?? "",
+          middleName: o.fullName?.split(" ").slice(1, -1).join(" ") ?? "",
+          lastName: o.fullName?.split(" ").slice(-1)[0] ?? "",
+          gender: "",
+          phoneNumber: "",
+          email: o.username ?? "",
+          nationality: "",
+          profilePictureUrl: "",
+        };
+        setProfile(officerProfile);
+        fillForm(officerProfile);
+      }
+      return;
+    }
 
     const cached = loadProfile();
     if (cached) {

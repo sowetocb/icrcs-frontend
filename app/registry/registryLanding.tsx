@@ -57,28 +57,31 @@ export default function RegistryLanding({
       // Before the profile owner is done, "start" means register yourself;
       // afterwards it means register a dependent. Officers always see a generic title.
       title: officerMode
-        ? t("registry.startTitle")
+        ? t("registry.officerStartTitle")
         : selfDone ? t("registry.startDependentTitle") : t("registry.startOwnerTitle"),
       desc: officerMode
-        ? t("registry.startDesc")
+        ? t("registry.officerStartDesc")
         : selfDone ? t("registry.startDependentDesc") : t("registry.startOwnerDesc"),
       action: t("registry.startAction"),
       onClick: onStart,
-      // Officers: can't start a new one while a case is active.
-      // Citizens: can't start a new one while a registration is incomplete.
-      //           can't register a dependent until the holder is APPROVED.
-      disabled: hasIncomplete || (!officerMode && dependentBlocked),
-      note: hasIncomplete
-        ? t("registry.finishFirstNote")
-        : dependentBlocked
-          ? t("registry.approvalRequiredNote")
-          : undefined,
+      // Officers: always allowed to start a new registration (even with
+      // incomplete cases — each "+ New Registration" creates a fresh case).
+      // Citizens: can't start a new one while a registration is incomplete,
+      //           and can't register a dependent until the holder is APPROVED.
+      disabled: officerMode ? false : (hasIncomplete || dependentBlocked),
+      note: officerMode
+        ? undefined
+        : hasIncomplete
+          ? t("registry.finishFirstNote")
+          : dependentBlocked
+            ? t("registry.approvalRequiredNote")
+            : undefined,
     },
     {
       key: "resume",
       Icon: ResumeIcon,
-      title: t("registry.resumeTitle"),
-      desc: t("registry.resumeDesc"),
+      title: officerMode ? t("registry.officerResumeTitle") : t("registry.resumeTitle"),
+      desc: officerMode ? t("registry.officerResumeDesc") : t("registry.resumeDesc"),
       action: t("registry.resumeAction"),
       onClick: onResume,
       disabled: !hasIncomplete,
@@ -104,12 +107,14 @@ export default function RegistryLanding({
           {/* Intro */}
           <div>
             <h1 className="font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
-              {t("registry.landingTitle")}
+              {officerMode ? t("registry.officerLandingTitle") : t("registry.landingTitle")}
               <br />
-              <span className="text-gold">{t("registry.landingTitleAccent")}</span>
+              <span className="text-gold">
+                {officerMode ? t("registry.officerLandingTitleAccent") : t("registry.landingTitleAccent")}
+              </span>
             </h1>
             <p className="mt-6 max-w-lg leading-relaxed text-muted">
-              {t("registry.landingIntro")}
+              {officerMode ? t("registry.officerLandingIntro") : t("registry.landingIntro")}
             </p>
           </div>
 

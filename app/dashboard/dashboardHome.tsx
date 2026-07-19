@@ -5,6 +5,7 @@ import Link from "next/link";
 import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { loadProfile } from "@/lib/auth/profile";
+import { isOfficer, loadOfficer } from "@/lib/auth/officerSession";
 import { FileText, Camera, Users, Mail, Download } from "lucide-react";
 
 type IconProps = { className?: string };
@@ -28,8 +29,17 @@ export default function DashboardHome() {
   const [userName, setUserName] = useState("");
 
   // Read the cached profile (stored once after login) — client-only to stay
-  // hydration-safe. We never fetch /v1/profile/me here.
+  // hydration-safe. Officers use their officer identity, not the citizen profile.
   useEffect(() => {
+    if (isOfficer()) {
+      const o = loadOfficer();
+      if (o) {
+        const parts = (o.fullName || "").trim().split(/\s+/).filter(Boolean);
+        const short = parts.length > 2 ? `${parts[0]} ${parts[parts.length - 1]}` : (o.fullName || o.username || "");
+        setUserName(short);
+      }
+      return;
+    }
     const p = loadProfile();
     if (p) {
       // eslint-disable-next-line react-hooks/set-state-in-effect

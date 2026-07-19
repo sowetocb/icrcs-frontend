@@ -414,7 +414,7 @@ export default function RegistryClient() {
             <CitizenSidebar />
             <OfficerCases
               onResume={officerResume}
-              onStartNew={() => setMode("category")}
+              onStartNew={startFresh}
             />
           </div>
         )}

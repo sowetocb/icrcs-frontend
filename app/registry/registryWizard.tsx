@@ -316,7 +316,14 @@ export default function RegistryWizard({
     // account holder's OWN registration — migrants / refugees / asylum seekers
     // keep their foreign nationality. Dependents and Tanzanian-origin minors are
     // Tanzanian. (Legacy profiles with no nationality fall back to Tanzania.)
-    base.nationalityCountry = isFirstPerson ? (prof?.nationality || "Tanzania") : "Tanzania";
+    // Officers registering migrants must NOT get a pre-filled nationality — the
+    // migrant's nationality needs to be selected by the officer.
+    if (isOfficer() && registrationType) {
+      // Leave nationalityCountry empty so the officer picks the migrant's actual one.
+      base.nationalityCountry = "";
+    } else {
+      base.nationalityCountry = isFirstPerson ? (prof?.nationality || "Tanzania") : "Tanzania";
+    }
     // Migrants/refugees/asylum seekers are non-citizens (citizenshipTypeId 2);
     // the citizen track stays 1.
     base.citizenshipTypeId = registrationType ? "2" : "1";
@@ -462,6 +469,12 @@ export default function RegistryWizard({
           // them all reflects the server data exactly without wiping unrelated
           // local fields.
           for (const [k, v] of Object.entries(mapped)) next[k] = v;
+          // A migrant's gated stage (4/5/6) that returned data must open on
+          // "Yes" so the fetched entries are actually shown — an empty stage
+          // (answered "No") is filtered out above, so reaching here means real
+          // data came back.
+          const gate = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
+          if (gate && next[gate] !== true) next[gate] = true;
           return next;
         });
         // Mark hydrated so the skeleton never blocks this stage again — it
@@ -504,6 +517,9 @@ export default function RegistryWizard({
         setData((d) => {
           const next = { ...d };
           for (const [k, v] of Object.entries(mapped)) next[k] = v;
+          // Gated migrant stage that returned data → open it on "Yes".
+          const gate = isMigrant ? MIGRANT_STAGE_GATE[n] : undefined;
+          if (gate && next[gate] !== true) next[gate] = true;
           return next;
         });
         hydratedStages.current.add(n);
@@ -614,6 +630,8 @@ export default function RegistryWizard({
         }
       }
       // Empty or unresolved — pull a fresh profile and use its gender.
+      // Officers register migrants (no citizen profile) — never hit /me.
+      if (isOfficer()) return;
       try {
         const fresh = await refreshMyProfile();
         saveProfile(fresh);
