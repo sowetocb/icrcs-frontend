@@ -47,6 +47,14 @@ export const RULES = {
 
   // ---- Email (REGISTRATION_EMAIL_REQUIRED / _INVALID / _TOO_LONG, PROFILE_EMAIL_EXISTS) ----
   EMAIL_MAX: 255, // backend contract; UI enforces UI_EMAIL_MAX (50)
+  // Canonical email FORMAT — the single source of truth for every email input
+  // (login, create-profile, forgot-password, registry wizard). This is the exact
+  // pattern used at authentication, so an address accepted to sign in is accepted
+  // everywhere. Length is capped separately (UI_EMAIL_MAX / EMAIL_MAX).
+  EMAIL_PATTERN: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+  // Characters that can never appear in an email — used by the live input filter
+  // to strip disallowed keystrokes. Global flag: use ONLY with String.replace.
+  EMAIL_DISALLOWED: /[^A-Za-z0-9._%+\-@]/g,
 
   // ---- Phone (REGISTRATION_PHONE_REQUIRED / _INVALID / _TOO_SHORT, PROFILE_PHONE_*) ----
   // Accepts 07XXXXXXXX or +2557XXXXXXXX (Tanzania mobile, network prefixes 6/7).

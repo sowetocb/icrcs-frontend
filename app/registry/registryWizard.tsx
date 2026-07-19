@@ -69,6 +69,7 @@ import {
   PASSPORT_PHOTO_TYPE,
   MANDATORY_ATTACHMENT_TYPE_IDS,
   PARENT_BIRTH_CERT_TYPE_IDS,
+  setFilesOfficerMode,
   type UploadedAttachment,
 } from "@/lib/api/files";
 
@@ -277,7 +278,11 @@ export default function RegistryWizard({
    * later phase. */
   registrationType?: RegistrationType;
   onExit: () => void;
-  onComplete: (data: Record<string, string | boolean>, applicationId: string) => void;
+  onComplete: (
+    data: Record<string, string | boolean>,
+    applicationId: string,
+    subjectId: string,
+  ) => void;
 }) {
   const { t, locale } = useI18n();
   const { notify } = useToast();
@@ -292,48 +297,38 @@ export default function RegistryWizard({
   // Contact details are inherited (not the names) when the subject isn't the
   // account holder — i.e. a normal dependent or a foreign profile's minor.
   const inheritsContact = selfDone || registeringMinor;
-  const [profile] = useState<Profile | null>(() => loadProfile());
-  const ownerId = profile?.profileId ?? "";
+  // Profile is fetched from the backend on mount — never from localStorage.
+  // This avoids relying on stale cached data for sensitive information.
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(() => !isOfficer());
+  const ownerId = profile?.profileId ?? loadProfile()?.profileId ?? "";
   const locked = profile ? (isFirstPerson ? PERSONAL_LOCK : CONTACT_LOCK) : [];
 
   // Resolve the in-progress draft ONCE and reuse it for every init value, so
-  // step / data / subjectId / submittedStages stay consistent. Prefer the
-  // owner-scoped match, but fall back to the device's draft so a profileId
-  // hiccup never strands the user's entered data (foreign drafts are already
-  // cleared on login).
+  // step / subjectId / submittedStages stay consistent. The draft stores ONLY
+  // navigation metadata (step, subjectId, submittedStages, applicationId) —
+  // never sensitive form data. Form data is always fetched from the backend.
   const [draft] = useState(() => loadRegistrationFor(ownerId) ?? loadRegistration());
   const resumable = draft && !draft.completed ? draft : null;
 
   const [step, setStep] = useState(() => skipReferee(resumable?.step ?? 1));
   const [data, setData] = useState<Record<string, string | boolean>>(() => {
-    const prof = loadProfile();
-    const base: Record<string, string | boolean> = prof
-      ? inheritsContact
-        ? { phone: prof.phoneNumber, email: prof.email }
-        : profileToPersonal(prof)
-      : {};
-    // Bind the country of nationality captured at profile creation to the
-    // account holder's OWN registration — migrants / refugees / asylum seekers
-    // keep their foreign nationality. Dependents and Tanzanian-origin minors are
-    // Tanzanian. (Legacy profiles with no nationality fall back to Tanzania.)
+    // Start with minimal non-sensitive defaults. The backend-fetched profile
+    // will populate personal fields via the mount effect below.
+    const base: Record<string, string | boolean> = {};
     // Officers registering migrants must NOT get a pre-filled nationality — the
     // migrant's nationality needs to be selected by the officer.
     if (isOfficer() && registrationType) {
-      // Leave nationalityCountry empty so the officer picks the migrant's actual one.
       base.nationalityCountry = "";
     } else {
-      base.nationalityCountry = isFirstPerson ? (prof?.nationality || "Tanzania") : "Tanzania";
+      base.nationalityCountry = isFirstPerson ? "Tanzania" : "Tanzania";
     }
     // Migrants/refugees/asylum seekers are non-citizens (citizenshipTypeId 2);
     // the citizen track stays 1.
     base.citizenshipTypeId = registrationType ? "2" : "1";
-    // Persist the chosen category IN THE DRAFT DATA. The `registrationType` prop
-    // only lives in registryClient's React state, so it is lost on a refresh (the
-    // wizard view is restored from sessionStorage) and on "Resume" (which skips
-    // the category picker). Storing it here means the draft itself remembers it.
-    base.registrationType = registrationType ?? "";
-    // Saved form data wins over the profile prefill so entered values are kept.
-    return resumable?.data ? { ...base, ...resumable.data } : base;
+    // The registrationType must survive refresh — stored in the draft metadata.
+    base.registrationType = resumable?.registrationType ?? registrationType ?? "";
+    return base;
   });
 
   // The active category: the draft's stored value (survives refresh/resume) wins,
@@ -406,8 +401,16 @@ export default function RegistryWizard({
   // when a government officer is registering, or the citizen namespace otherwise.
   // Set before any submit can fire (submits require user interaction post-mount).
   useEffect(() => {
-    setRegistrationOfficerMode(isOfficer());
-    return () => setRegistrationOfficerMode(false);
+    const officer = isOfficer();
+    setRegistrationOfficerMode(officer);
+    // File uploads (passport photo + Stage 8 documents) must also route to the
+    // officer namespace so the proxy attaches the officer cookie — otherwise the
+    // upload hits /v1/files/upload with no officer auth and returns 401.
+    setFilesOfficerMode(officer);
+    return () => {
+      setRegistrationOfficerMode(false);
+      setFilesOfficerMode(false);
+    };
   }, []);
 
   // Whenever the current step advances past the known frontier, push it out.
@@ -415,12 +418,55 @@ export default function RegistryWizard({
     setMaxStep((m) => Math.max(m, step));
   }, [step]);
 
-  // Persist the currently-viewed step on every step change so a hard refresh
-  // restores the exact stage the user is on — including after they navigate back
-  // to edit an earlier stage. Without this, the draft's saved step lags at the
-  // furthest-reached stage (only written on save/exit), so refreshing an earlier
-  // stage would snap the user forward. `maxStep` is stored separately, so the
-  // sidebar frontier (and access to later completed stages) is never lost.
+  // Fetch the profile from the backend on mount — the single source of truth
+  // for the account holder's personal details. If this fails, the form stays
+  // empty and the user is informed politely. Never fall back to localStorage.
+  useEffect(() => {
+    // Officers register migrants (no citizen profile) — skip the fetch.
+    if (isOfficer()) {
+      setProfileLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const fresh = await refreshMyProfile();
+        if (cancelled) return;
+        setProfile(fresh);
+        // Populate personal fields from the backend-fetched profile.
+        setData((d) => {
+          const next = { ...d };
+          if (isFirstPerson) {
+            const personal = profileToPersonal(fresh);
+            for (const [k, v] of Object.entries(personal)) {
+              if (!next[k] || next[k] === "") next[k] = v;
+            }
+          } else if (inheritsContact) {
+            if (!next.phone || next.phone === "") next.phone = fresh.phoneNumber;
+            if (!next.email || next.email === "") next.email = fresh.email;
+          }
+          // Bind nationality from the backend profile (not from cache).
+          if (!(isOfficer() && registrationType)) {
+            next.nationalityCountry = isFirstPerson
+              ? (fresh.nationality || "Tanzania")
+              : "Tanzania";
+          }
+          return next;
+        });
+      } catch {
+        if (!cancelled) {
+          setFormError(t("registry.profileLoadError"));
+        }
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist navigation metadata (NOT form data) on every step change so a hard
+  // refresh restores the exact stage the user is on.
   useEffect(() => {
     saveRegistration({
       step,
@@ -430,16 +476,17 @@ export default function RegistryWizard({
       applicationId: applicationId || undefined,
       subjectId: subjectId || undefined,
       submittedStages: [...submittedStages],
-      data,
+      registrationType: typeof data.registrationType === "string" ? data.registrationType : undefined,
+      // No `data` field — sensitive form data is never stored in localStorage.
     });
-    // Runs on step change only; captures the latest data/identity from this render.
+    // Runs on step change only; captures the latest identity from this render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   // Re-hydrate an already-submitted stage from the backend when the user returns
   // to it (e.g. resuming on a fresh browser, or going back to edit). The API is
-  // the source of truth for a submitted stage, so every field it returns
-  // overwrites the local value — the form shows exactly what the server stored.
+  // the ONLY source of truth for a submitted stage — if the fetch fails, the
+  // form stays empty and the user is informed. No fallback to cached data.
   useEffect(() => {
     if (!subjectId || !submittedStages.has(step)) {
       setStageLoading(false);
@@ -453,7 +500,12 @@ export default function RegistryWizard({
     (async () => {
       try {
         const raw = await getStageData(subjectId, step);
-        if (!raw || cancelled) return;
+        if (cancelled) return;
+        if (!raw) {
+          // The backend returned no data — inform the user.
+          setFormError(t("registry.stageLoadError"));
+          return;
+        }
         const mapped = await stageToForm(step, raw);
         // Migrant Stage 1 stores Travel History on a SEPARATE endpoint, so pull
         // it alongside the stage data and merge it in — otherwise the whole
@@ -462,24 +514,37 @@ export default function RegistryWizard({
           const th = await getTravelHistory(subjectId).catch(() => null);
           if (th) Object.assign(mapped, await travelHistoryToForm(th));
         }
-        if (cancelled || Object.keys(mapped).length === 0) return;
+        if (cancelled) return;
+        const hasData = Object.keys(mapped).length > 0;
+        // The gate on a migrant's stages 4/5/6 must reflect the server on resume:
+        // data present → open on "Yes" (so it's shown); a submitted-but-empty
+        // stage (answered "No") → "No". So even an empty response is applied when
+        // there's a gate to settle. Nothing to do only when neither applies.
+        const gate = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
+        if (!hasData && !gate) return;
         setData((d) => {
           const next = { ...d };
           // `mapped` only holds keys derived from the API response, so assigning
           // them all reflects the server data exactly without wiping unrelated
           // local fields.
           for (const [k, v] of Object.entries(mapped)) next[k] = v;
-          // A migrant's gated stage (4/5/6) that returned data must open on
-          // "Yes" so the fetched entries are actually shown — an empty stage
-          // (answered "No") is filtered out above, so reaching here means real
-          // data came back.
-          const gate = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
-          if (gate && next[gate] !== true) next[gate] = true;
+          if (gate) {
+            if (hasData) next[gate] = true;
+            // Only settle an UNSET gate to "No" — never override the user's own
+            // in-session choice.
+            else if (next[gate] !== true && next[gate] !== false) next[gate] = false;
+          }
           return next;
         });
         // Mark hydrated so the skeleton never blocks this stage again — it
         // perishes for good once the data has been successfully fetched.
         hydratedStages.current.add(step);
+      } catch {
+        // The backend is unreachable — inform the user politely and leave
+        // the form empty rather than showing stale cached data.
+        if (!cancelled) {
+          setFormError(t("registry.stageLoadError"));
+        }
       } finally {
         if (!cancelled) setStageLoading(false);
       }
@@ -513,13 +578,18 @@ export default function RegistryWizard({
         if (!raw) continue;
         const mapped = await stageToForm(n, raw);
         if (cancelled) return;
-        if (Object.keys(mapped).length === 0) continue;
+        const hasData = Object.keys(mapped).length > 0;
+        const gate = isMigrant ? MIGRANT_STAGE_GATE[n] : undefined;
+        if (!hasData && !gate) continue;
         setData((d) => {
           const next = { ...d };
           for (const [k, v] of Object.entries(mapped)) next[k] = v;
-          // Gated migrant stage that returned data → open it on "Yes".
-          const gate = isMigrant ? MIGRANT_STAGE_GATE[n] : undefined;
-          if (gate && next[gate] !== true) next[gate] = true;
+          // Gated migrant stage: data present → "Yes"; submitted but empty →
+          // "No" (only when the gate is still unset — never override a choice).
+          if (gate) {
+            if (hasData) next[gate] = true;
+            else if (next[gate] !== true && next[gate] !== false) next[gate] = false;
+          }
           return next;
         });
         hydratedStages.current.add(n);
@@ -629,27 +699,22 @@ export default function RegistryWizard({
           return;
         }
       }
-      // Empty or unresolved — pull a fresh profile and use its gender.
-      // Officers register migrants (no citizen profile) — never hit /me.
+      // Empty or unresolved — use the profile fetched on mount. Officers
+      // register migrants (no citizen profile) — nothing to resolve.
       if (isOfficer()) return;
-      try {
-        const fresh = await refreshMyProfile();
-        saveProfile(fresh);
-        const code = await resolveGenderCode(fresh.gender);
+      if (profile) {
+        const code = await resolveGenderCode(profile.gender);
         if (!cancelled && code) setData((d) => ({ ...d, gender: code }));
-      } catch {
-        // best effort — leave the field for the user
       }
     })();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [profile]);
 
   // A subject who isn't the account holder (a dependent — including a minor)
-  // inherits the account holder's phone & email. Enforce it from the profile so
-  // those fields are populated even when a resumed/empty draft didn't carry them.
+  // inherits the account holder's phone & email from the backend-fetched profile.
   useEffect(() => {
     if (!inheritsContact || !profile) return;
     setData((d) => {
@@ -660,8 +725,9 @@ export default function RegistryWizard({
       if (nextPhone === d.phone && nextEmail === d.email) return d;
       return { ...d, phone: nextPhone, email: nextEmail };
     });
+    // Re-run when the profile arrives from the backend (async).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inheritsContact]);
+  }, [inheritsContact, profile]);
 
   // Programmatic, non-user updates (effect-driven defaults & sync). Updates the
   // data WITHOUT marking the form dirty, so the "unsaved changes" reminder only
@@ -816,7 +882,7 @@ export default function RegistryWizard({
 
     // 2. Email — standard format
     if (name === "email") {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) flag(t("form.emailInvalid"));
+      if (!RULES.EMAIL_PATTERN.test(trimmed)) flag(t("form.emailInvalid"));
       return;
     }
 
@@ -1608,7 +1674,7 @@ export default function RegistryWizard({
         return;
       }
       setSubmitting(false);
-      onComplete(data, applicationId);
+      onComplete(data, applicationId, subjectId);
       return;
     }
 
@@ -1676,7 +1742,7 @@ export default function RegistryWizard({
       // Each check below pins the message to its own field (no banner).
       // Email must be a valid format.
       const email = typeof data.email === "string" ? data.email.trim() : "";
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (email && !RULES.EMAIL_PATTERN.test(email)) {
         setErrors(["email"]);
         setFieldErrors({ email: t("form.emailInvalid") });
         setFormError("");
@@ -2354,11 +2420,18 @@ export default function RegistryWizard({
       notify(t("toast.stageSaved"));
     }
 
-    // If the user jumped back to edit an earlier stage, return them to where
-    // they were; otherwise advance sequentially.
-    let next = returnStep && returnStep > step
-      ? Math.min(returnStep, TOTAL)
-      : Math.min(step + 1, TOTAL);
+    // Where to land after saving:
+    //  • Editing an already-submitted stage (the GET→PUT edit path): the stage is
+    //    just updated in place, so jump straight to the LATEST stage reached
+    //    (maxStep) — the user shouldn't be forced to re-walk every completed
+    //    stage after correcting one earlier field.
+    //  • A brand-new stage: advance sequentially (or return to an explicit
+    //    backward-jump marker if one is set).
+    let next = edit
+      ? Math.min(Math.max(maxStep, step + 1), TOTAL)
+      : returnStep && returnStep > step
+        ? Math.min(returnStep, TOTAL)
+        : Math.min(step + 1, TOTAL);
     setReturnStep(null);
     // Skip the removed Referees step. Traverse its GET-only backend stage first
     // (for sequencing) then land on Uploads; the GET is non-fatal if it fails.
@@ -2454,6 +2527,7 @@ export default function RegistryWizard({
                   locked={locked}
                   isFirstPerson={isFirstPerson}
                   isMigrant={isMigrant}
+                  isOfficerMode={isOfficer()}
                   onGoToStep={goTo}
                   onSessionExpired={signOutToLogin}
                 >

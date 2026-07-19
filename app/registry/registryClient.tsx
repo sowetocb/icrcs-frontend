@@ -299,10 +299,15 @@ export default function RegistryClient() {
   function handleComplete(
     data: Record<string, string | boolean>,
     applicationId: string,
+    subjectId: string,
   ) {
     const now = new Date();
-    // Reuse the ID issued after Personal Information; fall back if absent.
-    const id = applicationId || generateApplicationId(now);
+    // The backend's subjectId (e.g. ICRCS-20260719-ALN0001-Y42UOC) is the REAL,
+    // status-checkable identifier — the status endpoint is
+    // GET /v1/registration/{subjectId}/status. Prefer it so the ID we show for
+    // follow-up actually resolves; the client-generated Application ID (CREG…) is
+    // only a placeholder used before Stage 1 returns and won't resolve on lookup.
+    const id = subjectId || applicationId || generateApplicationId(now);
     const date = formatSubmittedDate(now);
     // Persist the submitted application so the status check reflects it.
     saveRegistration({

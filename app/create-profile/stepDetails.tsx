@@ -60,12 +60,12 @@ const errorRing = "border-danger focus:border-danger focus:ring-danger/15";
 // domain of letters/digits/hyphens with at least one dot, and a ≥2-letter TLD.
 // Stricter than "anything@anything.anything" so structured junk like
 // "[[[@[[.co" is rejected, while every real-world address still passes.
-const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const EMAIL_RE = RULES.EMAIL_PATTERN;
 
 // Characters that can legitimately appear anywhere in an email address (the
 // union of valid local-part and domain characters, plus the @). Anything else
 // is stripped as the user types so they can't enter what would never validate.
-const EMAIL_DISALLOWED = /[^A-Za-z0-9._%+\-@]/g;
+const EMAIL_DISALLOWED = RULES.EMAIL_DISALLOWED;
 
 function FieldError({ id, message }: { id: string; message: string }) {
   return (

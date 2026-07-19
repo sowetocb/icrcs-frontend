@@ -1253,8 +1253,15 @@ export async function submitStage9(subjectId: string): Promise<unknown> {
     await delay(300);
     return { mock: true };
   }
+  // The declaration is confirmed differently on each endpoint:
+  //  • Citizen: POST .../stage9?confirmed=true with an EMPTY body.
+  //  • Officer: POST .../stage9 with { confirmed: true } in the BODY (no query).
+  // Sending the citizen shape (query param) to the officer endpoint leaves the
+  // body empty, so the backend replies REGISTRATION_DECLARATION_REQUIRED.
   return withFreshAuth((at) =>
-    apiPost(`${regRoot()}/${subjectId}/stage9?confirmed=true`, {}, at),
+    REG_OFFICER
+      ? apiPost(`${regRoot()}/${subjectId}/stage9`, { confirmed: true }, at)
+      : apiPost(`${regRoot()}/${subjectId}/stage9?confirmed=true`, {}, at),
   );
 }
 

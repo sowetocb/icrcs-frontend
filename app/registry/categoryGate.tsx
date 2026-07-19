@@ -31,9 +31,11 @@ const CATEGORIES: {
   { key: "FOREIGN", Icon: Globe, titleKey: "category.foreignTitle", descKey: "category.foreignDesc" },
   { key: "ASYLUM_SEEKER", Icon: ShieldCheck, titleKey: "category.asylumTitle", descKey: "category.asylumDesc" },
   { key: "REFUGEE", Icon: Home, titleKey: "category.refugeeTitle", descKey: "category.refugeeDesc" },
-  { key: "ALIEN", Icon: Users, titleKey: "category.alienTitle", descKey: "category.alienDesc" },
+  // "Migrant" (pre-1972 resident, no foreign passport) → UNDOCUMENTED_MIGRANT enum.
   { key: "UNDOCUMENTED_MIGRANT", Icon: FileText, titleKey: "category.undocumentedTitle", descKey: "category.undocumentedDesc" },
   { key: "VOLUNTARY_RETURNEE", Icon: RotateCcw, titleKey: "category.returneeTitle", descKey: "category.returneeDesc" },
+  // "Immigrant with Undetermined Status" (irregular entry/stay) → ALIEN enum.
+  { key: "ALIEN", Icon: Users, titleKey: "category.alienTitle", descKey: "category.alienDesc" },
 ];
 
 /**
@@ -93,7 +95,10 @@ export default function CategoryGate({
         <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
           {t("category.title")}
         </h1>
-        <p className="mt-3 max-w-2xl leading-relaxed text-muted">{t("category.subtitle")}</p>
+        <p className="mt-3 max-w-3xl leading-relaxed text-muted">{t("category.subtitle")}</p>
+        <p className="mt-3 max-w-3xl rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm leading-relaxed text-ink">
+          {t("category.note")}
+        </p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map(({ key, Icon, titleKey, descKey }) => (

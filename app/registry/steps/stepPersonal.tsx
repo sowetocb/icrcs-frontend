@@ -103,7 +103,7 @@ const ID_DOC_SUFFIXES = ["Type", "Number"];
 
 
 export default function StepPersonal() {
-  const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
+  const { data, set, setQuiet, isFirstPerson, isMigrant, isOfficerMode } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
@@ -122,9 +122,14 @@ export default function StepPersonal() {
   // Tanzanian, so force Tanzania only for them. Migrant-track dependents (minors
   // of a migrant account holder) and officer-registered migrants keep an open
   // nationality picker — their nationality is NOT forced to Tanzania.
+  //
+  // Only OFFICER registration and MIGRANT MINOR registration (dependent under the
+  // migrant track, i.e. !isFirstPerson && isMigrant) allow the nationality to be
+  // freely selected. All other flows bind nationality from the account profile.
+  const canPickNationality = !!isOfficerMode || (!isFirstPerson && !!isMigrant);
   useEffect(() => {
     if (isFirstPerson) return;
-    if (isMigrant) return; // migrant-track: nationality is freely selectable
+    if (canPickNationality) return; // officer or migrant-minor: freely selectable
     if (data.nationalityCountry !== "Tanzania") setQuiet("nationalityCountry", "Tanzania");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -245,7 +250,7 @@ export default function StepPersonal() {
       {/* Nationality. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
-          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled={!isMigrant} />
+          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled={!canPickNationality} />
         </Field>
       </div>
 

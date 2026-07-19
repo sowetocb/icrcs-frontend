@@ -370,6 +370,8 @@ const en = {
     reviewedCount: "Reviewed {n} of {total}",
     reviewAllToAgree: "Review every section above before you can agree and submit.",
     previewLoadError: "Could not load your application summary. Please try again.",
+    profileLoadError: "Could not load your profile information. Please check your connection and try again.",
+    stageLoadError: "Could not load this step's saved data from the server. Please check your connection and try again.",
     sameAsPerm: "My current address is the same as my permanent address",
     neverAttendedSchool: "I have never attended school",
     haveAttendedSchool: "Have you attended school?",
@@ -453,10 +455,14 @@ const en = {
     clauseText:
       "I, {name}, hereby declare that all information provided in this registration form is true, complete, and accurate to the best of my knowledge. I understand that any false statements or omission of material facts may result in the rejection of my application or criminal prosecution under the National Security and Digital Identity Act.",
     agree: "I agree to the terms and conditions and the legal declaration above.",
-    landingTitle: "Registry",
-    landingTitleAccent: "Tanzania",
+    landingTitle: "Register with",
+    landingTitleAccent: "ICRCS",
     landingIntro:
-      "This service lets you complete the Citizen Registry application form electronically from anywhere. After filling in the form, you will need to visit the nearest Immigration Office with your supporting documents to finalize your application.",
+      "This registration enables the Immigration Services Department to verify your identity and determine your immigration status.\n" +
+      "During the registration process, you will be required to provide your Personal Information, Parents' Information, Emergency Contact Information, Close Relatives' Information, Education and Employment Information, and upload the necessary supporting documents.\n" +
+      "Please ensure that all information provided is complete and accurate. You may save your application and continue later before final submission.\n" +
+      "After completing and submitting your registration, you will be required to visit the nearest Immigration Office for biometric enrollment, including fingerprint capture and identity verification. You will be notified of the next steps after submission.\n" +
+      'Select "Start Registration" when you are ready to begin.',
     startTitle: "Start Registration",
     startDesc:
       "Begin a new Citizen Registry application and fill in your details electronically.",
@@ -481,16 +487,17 @@ const en = {
     officerLandingTitle: "Migrant",
     officerLandingTitleAccent: "Registration",
     officerLandingIntro:
-      "Register migrants — refugees, asylum seekers, aliens, and other non-citizens — on their behalf. Each registration is a separate case tracked by the server; start as many as you need.",
+      "Register a migrant or non-citizen who requires registration and verification of their identity and immigration status. This includes migrants, refugees, asylum seekers, foreigners, migrants with undetermined status and voluntary returnees, as applicable.\n" +
+      "Each person must be registered separately by providing their personal details, family information, migration history, address, and relevant supporting documents. After submitting the registration, the registered person will be required to complete biometric enrollment and verification at the designated Immigration Office.",
     officerStartTitle: "New Migrant Registration",
     officerStartDesc:
-      "Start a new registration for a migrant (refugee, asylum seeker, alien, undocumented migrant, or voluntary returnee).",
+      "Start a new registration for a foreigner, asylum seeker, refugee, migrant, voluntary returnee, or immigrant with undetermined status.",
     officerResumeTitle: "Resume a Registration",
     officerResumeDesc:
       "Continue a migrant registration you started earlier and pick up at the stage you left off.",
     statusTitle: "Registration Status",
     statusDesc:
-      "Track the progress of your submitted application and view the status of your Registration Certificate.",
+      "Track the progress of your submitted application and view the status of your Registration.",
     statusAction: "View status",
     submittedTitle: "Registration Submitted!",
     applicationId: "Application ID",
@@ -504,7 +511,7 @@ const en = {
     returnDashboard: "Return to Dashboard",
     checkTitle: "Check Application Status",
     checkIntro:
-      "Enter your Application ID to view the current status and progress of your Citizen Registry application.",
+      "Enter your Application ID to view the current status and progress of your application.",
     checkIdLabel: "Application ID",
     checkButton: "Check Status",
     checkInvalid: "Please enter a valid Application ID (e.g. CREG260604812345).",
@@ -718,7 +725,7 @@ const en = {
     pointOfEntry: "Point of Entry",
     phPointOfEntry: "e.g. Namanga Border",
     transitCountry: "Transit Country",
-    travelDocType: "Document Type",
+    travelDocType: "Travel Document Type",
     phTravelDocType: "e.g. Passport",
     travelDocNo: "Document Number",
     travelIssuedDate: "Issued Date",
@@ -742,7 +749,7 @@ const en = {
     birthCertNo: "Birth Certificate Number", // REVIEW
     birthCertFile: "Upload Birth Certificate",
     indexNo: "Namba ya cheti", // REVIEW
-    docType: "Document Type", // REVIEW
+    docType: "Identification Document", // REVIEW
     docNumber: "Document Number", // REVIEW
     idDocNida: "NIDA Number",
     idDocVoter: "Voters ID",
@@ -907,22 +914,28 @@ const en = {
   },
   category: {
     title: "Registration Category",
-    subtitle: "Select the category that describes you. This determines which registration you complete.",
+    subtitle:
+      "Select the category that best describes your current circumstances or the purpose of your registration. Your selection will help the system guide you through the appropriate registration process and determine the information and supporting documents you need to provide.",
+    note:
+      "Please note: Selecting a registration category does not constitute a final determination of your citizenship or immigration status. Your status will be determined after registration, biometric enrollment, verification, assessment, and approval by the Immigration Services Department.",
     back: "Back",
     citizenTitle: "Citizen",
     citizenDesc: "A Tanzanian national registering in the national civil registry.",
-    foreignTitle: "Foreign National",
-    foreignDesc: "A foreign national with a valid permit registering a Tanzanian-origin minor.",
+    foreignTitle: "Foreigner",
+    foreignDesc:
+      "A non-Tanzanian citizen registering based on their current immigration circumstances or authorization to stay in Tanzania. May have a valid visa, pass or resident permit.",
     refugeeTitle: "Refugee",
-    refugeeDesc: "A person registered or seeking registration as a refugee in Tanzania.",
+    refugeeDesc: "A person recognized or being registered as a refugee in accordance with applicable procedures.",
     asylumTitle: "Asylum Seeker",
-    asylumDesc: "A person seeking asylum whose status is pending determination.",
-    alienTitle: "Alien",
-    alienDesc: "A foreign national residing in Tanzania under alien status.",
-    undocumentedTitle: "Undocumented Migrant",
-    undocumentedDesc: "A migrant without valid travel or identity documents.",
+    asylumDesc: "A person seeking international protection whose claim for refugee status is awaiting determination.",
+    alienTitle: "Immigrant with Undetermined Status",
+    alienDesc:
+      "A non-citizen whose entry, stay, or residence in Tanzania is not in accordance with applicable immigration laws or requirements.",
+    undocumentedTitle: "Migrant",
+    undocumentedDesc:
+      "A person who migrated to Tanzania before 1972 and has continued to reside in the country without a passport or identification document of another country.",
     returneeTitle: "Voluntary Returnee",
-    returneeDesc: "A person voluntarily returning to Tanzania.",
+    returneeDesc: "A person who has voluntarily returned to Tanzania and requires registration and status verification.",
   },
   preview: {
     fullName: "Full Name", // REVIEW
@@ -1371,6 +1384,8 @@ const sw: typeof en = {
     reviewedCount: "Umepitia {n} kati ya {total}",
     reviewAllToAgree: "Pitia kila sehemu hapo juu kabla ya kukubali na kuwasilisha.",
     previewLoadError: "Haikuweza kupakia muhtasari wa maombi yako. Tafadhali jaribu tena.",
+    profileLoadError: "Haikuweza kupakia taarifa za wasifu wako. Tafadhali angalia muunganisho wako na ujaribu tena.",
+    stageLoadError: "Haikuweza kupakia taarifa zilizohifadhiwa za hatua hii kutoka kwenye seva. Tafadhali angalia muunganisho wako na ujaribu tena.",
     sameAsPerm: "Anwani yangu ya sasa ni sawa na anwani yangu ya kudumu",
     neverAttendedSchool: "Sijawahi kwenda shule",
     haveAttendedSchool: "Je, umewahi kwenda shule?",
@@ -1454,10 +1469,14 @@ const sw: typeof en = {
     clauseText:
       "Mimi, {name}, natamka kwamba taarifa zote nilizotoa katika fomu hii ya usajili ni za kweli, kamili na sahihi kwa ufahamu wangu wote. Naelewa kuwa taarifa zozote za uongo au kuficha ukweli muhimu kunaweza kusababisha kukataliwa kwa maombi yangu au mashtaka ya jinai chini ya Sheria ya Usalama wa Taifa na Utambulisho wa Kidijitali.",
     agree: "Nakubali masharti na kanuni pamoja na tamko la kisheria hapo juu.",
-    landingTitle: "Mfumo wa Usajili wa Kiraia",
-    landingTitleAccent: "Tanzania",
+    landingTitle: "Jisajili na",
+    landingTitleAccent: "ICRCS",
     landingIntro:
-      "Hii ni huduma inayokuwezesha muombaji kujaza Fomu ya Maombi ya Usajili wa Kiraia kwa njia ya Kielektroniki akiwa mahali popote. Baada ya kujaza fomu hiyo, atatakiwa kuiwasilisha pamoja na vielelezo vingine katika Ofisi ya Uhamiaji iliyo karibu naye kwa ajili ya kushughulikia maombi yake ya Usajili wa Kiraia.",
+      "Usajili huu unaiwezesha Idara ya Huduma za Uhamiaji kuthibitisha utambulisho wako na kubaini hadhi yako ya kiuhamiaji.\n" +
+      "Wakati wa mchakato wa usajili, utatakiwa kutoa Taarifa zako Binafsi, Taarifa za Wazazi, Taarifa za Mtu wa Kuwasiliana Naye Dharura, Taarifa za Ndugu wa Karibu, Taarifa za Elimu na Ajira, na kupakia vielelezo vinavyohitajika.\n" +
+      "Tafadhali hakikisha taarifa zote unazotoa ni kamili na sahihi. Unaweza kuhifadhi maombi yako na kuendelea baadaye kabla ya kuwasilisha rasmi.\n" +
+      "Baada ya kukamilisha na kuwasilisha usajili wako, utatakiwa kufika Ofisi ya Uhamiaji iliyo karibu nawe kwa ajili ya usajili wa alama za kibayometriki, ikiwemo unukuzi wa alama za vidole na uthibitisho wa utambulisho. Utaarifiwa hatua zinazofuata baada ya kuwasilisha.\n" +
+      'Chagua "Anza Usajili" ukiwa tayari kuanza.',
     startTitle: "Jaza Maombi",
     startDesc:
       "Kwa Mwombaji anayetaka kujaza fomu ya maombi ya Usajili wa Kiraia kwa njia ya kielektroniki.",
@@ -1480,16 +1499,17 @@ const sw: typeof en = {
     officerLandingTitle: "Usajili wa",
     officerLandingTitleAccent: "Wahamiaji",
     officerLandingIntro:
-      "Sajili wahamiaji — wakimbizi, watafuta hifadhi, wageni, na wasio raia — kwa niaba yao. Kila usajili ni kesi tofauti inayofuatiliwa na seva; anzisha kadri unavyohitaji.",
+      "Sajili mhamiaji au mtu asiye raia anayehitaji usajili na uhakiki wa utambulisho wake na hadhi ya uhamiaji. Hii inajumuisha wahamiaji, wakimbizi, watafuta hifadhi, wageni, wahamiaji wenye hadhi isiyobainika na wanaorejea kwa hiari, kadri inavyohusika.\n" +
+      "Kila mtu lazima asajiliwe kivyake kwa kutoa taarifa zake binafsi, taarifa za familia, historia ya uhamiaji, anuani, na vielelezo husika. Baada ya kuwasilisha usajili, mtu aliyesajiliwa atatakiwa kukamilisha uandikishaji wa alama za kibayometriki na uhakiki katika Ofisi ya Uhamiaji iliyoteuliwa.",
     officerStartTitle: "Usajili Mpya wa Mhamiaji",
     officerStartDesc:
-      "Anzisha usajili mpya wa mhamiaji (mkimbizi, mtafuta hifadhi, mgeni, mhamiaji asiye na nyaraka, au anayerejea kwa hiari).",
+      "Anzisha usajili mpya wa mgeni, mtafuta hifadhi, mkimbizi, mhamiaji, anayerejea kwa hiari, au mhamiaji mwenye hadhi isiyobainika.",
     officerResumeTitle: "Endeleza Usajili",
     officerResumeDesc:
       "Endeleza usajili wa mhamiaji uliouanza awali na uendelee kutoka hatua uliyoishia.",
     statusTitle: "Ufuatiliaji Ombi",
     statusDesc:
-      "Angalia hali na maendeleo ya ombi lako la kupatiwa Cheti cha Usajili ulilowasilisha.",
+      "Angalia hali na maendeleo ya ombi lako la kupatiwa hali ya Usajili uliowasilisha.",
     statusAction: "Angalia hali ya maombi",
     submittedTitle: "Usajili Umewasilishwa!",
     applicationId: "Namba ya Maombi",
@@ -1503,7 +1523,7 @@ const sw: typeof en = {
     returnDashboard: "Rudi kwenye Dashibodi",
     checkTitle: "Angalia Hali ya Maombi",
     checkIntro:
-      "Weka Namba yako ya Maombi ili kuona hali na maendeleo ya maombi yako ya Usajili wa Kiraia.",
+      "Weka Namba yako ya Maombi ili kuona hali na maendeleo ya ombi lako la Usajili.",
     checkIdLabel: "Namba ya Maombi",
     checkButton: "Angalia Hali",
     checkInvalid: "Tafadhali weka Namba sahihi ya Maombi (mf. CREG260604812345).",
@@ -1716,7 +1736,7 @@ const sw: typeof en = {
     pointOfEntry: "Mahali pa Kuingilia",
     phPointOfEntry: "mf. Mpaka wa Namanga",
     transitCountry: "Nchi ya Kupitia",
-    travelDocType: "Aina ya Hati",
+    travelDocType: "Aina ya Hati ya Safari",
     phTravelDocType: "mf. Pasipoti",
     travelDocNo: "Namba ya Hati",
     travelIssuedDate: "Tarehe ya Kutolewa",
@@ -1740,7 +1760,7 @@ const sw: typeof en = {
     birthCertNo: "Namba ya Cheti cha Kuzaliwa", // REVIEW
     birthCertFile: "Cheti cha Kuzaliwa (pakia)",
     indexNo: "Namba ya Cheti", // REVIEW
-    docType: "Aina ya Hati", // REVIEW
+    docType: "Hati ya Utambulisho", // REVIEW
     docNumber: "Namba ya Hati", // REVIEW
     idDocNida: "Namba ya NIDA",
     idDocVoter: "Kitambulisho cha Mpiga Kura",
@@ -1904,22 +1924,28 @@ const sw: typeof en = {
   },
   category: {
     title: "Aina ya Usajili",
-    subtitle: "Chagua aina inayokuelezea. Hii itaamua usajili utakaokamilisha.",
+    subtitle:
+      "Chagua aina inayoelezea vyema hali yako ya sasa au madhumuni ya usajili wako. Chaguo lako litasaidia mfumo kukuongoza katika mchakato sahihi wa usajili na kubaini taarifa na vielelezo unavyohitaji kuwasilisha.",
+    note:
+      "Tafadhali kumbuka: Kuchagua aina ya usajili hakuamui hadhi yako ya uraia au uhamiaji. Hadhi yako itaamuliwa baada ya usajili, uandikishaji wa alama za kibayometriki, uhakiki, tathmini, na idhini ya Idara ya Huduma za Uhamiaji.",
     back: "Rudi",
     citizenTitle: "Raia",
     citizenDesc: "Raia wa Tanzania anayejisajili katika daftari la kitaifa la usajili.",
-    foreignTitle: "Raia wa Kigeni",
-    foreignDesc: "Raia wa kigeni mwenye kibali halali anayesajili mtoto mwenye asili ya Kitanzania.",
+    foreignTitle: "Mgeni",
+    foreignDesc:
+      "Mtu asiye raia wa Tanzania anayejisajili kwa kuzingatia hali yake ya sasa ya uhamiaji au idhini ya kuishi Tanzania. Anaweza kuwa na viza halali, pasi au kibali cha ukazi.",
     refugeeTitle: "Mkimbizi",
-    refugeeDesc: "Mtu aliyesajiliwa au anayetafuta usajili kama mkimbizi nchini Tanzania.",
+    refugeeDesc: "Mtu aliyetambuliwa au anayesajiliwa kama mkimbizi kwa mujibu wa taratibu husika.",
     asylumTitle: "Mtafuta Hifadhi",
-    asylumDesc: "Mtu anayetafuta hifadhi ambaye hadhi yake bado inasubiri uamuzi.",
-    alienTitle: "Mgeni",
-    alienDesc: "Raia wa kigeni anayeishi Tanzania chini ya hadhi ya ugeni.",
-    undocumentedTitle: "Mhamiaji Asiye na Hati",
-    undocumentedDesc: "Mhamiaji asiye na hati halali za safari au utambulisho.",
+    asylumDesc: "Mtu anayetafuta ulinzi wa kimataifa ambaye ombi lake la hadhi ya ukimbizi bado linasubiri uamuzi.",
+    alienTitle: "Mhamiaji Mwenye Hadhi Isiyobainika",
+    alienDesc:
+      "Mtu asiye raia ambaye kuingia, kukaa, au kuishi kwake Tanzania hakuzingatii sheria au matakwa husika ya uhamiaji.",
+    undocumentedTitle: "Mhamiaji",
+    undocumentedDesc:
+      "Mtu aliyehamia Tanzania kabla ya mwaka 1972 na ameendelea kuishi nchini bila pasipoti au hati ya utambulisho ya nchi nyingine.",
     returneeTitle: "Anayerejea kwa Hiari",
-    returneeDesc: "Mtu anayerejea Tanzania kwa hiari yake.",
+    returneeDesc: "Mtu aliyerejea Tanzania kwa hiari na anayehitaji usajili na uhakiki wa hadhi.",
   },
   preview: {
     fullName: "Jina Kamili", // REVIEW

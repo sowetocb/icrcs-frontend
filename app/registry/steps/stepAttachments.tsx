@@ -258,11 +258,6 @@ export default function StepAttachments() {
         })}
       </ul>
 
-      {!subjectId && (
-        <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
-          {t("fields.uploadsNeedId")}
-        </p>
-      )}
     </div>
   );
 }

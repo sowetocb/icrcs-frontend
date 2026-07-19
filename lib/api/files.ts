@@ -9,6 +9,17 @@ import { RULES } from "@/lib/validation/rules";
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Officers upload under the officer namespace so the proxy attaches the officer
+// cookie (`/v1/officer/files/**`); citizens use `/v1/files/**`. The wizard sets
+// this once on mount via setFilesOfficerMode() — mirrors registration.ts's
+// setRegistrationOfficerMode(). Without it an officer's upload hits the citizen
+// path, gets no officer cookie, and the backend replies 401 {"error":"unauthorized"}.
+let FILES_OFFICER = false;
+export function setFilesOfficerMode(officer: boolean): void {
+  FILES_OFFICER = officer;
+}
+const filesRoot = () => (FILES_OFFICER ? "/v1/officer/files" : "/v1/files");
+
 export type AttachmentType = {
   id: number;
   label: string;
@@ -83,7 +94,7 @@ export async function uploadAttachment(
   form.append("attachmentTypeId", String(attachmentTypeId));
 
   const token = loadSession()?.accessToken;
-  const raw = (await apiUpload("/v1/files/upload", form, token)) as Record<string, unknown>;
+  const raw = (await apiUpload(`${filesRoot()}/upload`, form, token)) as Record<string, unknown>;
   const d = (raw?.data ?? raw ?? {}) as Record<string, unknown>;
   return {
     fileId: String(d.fileId ?? d.id ?? ""),

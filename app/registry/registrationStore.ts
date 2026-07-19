@@ -14,6 +14,9 @@ export type RegistrationState = {
   ownerId?: string; // account holder (profileId) this draft belongs to
   subjectId?: string; // backend registration id from Stage 1, used by Stage 2+
   submittedStages?: number[]; // stages already POSTed (revisits use PUT /edit)
+  registrationType?: string; // migrant category (MIGRANT/REFUGEE/…) — persisted
+  // as metadata (NOT under `data`) so the migrant track survives a refresh
+  // without keeping any sensitive form data in localStorage.
   data?: Record<string, string | boolean>;
 };
 

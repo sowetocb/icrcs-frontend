@@ -113,9 +113,14 @@ export default function RegistryLanding({
                 {officerMode ? t("registry.officerLandingTitleAccent") : t("registry.landingTitleAccent")}
               </span>
             </h1>
-            <p className="mt-6 max-w-lg leading-relaxed text-muted">
-              {officerMode ? t("registry.officerLandingIntro") : t("registry.landingIntro")}
-            </p>
+            <div className="mt-6 max-w-lg space-y-3 leading-relaxed text-muted">
+              {(officerMode ? t("registry.officerLandingIntro") : t("registry.landingIntro"))
+                .split("\n")
+                .filter((para) => para.trim().length > 0)
+                .map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+            </div>
           </div>
 
           {/* Cards */}

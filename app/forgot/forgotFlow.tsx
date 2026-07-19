@@ -12,7 +12,7 @@ import { Eye, EyeOff, LoaderCircle, CircleCheck } from "lucide-react";
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
 // (mirrors the create-profile OTP).
 const OTP_RESEND_COOLDOWN = 180; // 10:00
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = RULES.EMAIL_PATTERN;
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-navy-500 focus:bg-card focus:ring-2 focus:ring-navy-500/15";
