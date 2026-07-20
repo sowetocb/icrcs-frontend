@@ -19,6 +19,10 @@ const csp = [
   "img-src 'self' data: blob: http: https:",
   "font-src 'self' data:",
   "connect-src 'self' http: https:",
+  // Allow the hidden blob: iframe used to open the browser print dialog for a
+  // fetched PDF (Print Form). Without this it falls back to default-src 'self',
+  // which excludes blob: and silently blocks the print frame.
+  "frame-src 'self' blob:",
 ].join("; ");
 
 const securityHeaders = [
