@@ -102,16 +102,24 @@ export default function OfficerCases({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, error]);
 
-  // Filter cases by search query
+  // The list shows ONLY active, pre-declaration cases: PENDING and not yet at
+  // stage 9. A declared case (PENDING_ENROLLMENT, 9/9) has left the officer's
+  // "active" work — it belongs under "Registered People", not here. Remaining
+  // cases are sorted by progress, furthest along first (8/9, 7/9, …).
   const filteredCases = useMemo(() => {
-    if (!search.trim()) return cases;
-    const q = search.toLowerCase();
-    return cases.filter(
-      (c) =>
-        (c.fullName || "").toLowerCase().includes(q) ||
-        (c.registrationType || "").toLowerCase().includes(q) ||
-        (c.subjectId || "").toLowerCase().includes(q),
+    let list = cases.filter(
+      (c) => c.status.toUpperCase() === "PENDING" && c.currentStage < 9,
     );
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          (c.fullName || "").toLowerCase().includes(q) ||
+          (c.registrationType || "").toLowerCase().includes(q) ||
+          (c.subjectId || "").toLowerCase().includes(q),
+      );
+    }
+    return [...list].sort((a, b) => b.currentStage - a.currentStage);
   }, [cases, search]);
 
   // If auto-resume will fire (exactly 1 active case), show a loading state

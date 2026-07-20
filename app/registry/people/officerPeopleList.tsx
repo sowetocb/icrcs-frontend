@@ -214,6 +214,18 @@ const humanize = (k: string) =>
 const arr = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? v.filter(isObj) : [];
 
+/** Resolve a backend file URL for an OFFICER viewer. toProxyUrl routes it through
+ * the same-origin proxy but yields the CITIZEN path (/v1/files/view); an officer
+ * has no citizen cookie, so that 401s. Rewrite it into the officer namespace
+ * (/v1/officer/files/view) so the proxy attaches the officer cookie instead. */
+function officerFileUrl(raw: string): string | null {
+  const url = toProxyUrl(raw);
+  if (!url) return null;
+  return url.includes("/v1/officer/files/")
+    ? url
+    : url.replace(/\/v1\/files\//, "/v1/officer/files/");
+}
+
 /** Flatten an object's primitive fields into label/value rows, recursing ONE
  * level into nested objects (e.g. an address `location`) so their fields show
  * too. Arrays and deeper nesting are handled by dedicated sections. */
@@ -296,6 +308,7 @@ function DetailView({
   const [data, setData] = useState<DeclarationReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("personal");
 
   useEffect(() => {
     let cancelled = false;
@@ -318,6 +331,196 @@ function DetailView({
   const personal = isObj(d.personalDetails) ? d.personalDetails : {};
   const documents = arr(d.documents);
   const attachments = arr(d.attachments);
+  const spouses = arr(d.spouses);
+  const relatives = arr(d.relatives);
+  const children = arr(d.children);
+
+  // Group the declaration into horizontal tabs (mirrors the Preview &
+  // Declaration step). Only tabs that actually carry data are shown.
+  const tabs: { key: string; label: string; content: ReactNode }[] = [
+    {
+      key: "personal",
+      label: "Personal",
+      content: (
+        <div className="space-y-5">
+          <Section title="Personal Details">
+            <KeyGrid
+              obj={{ ...personal, citizenshipType: d.citizenshipType, registrationType: d.registrationType }}
+            />
+          </Section>
+          {isObj(d.birthDetails) && (
+            <Section title="Birth Details">
+              <KeyGrid obj={d.birthDetails} />
+            </Section>
+          )}
+          {isObj(d.physicalDetail) && (
+            <Section title="Physical Characteristics">
+              <KeyGrid obj={d.physicalDetail} />
+            </Section>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  if (arr(d.addresses).length > 0) {
+    tabs.push({
+      key: "address",
+      label: "Address",
+      content: (
+        <CardsSection
+          title="Address"
+          items={arr(d.addresses)}
+          labelFor={(a) => (S(a.addressType) ? `${S(a.addressType)} Address` : "Address")}
+        />
+      ),
+    });
+  }
+
+  if (arr(d.parents).length > 0) {
+    tabs.push({
+      key: "parents",
+      label: "Parents",
+      content: (
+        <CardsSection
+          title="Parents"
+          items={arr(d.parents)}
+          labelFor={(p, i) => S(p.parentType) || `Parent ${i + 1}`}
+        />
+      ),
+    });
+  }
+
+  if (arr(d.educationList).length > 0 || isObj(d.employment)) {
+    tabs.push({
+      key: "education",
+      label: "Education & Work",
+      content: (
+        <div className="space-y-5">
+          <CardsSection
+            title="Education"
+            items={arr(d.educationList)}
+            labelFor={(e, i) => S(e.schoolName) || S(e.educationLevel) || `School ${i + 1}`}
+          />
+          {isObj(d.employment) && (
+            <Section title="Employment">
+              <KeyGrid obj={d.employment} />
+            </Section>
+          )}
+        </div>
+      ),
+    });
+  }
+
+  if (arr(d.emergencyContacts).length > 0) {
+    tabs.push({
+      key: "contacts",
+      label: "Emergency",
+      content: (
+        <CardsSection
+          title="Emergency Contacts"
+          items={arr(d.emergencyContacts)}
+          labelFor={(c, i) => [S(c.firstName), S(c.lastName)].filter(Boolean).join(" ") || `Contact ${i + 1}`}
+        />
+      ),
+    });
+  }
+
+  if (spouses.length > 0 || relatives.length > 0 || children.length > 0) {
+    tabs.push({
+      key: "family",
+      label: "Family",
+      content: (
+        <div className="space-y-5">
+          <CardsSection
+            title="Spouse(s)"
+            items={spouses}
+            labelFor={(s, i) => [S(s.firstName), S(s.lastName)].filter(Boolean).join(" ") || `Spouse ${i + 1}`}
+          />
+          <CardsSection
+            title="Relatives"
+            items={relatives}
+            labelFor={(r, i) => [S(r.firstName), S(r.lastName)].filter(Boolean).join(" ") || `Relative ${i + 1}`}
+          />
+          <CardsSection
+            title="Children"
+            items={children}
+            labelFor={(c, i) => [S(c.firstName), S(c.lastName)].filter(Boolean).join(" ") || `Child ${i + 1}`}
+          />
+        </div>
+      ),
+    });
+  }
+
+  if (documents.length > 0 || attachments.length > 0 || isObj(d.travelHistory)) {
+    tabs.push({
+      key: "documents",
+      label: "Documents",
+      content: (
+        <div className="space-y-5">
+          {documents.length > 0 && (
+            <Section title="Identification Documents">
+              <div className="space-y-2">
+                {documents.map((doc, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-navy-700">{S(doc.documentType) || "—"}</span>
+                    <span className="font-mono text-sm text-muted">{S(doc.documentNumber) || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+          {attachments.length > 0 && (
+            <Section title="Attachments">
+              <div className="space-y-3">
+                {attachments.map((a, i) => {
+                  const url = officerFileUrl(S(a.fileUrl));
+                  const isImg = S(a.mimeType).startsWith("image/");
+                  return (
+                    <div key={i} className="flex items-center gap-4 rounded-xl border border-line p-3">
+                      {isImg && url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={url} alt={S(a.attachmentType)} className="h-16 w-16 rounded-lg object-cover" />
+                      ) : (
+                        <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-navy-50 text-navy-500">
+                          <FileText size={22} strokeWidth={1.5} aria-hidden="true" />
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-navy-700">{S(a.attachmentType) || "Attachment"}</p>
+                        <p className="truncate text-xs text-muted">{S(a.mimeType)}</p>
+                      </div>
+                      {url && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20"
+                        >
+                          {t("officer.viewDetails")}
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+          {isObj(d.travelHistory) && (
+            <Section title="Travel History">
+              <KeyGrid obj={d.travelHistory} />
+            </Section>
+          )}
+        </div>
+      ),
+    });
+  }
+
+  // Fall back to the first tab when the selected one has no data this record.
+  const active = tabs.find((tb) => tb.key === activeTab) ?? tabs[0];
 
   return (
     <div className="space-y-6">
@@ -352,135 +555,26 @@ function DetailView({
 
       {!loading && !error && data && (
         <div className="space-y-5">
-          {/* Personal — merge the scalar citizenship / registration type in. */}
-          <Section title="Personal Details">
-            <KeyGrid
-              obj={{
-                ...personal,
-                citizenshipType: d.citizenshipType,
-                registrationType: d.registrationType,
-              }}
-            />
-          </Section>
+          {/* Horizontal tabs (left → right) — one section group shown at a time,
+              like the Preview & Declaration step. */}
+          <div className="flex w-full overflow-x-auto border-b border-line">
+            {tabs.map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                onClick={() => setActiveTab(tb.key)}
+                className={`flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-sm font-semibold transition ${
+                  active?.key === tb.key
+                    ? "border-navy-700 text-navy-700"
+                    : "border-transparent text-muted hover:text-navy-700"
+                }`}
+              >
+                {tb.label}
+              </button>
+            ))}
+          </div>
 
-          {isObj(d.birthDetails) && (
-            <Section title="Birth Details">
-              <KeyGrid obj={d.birthDetails} />
-            </Section>
-          )}
-
-          {isObj(d.physicalDetail) && (
-            <Section title="Physical Characteristics">
-              <KeyGrid obj={d.physicalDetail} />
-            </Section>
-          )}
-
-          <CardsSection
-            title="Address"
-            items={arr(d.addresses)}
-            labelFor={(a) => (S(a.addressType) ? `${S(a.addressType)} Address` : "Address")}
-          />
-
-          <CardsSection
-            title="Parents"
-            items={arr(d.parents)}
-            labelFor={(p, i) => S(p.parentType) || `Parent ${i + 1}`}
-          />
-
-          {isObj(d.employment) && (
-            <Section title="Employment">
-              <KeyGrid obj={d.employment} />
-            </Section>
-          )}
-
-          <CardsSection
-            title="Education"
-            items={arr(d.educationList)}
-            labelFor={(e, i) => S(e.schoolName) || S(e.educationLevel) || `School ${i + 1}`}
-          />
-
-          <CardsSection
-            title="Emergency Contacts"
-            items={arr(d.emergencyContacts)}
-            labelFor={(c, i) => [S(c.firstName), S(c.lastName)].filter(Boolean).join(" ") || `Contact ${i + 1}`}
-          />
-
-          <CardsSection
-            title="Spouse(s)"
-            items={arr(d.spouses)}
-            labelFor={(s, i) => [S(s.firstName), S(s.lastName)].filter(Boolean).join(" ") || `Spouse ${i + 1}`}
-          />
-
-          <CardsSection
-            title="Relatives"
-            items={arr(d.relatives)}
-            labelFor={(r, i) => [S(r.firstName), S(r.lastName)].filter(Boolean).join(" ") || `Relative ${i + 1}`}
-          />
-
-          <CardsSection
-            title="Children"
-            items={arr(d.children)}
-            labelFor={(c, i) => [S(c.firstName), S(c.lastName)].filter(Boolean).join(" ") || `Child ${i + 1}`}
-          />
-
-          {documents.length > 0 && (
-            <Section title="Identification Documents">
-              <div className="space-y-2">
-                {documents.map((doc, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-4 py-3"
-                  >
-                    <span className="text-sm font-medium text-navy-700">{S(doc.documentType) || "—"}</span>
-                    <span className="font-mono text-sm text-muted">{S(doc.documentNumber) || "—"}</span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {attachments.length > 0 && (
-            <Section title="Attachments">
-              <div className="space-y-3">
-                {attachments.map((a, i) => {
-                  const url = toProxyUrl(S(a.fileUrl));
-                  const isImg = S(a.mimeType).startsWith("image/");
-                  return (
-                    <div key={i} className="flex items-center gap-4 rounded-xl border border-line p-3">
-                      {isImg && url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={url} alt={S(a.attachmentType)} className="h-16 w-16 rounded-lg object-cover" />
-                      ) : (
-                        <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-navy-50 text-navy-500">
-                          <FileText size={22} strokeWidth={1.5} aria-hidden="true" />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-navy-700">{S(a.attachmentType) || "Attachment"}</p>
-                        <p className="truncate text-xs text-muted">{S(a.mimeType)}</p>
-                      </div>
-                      {url && (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="shrink-0 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20"
-                        >
-                          {t("officer.viewDetails")}
-                        </a>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-          )}
-
-          {isObj(d.travelHistory) && (
-            <Section title="Travel History">
-              <KeyGrid obj={d.travelHistory} />
-            </Section>
-          )}
+          <div>{active?.content}</div>
         </div>
       )}
     </div>

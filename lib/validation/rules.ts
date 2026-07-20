@@ -11,7 +11,7 @@
  *     app/registry/steps/stepPersonal.tsx) — STRICTER than the backend's 100.
  *   • The Stage-1 email input caps at maxLength=20 — STRICTER than 255.
  *   • File uploads enforce 300KB in the UI (profileView / stepPersonal /
- *     stepAttachments) — STRICTER than the backend's 500KB.
+ *     stepAttachments) — now MATCHES the backend (FILE_TOO_LARGE = 300KB).
  *   • lib/countries.ts stores ISO-3166-1 alpha-2 codes; the backend contract
  *     below (and the country schemas) use alpha-3. Reconcile via the live
  *     getCountries() lookup before wiring ISO3_SHAPE anywhere.
@@ -83,7 +83,9 @@ export const RULES = {
 
   // ---- Dates (VALIDATION_DOB_FUTURE, REGISTRATION_DOB_TOO_OLD, REGISTRATION_INVALID_DATE) ----
   MAX_AGE_YEARS: 130,
-  MIN_APPLICANT_AGE_FOR_DECLARING_CHILDREN: 16, // REGISTRATION_MINOR_CANNOT_HAVE_CHILDREN
+  // Backend: REGISTRATION_MINOR_CANNOT_HAVE_CHILDREN ("at least 14 years old") and
+  // REGISTRATION_CHILD_DOB_INVALID ("child born after the applicant turned 14").
+  MIN_APPLICANT_AGE_FOR_DECLARING_CHILDREN: 14,
   PARENT_MIN_AGE_GAP_YEARS: 16, // REGISTRATION_PARENT_AGE_INVALID
   SPOUSE_MIN_AGE: 16, // REGISTRATION_SPOUSE_UNDERAGE
   CONTACT_MIN_AGE: 18, // REGISTRATION_CONTACT_UNDERAGE
@@ -91,7 +93,9 @@ export const RULES = {
   EDU_YEAR_MIN: 1900, // REGISTRATION_EDUCATION_YEAR_INVALID
 
   // ---- Files (FILE_EMPTY / FILE_TOO_LARGE / FILE_TYPE_NOT_ALLOWED) ----
-  FILE_MAX_BYTES: 500 * 1024, // 500KB. FRONTEND-DIVERGES: UI enforces 300KB
+  // Backend FILE_TOO_LARGE now caps uploads at 300KB (was 500KB) — matches the
+  // UI (profileView / stepPersonal / stepAttachments all enforce 300KB).
+  FILE_MAX_BYTES: 300 * 1024, // 300KB
   FILE_ALLOWED_MIME: ['image/jpeg', 'image/png', 'application/pdf'] as const,
   // Photo-only fields (passport photo, profile picture) intentionally accept
   // images only (no PDF) — use this, not FILE_ALLOWED_MIME.

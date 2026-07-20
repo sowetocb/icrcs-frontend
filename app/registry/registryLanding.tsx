@@ -102,9 +102,9 @@ export default function RegistryLanding({
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8 lg:px-8 lg:py-10">
-      {/* Left-aligned (no mx-auto) so the intro sits next to the sidebar instead
-          of floating in the centre with a huge gap on ultra-wide screens. */}
-      <div className="w-full max-w-6xl">
+      {/* Centred within the content area (mx-auto) so the two columns sit in the
+          middle of the page, consistent with the officer cases / people views. */}
+      <div className="mx-auto w-full max-w-6xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           {/* Intro */}
           <div>

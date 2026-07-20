@@ -756,7 +756,7 @@ const en = {
     idDocVoter: "Voters ID",
     idDocTin: "TIN Number",
     idDocDriving: "Driving License",
-    docNumberReq: "Document number is required", // REVIEW
+    docNumberReq: "Document number", // REVIEW
     docFile: "Document File", // REVIEW
     eduLevel: "Education Level", // REVIEW
     schoolName: "School Name", // REVIEW
@@ -883,7 +883,7 @@ const en = {
     travelOther: "Other Travel Document",
   },
   gate: {
-    title: "Citizenship Check", // REVIEW
+    title: "Background Check", // REVIEW
     travelDocType: "Travel Document Type", // REVIEW
     verifying: "Verifying…", // REVIEW
     notFoundTitle: "Record Not Found", // REVIEW
