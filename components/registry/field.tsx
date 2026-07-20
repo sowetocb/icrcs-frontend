@@ -34,6 +34,12 @@ type WizardContextValue = {
   isMigrant?: boolean;
   /** True when a government officer is registering a migrant. */
   isOfficerMode?: boolean;
+  /** True when a Tanzanian citizen is registering a FOREIGN MINOR — the minor's
+   * nationality is freely picked, not locked. */
+  foreignMinor?: boolean;
+  /** The backend registration id (from Stage 1). Needed by uploads — officers
+   * MUST send it explicitly since they have no citizen profile to resolve it. */
+  subjectId?: string;
   /** Jump to a completed wizard step (used on the preview screen). */
   onGoToStep?: (step: number) => void;
   /** Raise the wizard's session-expired flow (blocking dialog → sign in). */
@@ -53,13 +59,15 @@ export function WizardProvider({
   isFirstPerson,
   isMigrant,
   isOfficerMode,
+  foreignMinor,
+  subjectId,
   onGoToStep,
   onSessionExpired,
   children,
 }: WizardContextValue & { children: React.ReactNode }) {
   return (
     <WizardContext.Provider
-      value={{ data, set, setQuiet, blur, errors, fieldErrors, locked, isFirstPerson, isMigrant, isOfficerMode, onGoToStep, onSessionExpired }}
+      value={{ data, set, setQuiet, blur, errors, fieldErrors, locked, isFirstPerson, isMigrant, isOfficerMode, foreignMinor, subjectId, onGoToStep, onSessionExpired }}
     >
       {children}
     </WizardContext.Provider>

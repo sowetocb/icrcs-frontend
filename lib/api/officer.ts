@@ -274,3 +274,64 @@ export async function getDeclaration(subjectId: string): Promise<DeclarationRevi
   return obj(raw.data ?? raw);
 }
 
+// ── Officer form PDFs ────────────────────────────────────────────────────────
+
+/** Fetch a server-rendered PDF (officer namespace, so the proxy attaches the
+ * officer cookie) and trigger a browser download. Uses a data: URL so the
+ * download isn't blocked as "insecure" over plain HTTP. Returns false on error. */
+async function downloadOfficerPdf(path: string, fileName: string): Promise<boolean> {
+  if (BYPASS) {
+    await delay(200);
+    return true;
+  }
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  try {
+    const res = await fetch(`${base}${path}`, {
+      credentials: "include",
+      headers: { accept: "application/pdf" },
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    if (!blob.size) return false;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** GET /v1/officer/registration/{subjectId}/declaration/pdf — the form PDF for a
+ * DECLARED (post-stage-9) registration. Any officer may download it. */
+export function downloadOfficerDeclarationPdf(
+  subjectId: string,
+  fileName = "Registration Form",
+): Promise<boolean> {
+  return downloadOfficerPdf(
+    `/v1/officer/registration/${encodeURIComponent(subjectId)}/declaration/pdf`,
+    fileName,
+  );
+}
+
+/** GET /v1/officer/registration/{subjectId}/stage9/preview/pdf — the form PDF for
+ * the officer's OWN pre-declaration (in-progress) registration. */
+export function downloadOfficerPreviewPdf(
+  subjectId: string,
+  fileName = "Registration Form",
+): Promise<boolean> {
+  return downloadOfficerPdf(
+    `/v1/officer/registration/${encodeURIComponent(subjectId)}/stage9/preview/pdf`,
+    fileName,
+  );
+}
+

@@ -344,7 +344,7 @@ const en = {
     ecAgeError: "Emergency contacts must be at least 18 years old.",
     spouseAgeError: "Spouse must be at least 16 years old.",
     spouseGenderMismatch: "Spouse must be of the opposite gender.",
-    childDobInvalid: "Child must be born after you turned 16.",
+    childDobInvalid: "A parent's date of birth must be 16 years earlier than the child's date of birth. Please verify the information provided.",
     primaryEducationRequired: "At least one education entry must be Primary level.",
     spouseRequired: "Please provide details for at least one spouse.",
     nameInvalid: "Only letters, spaces, hyphens and apostrophes are allowed.",
@@ -914,6 +914,7 @@ const en = {
     relationshipContinue: "Continue",
   },
   category: {
+    eyebrow: "Select Your Category",
     title: "Registration Category",
     subtitle:
       "Select the category that best describes your current circumstances or the purpose of your registration. Your selection will help the system guide you through the appropriate registration process and determine the information and supporting documents you need to provide.",
@@ -1043,6 +1044,7 @@ const en = {
     detailBack: "Back to list",
     detailTitle: "Registration Details",
     detailSubjectId: "Subject ID",
+    downloadPdf: "Download PDF",
     detailType: "Registration Type",
     detailDeclaredDate: "Declared Date",
     stationEmpty: "No registrations at your station yet.",
@@ -1389,7 +1391,7 @@ const sw: typeof en = {
     ecAgeError: "Mawasiliano ya dharura lazima wawe na umri wa angalau miaka 18.",
     spouseAgeError: "Mwenzi wa ndoa lazima awe na umri wa angalau miaka 16.",
     spouseGenderMismatch: "Mwenzi wa ndoa lazima awe wa jinsia tofauti.",
-    childDobInvalid: "Mtoto lazima azaliwe baada ya wewe kutimiza miaka 16.",
+    childDobInvalid: "Tarehe ya kuzaliwa ya mzazi lazima iwe miaka 16 kabla ya tarehe ya kuzaliwa ya mtoto. Tafadhali hakiki taarifa zilizotolewa.",
     primaryEducationRequired: "Angalau elimu moja lazima iwe ya ngazi ya Msingi.",
     spouseRequired: "Tafadhali toa taarifa za angalau mwenzi mmoja wa ndoa.",
     nameInvalid: "Tumia herufi, nafasi, kistari au nukta peke yake.",
@@ -1955,6 +1957,7 @@ const sw: typeof en = {
     relationshipContinue: "Endelea",
   },
   category: {
+    eyebrow: "Chagua Aina Yako",
     title: "Aina ya Usajili",
     subtitle:
       "Chagua aina inayoelezea vyema hali yako ya sasa au madhumuni ya usajili wako. Chaguo lako litasaidia mfumo kukuongoza katika mchakato sahihi wa usajili na kubaini taarifa na vielelezo unavyohitaji kuwasilisha.",
@@ -2081,6 +2084,7 @@ const sw: typeof en = {
     detailBack: "Rudi kwenye orodha",
     detailTitle: "Maelezo ya Usajili",
     detailSubjectId: "Kitambulisho cha Somo",
+    downloadPdf: "Pakua PDF",
     detailType: "Aina ya Usajili",
     detailDeclaredDate: "Tarehe ya Kutangazwa",
     stationEmpty: "Bado hakuna usajili katika kituo chako.",

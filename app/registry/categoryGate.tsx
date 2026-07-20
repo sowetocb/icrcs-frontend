@@ -91,12 +91,14 @@ export default function CategoryGate({
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:px-[10%]">
       <div className="mx-auto w-full max-w-5xl">
-        <p className="text-sm font-semibold text-success">{t("category.title")}</p>
+        <p className="text-sm font-semibold text-success">{t("category.eyebrow")}</p>
         <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
           {t("category.title")}
         </h1>
-        <p className="mt-3 max-w-3xl leading-relaxed text-muted">{t("category.subtitle")}</p>
-        <p className="mt-3 max-w-3xl rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm leading-relaxed text-ink">
+        {/* Full-width paragraphs (no max-w cap) so they stretch across the
+            centred container and fill the side gaps for a balanced look. */}
+        <p className="mt-3 leading-relaxed text-muted">{t("category.subtitle")}</p>
+        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm leading-relaxed text-ink">
           {t("category.note")}
         </p>
 

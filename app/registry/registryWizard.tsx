@@ -261,6 +261,7 @@ export default function RegistryWizard({
   selfDone,
   registeringMinor = false,
   minorRelationship = "",
+  foreignMinor = false,
   registrationType,
   onExit,
   onComplete,
@@ -273,6 +274,10 @@ export default function RegistryWizard({
   /** When registering a minor, the registrant's relationship to them, chosen at
    * the gate ("guardian" | "parent"). Drives Stage 3 (Parents vs Guardian). */
   minorRelationship?: "guardian" | "parent" | "";
+  /** A Tanzanian citizen registering a FOREIGN MINOR: same as a Tanzanian-minor
+   * registration except the minor's nationality is freely picked, not locked to
+   * Tanzania. */
+  foreignMinor?: boolean;
   /** Migrant-track category (MIGRANT / REFUGEE / ASYLUM_SEEKER) chosen at the
    * category picker; undefined for the citizen track. Accepted now so the picker
    * can route through here; the migrant Stage-1 endpoint + steps are wired in a
@@ -330,8 +335,9 @@ export default function RegistryWizard({
         : "");
     const regType = draftRegType || registrationType || "";
     // Officers registering migrants must NOT get a pre-filled nationality — the
-    // migrant's nationality needs to be selected by the officer.
-    if (isOfficer() && regType) {
+    // migrant's nationality needs to be selected by the officer. A foreign minor
+    // likewise has a freely-picked nationality (not Tanzania).
+    if ((isOfficer() && regType) || foreignMinor) {
       base.nationalityCountry = "";
     } else {
       base.nationalityCountry = "Tanzania";
@@ -458,8 +464,9 @@ export default function RegistryWizard({
             if (!next.phone || next.phone === "") next.phone = fresh.phoneNumber;
             if (!next.email || next.email === "") next.email = fresh.email;
           }
-          // Bind nationality from the backend profile (not from cache).
-          if (!(isOfficer() && registrationType)) {
+          // Bind nationality from the backend profile (not from cache). A foreign
+          // minor keeps its freely-picked nationality — don't force Tanzania.
+          if (!(isOfficer() && registrationType) && !foreignMinor) {
             next.nationalityCountry = isFirstPerson
               ? (fresh.nationality || "Tanzania")
               : "Tanzania";
@@ -2589,6 +2596,8 @@ export default function RegistryWizard({
                   isFirstPerson={isFirstPerson}
                   isMigrant={isMigrant}
                   isOfficerMode={isOfficer()}
+                  foreignMinor={foreignMinor}
+                  subjectId={subjectId}
                   onGoToStep={goTo}
                   onSessionExpired={signOutToLogin}
                 >

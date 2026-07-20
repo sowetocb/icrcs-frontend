@@ -8,6 +8,7 @@ import {
   getDeclaredMine,
   getDeclaredAll,
   getDeclaration,
+  downloadOfficerDeclarationPdf,
   type DeclaredRegistration,
   type DeclaredPage,
   type DeclarationReview,
@@ -23,6 +24,7 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 
 // ── Status styling ──────────────────────────────────────────────────────────
@@ -309,6 +311,17 @@ function DetailView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("personal");
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadOfficerDeclarationPdf(subjectId, `Registration Form ${subjectId}`);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -533,11 +546,28 @@ function DetailView({
         {t("officer.detailBack")}
       </button>
 
-      <div>
-        <h2 className="font-display text-xl font-bold text-navy-700">{t("officer.detailTitle")}</h2>
-        <p className="mt-1 text-xs font-medium text-muted">
-          {t("officer.detailSubjectId")}: <span className="font-mono text-navy-500">{subjectId}</span>
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold text-navy-700">{t("officer.detailTitle")}</h2>
+          <p className="mt-1 text-xs font-medium text-muted">
+            {t("officer.detailSubjectId")}: <span className="font-mono text-navy-500">{subjectId}</span>
+          </p>
+        </div>
+        {!loading && !error && data && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-navy-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {downloading ? (
+              <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Download size={16} aria-hidden="true" />
+            )}
+            {t("officer.downloadPdf")}
+          </button>
+        )}
       </div>
 
       {loading && (

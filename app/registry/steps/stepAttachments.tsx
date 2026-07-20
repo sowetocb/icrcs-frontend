@@ -55,7 +55,7 @@ function readDataUrl(file: File): Promise<string> {
 
 export default function StepAttachments() {
   const { t } = useI18n();
-  const { data, set, errors, fieldErrors, isMigrant, isOfficerMode } = useWizard();
+  const { data, set, errors, fieldErrors, isMigrant, isOfficerMode, subjectId: ctxSubjectId } = useWizard();
   // Uploads are COMPLETELY optional on the migrant track (Migrant / Refugee /
   // Asylum Seeker / Alien / Undocumented Migrant / Voluntary Returnee) — these
   // applicants often hold no civil documents at all — AND for every officer
@@ -65,21 +65,19 @@ export default function StepAttachments() {
   // the "Required" badge is hidden. (The wizard's Stage 8 gate is skipped too.)
   const uploadsOptional = isMigrant || isOfficerMode;
   const isRequiredType = (mandatory: boolean) => mandatory && !uploadsOptional;
-  const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
+  // The backend registration id the file belongs to. Prefer the wizard's live
+  // value (the ONLY source officers have — they have no citizen profile to look
+  // it up from); fall back to the citizen draft lookup. Officers MUST send this
+  // in the upload FormData or /v1/officer/files/upload rejects with "No
+  // registration found for this profile".
+  const subjectId =
+    ctxSubjectId || loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId || "";
 
   const saved = parseAttachments(data.attachments);
   // Reactive view of what's already uploaded (this session OR re-hydrated from
   // GET /stage8) so previously-uploaded files always show as done, even when
   // they arrive after this component first mounted.
   const savedByType = new Map(saved.map((a) => [a.typeId, a]));
-  // Track which document types already have an upload from a prior stage (1-6)
-  // or from the current session. These are "locked" — the user can replace the
-  // file but cannot un-tick the checkbox (the document is already committed).
-  const [lockedTypes] = useState<Set<number>>(() => {
-    const s = new Set<number>();
-    for (const a of saved) s.add(a.typeId);
-    return s;
-  });
   // Pre-tick the mandatory type and any already-uploaded ones.
   const [ticked, setTicked] = useState<Record<number, boolean>>(() => {
     const init: Record<number, boolean> = {};
@@ -155,16 +153,36 @@ export default function StepAttachments() {
     e.target.value = "";
   }
 
-  /** A checkbox is disabled (non-uncheckable) when the document type is
-   * mandatory OR was already uploaded in a prior stage (1-6). The user can
-   * still replace the file via the upload button, but cannot remove it. */
-  function isCheckboxLocked(typeId: number, mandatory: boolean): boolean {
-    return isRequiredType(mandatory) || lockedTypes.has(typeId) || savedByType.has(typeId);
+  /** Remove a document's uploaded file + row when the user deselects it, so it is
+   * no longer part of the submission. */
+  function removeAttachment(typeId: number) {
+    const list = parseAttachments(data.attachments).filter((a) => a.typeId !== typeId);
+    set("attachments", JSON.stringify(list));
+    setRows((r) => {
+      const next = { ...r };
+      delete next[typeId];
+      return next;
+    });
+    if (typeId === PASSPORT_PHOTO_TYPE) set("passportPhotoUploaded", "");
+    if (typeId === 2) set("idDocumentUploaded", "");
   }
 
-  function toggle(typeId: number, mandatory: boolean) {
-    if (isCheckboxLocked(typeId, mandatory)) return;
-    setTicked((prev) => ({ ...prev, [typeId]: !prev[typeId] }));
+  /** A checkbox is only disabled while its file is mid-upload — the user may
+   * freely deselect any document here because this stage (Uploads) is BEFORE the
+   * declaration & submission. Deselecting removes the uploaded file (see toggle);
+   * mandatory documents are still enforced when the stage is saved. */
+  function isCheckboxLocked(typeId: number): boolean {
+    return rows[typeId]?.status === "uploading";
+  }
+
+  function toggle(typeId: number) {
+    setTicked((prev) => {
+      const nextTicked = !prev[typeId];
+      // Deselecting before declaration drops the uploaded file so it isn't
+      // submitted; the user can re-tick and upload again.
+      if (!nextTicked) removeAttachment(typeId);
+      return { ...prev, [typeId]: nextTicked };
+    });
   }
 
   return (
@@ -199,8 +217,8 @@ export default function StepAttachments() {
                   <input
                     type="checkbox"
                     checked={isTicked}
-                    disabled={isCheckboxLocked(type.id, type.mandatory)}
-                    onChange={() => toggle(type.id, type.mandatory)}
+                    disabled={isCheckboxLocked(type.id)}
+                    onChange={() => toggle(type.id)}
                     className="h-4 w-4 shrink-0 rounded border-line accent-navy-700 disabled:opacity-60"
                   />
                   <span className="text-sm font-medium text-ink">

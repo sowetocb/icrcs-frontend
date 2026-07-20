@@ -59,6 +59,11 @@ export default function RegistryClient() {
   // The foreign registrant's relationship to the minor ("guardian" | "parent"),
   // chosen in the gate dialog and used to branch Stage 3 (Parents).
   const [minorRelationship, setMinorRelationship] = useState<"guardian" | "parent" | "">("");
+  // True when a TANZANIAN citizen is registering a FOREIGN MINOR (they picked the
+  // "Foreign Minor" category). The only difference from a Tanzanian-minor
+  // registration is that the minor's nationality is freely picked, not locked to
+  // Tanzania — so the wizard must NOT lock it.
+  const [foreignMinor, setForeignMinor] = useState(false);
   // The migrant-track registrationType (MIGRANT / REFUGEE / ASYLUM_SEEKER) chosen
   // at the category gate; null for the citizen track. Passed to the wizard, which
   // uses it to hit the /stage1/migrant endpoint + show migrant-only steps.
@@ -336,6 +341,7 @@ export default function RegistryClient() {
     setSubmission({ id, date, data });
     notify(t(registeringMinor ? "toast.minorRegistered" : "toast.registrationSubmitted"));
     setRegisteringMinor(false);
+    setForeignMinor(false);
     setMode("success");
   }
 
@@ -366,6 +372,7 @@ export default function RegistryClient() {
     }
     clearRegistration();
     setRegisteringMinor(false);
+    setForeignMinor(false);
     setRegistrationType(null);
     // Every fresh registration now starts at the category picker, which routes
     // Citizen/Foreign into the existing flow and Migrant/Refugee/Asylum into the
@@ -378,10 +385,27 @@ export default function RegistryClient() {
   // categories carry their registrationType into the wizard.
   function chooseCategory(category: RegistrationCategory) {
     if (category === "FOREIGN") {
+      const nat = (loadProfile()?.nationality ?? "").trim();
+      const isTanzanian = nat === "" || nat === "Tanzania";
+      if (isTanzanian) {
+        // A TANZANIAN citizen picked "Foreign Minor": register a foreign minor
+        // directly in the wizard (citizen track), with the minor's nationality
+        // freely picked. Do NOT route to the foreign-national CitizenshipGate.
+        setRegistrationType(null);
+        setRegisteringMinor(true);
+        setForeignMinor(true);
+        setMinorRelationship("");
+        setMode("wizard");
+        return;
+      }
+      // A verified FOREIGN NATIONAL picked Foreigner → the existing
+      // travel-document gate (register themselves / a Tanzanian-origin minor).
       setRegistrationType(null);
+      setForeignMinor(false);
       setMode("gate");
       return;
     }
+    setForeignMinor(false);
     if (isMigrantCategory(category)) {
       setRegistrationType(CATEGORY_REGISTRATION_TYPE[category] ?? null);
     } else {
@@ -484,6 +508,7 @@ export default function RegistryClient() {
             selfDone={selfDone}
             registeringMinor={registeringMinor}
             minorRelationship={minorRelationship}
+            foreignMinor={foreignMinor}
             registrationType={registrationType ?? undefined}
             onExit={() => setMode("landing")}
             onComplete={handleComplete}

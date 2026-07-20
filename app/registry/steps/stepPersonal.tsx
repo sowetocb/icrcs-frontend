@@ -108,7 +108,7 @@ const ID_DOC_SUFFIXES = ["Type", "Number"];
 
 
 export default function StepPersonal() {
-  const { data, set, setQuiet, isFirstPerson, isMigrant, isOfficerMode } = useWizard();
+  const { data, set, setQuiet, isFirstPerson, isMigrant, isOfficerMode, foreignMinor } = useWizard();
   const { t } = useI18n();
   const genders = useGenderOptions();
   const maritalStatuses = useMarriageOptions();
@@ -131,7 +131,8 @@ export default function StepPersonal() {
   // Only OFFICER registration and MIGRANT MINOR registration (dependent under the
   // migrant track, i.e. !isFirstPerson && isMigrant) allow the nationality to be
   // freely selected. All other flows bind nationality from the account profile.
-  const canPickNationality = !!isOfficerMode || (!isFirstPerson && !!isMigrant);
+  const canPickNationality =
+    !!isOfficerMode || !!foreignMinor || (!isFirstPerson && !!isMigrant);
   useEffect(() => {
     if (isFirstPerson) return;
     if (canPickNationality) return; // officer or migrant-minor: freely selectable
