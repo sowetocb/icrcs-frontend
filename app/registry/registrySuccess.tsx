@@ -6,9 +6,11 @@ import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import { registrationFormFileName } from "./printRegistrationForm";
 import { downloadRegistrationReviewPdf, printRegistrationReviewPdf } from "@/lib/api/registration";
+import { downloadOfficerDeclarationPdf, printOfficerDeclarationPdf } from "@/lib/api/officer";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
 import { CircleCheck, Download, Printer } from "lucide-react";
 import { loadProfile } from "@/lib/auth/profile";
+import { isOfficer } from "@/lib/auth/officerSession";
 // ── OLD client-side print mechanism (replaced by the backend /review/pdf
 //    endpoint). Kept commented for reference. ──
 // import { useEffect, useRef } from "react";
@@ -52,10 +54,13 @@ export default function RegistrySuccess({
         .map((k) => data[k])
         .filter((v): v is string => typeof v === "string" && v.trim() !== "")
         .join(" ");
-      const ok = await downloadRegistrationReviewPdf(
-        currentSubjectId(),
-        registrationFormFileName(fullName),
-      );
+      const sid = currentSubjectId();
+      const fileName = registrationFormFileName(fullName);
+      // Officers have no citizen profile — the citizen /review/pdf 401s for them.
+      // Use the officer declaration/pdf endpoint (post-stage-9 declared form).
+      const ok = isOfficer()
+        ? await downloadOfficerDeclarationPdf(sid, fileName)
+        : await downloadRegistrationReviewPdf(sid, fileName);
       notify(ok ? t("registry.downloadSuccess") : t("registry.downloadError"), ok ? "success" : "error");
     } catch {
       notify(t("registry.downloadError"), "error");
@@ -68,7 +73,10 @@ export default function RegistrySuccess({
     if (busy) return;
     setBusy(true);
     try {
-      const ok = await printRegistrationReviewPdf(currentSubjectId());
+      const sid = currentSubjectId();
+      const ok = isOfficer()
+        ? await printOfficerDeclarationPdf(sid)
+        : await printRegistrationReviewPdf(sid);
       if (!ok) notify(t("registry.downloadError"), "error");
     } catch {
       notify(t("registry.downloadError"), "error");

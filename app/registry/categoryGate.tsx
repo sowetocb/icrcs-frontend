@@ -103,24 +103,31 @@ export default function CategoryGate({
         </p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map(({ key, Icon, titleKey, descKey }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onSelect(key)}
-              className="group flex flex-col rounded-xl border border-line bg-card p-5 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
-                <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
-              </span>
-              <h2 className="mt-3 text-lg font-bold text-navy-700">{t(titleKey)}</h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(descKey)}</p>
-              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-700 transition group-hover:gap-2.5">
-                {t("gate.continue")}
-                <ArrowRightIcon size={16} aria-hidden="true" />
-              </span>
-            </button>
-          ))}
+          {categories.map(({ key, Icon, titleKey, descKey }) => {
+            // A Tanzanian registering a dependent picks "Foreigner" to register a
+            // FOREIGN MINOR — relabel that card so its purpose is unmistakable.
+            const isForeignMinor = key === "FOREIGN" && isDependent && isTanzanian;
+            const tKey = isForeignMinor ? "category.foreignMinorTitle" : titleKey;
+            const dKey = isForeignMinor ? "category.foreignMinorDesc" : descKey;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onSelect(key)}
+                className="group flex flex-col rounded-xl border border-line bg-card p-5 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
+                  <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <h2 className="mt-3 text-lg font-bold text-navy-700">{t(tKey)}</h2>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(dKey)}</p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-700 transition group-hover:gap-2.5">
+                  {t("gate.continue")}
+                  <ArrowRightIcon size={16} aria-hidden="true" />
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <button

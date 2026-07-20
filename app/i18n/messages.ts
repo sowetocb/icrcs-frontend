@@ -926,6 +926,9 @@ const en = {
     foreignTitle: "Foreigner",
     foreignDesc:
       "A non-Tanzanian citizen registering based on their current immigration circumstances or authorization to stay in Tanzania. May have a valid visa, pass or resident permit.",
+    foreignMinorTitle: "Foreign Minor",
+    foreignMinorDesc:
+      "Register a foreign minor under your profile. You freely select the minor's nationality — it is not fixed to Tanzania.",
     refugeeTitle: "Refugee",
     refugeeDesc: "A person recognized or being registered as a refugee in accordance with applicable procedures.",
     asylumTitle: "Asylum Seeker",
@@ -1969,6 +1972,9 @@ const sw: typeof en = {
     foreignTitle: "Mgeni",
     foreignDesc:
       "Mtu asiye raia wa Tanzania anayejisajili kwa kuzingatia hali yake ya sasa ya uhamiaji au idhini ya kuishi Tanzania. Anaweza kuwa na viza halali, pasi au kibali cha ukazi.",
+    foreignMinorTitle: "Mtoto Mgeni",
+    foreignMinorDesc:
+      "Sajili mtoto mgeni chini ya wasifu wako. Unachagua uraia wa mtoto kwa uhuru — haujafungwa kuwa Tanzania.",
     refugeeTitle: "Mkimbizi",
     refugeeDesc: "Mtu aliyetambuliwa au anayesajiliwa kama mkimbizi kwa mujibu wa taratibu husika.",
     asylumTitle: "Mtafuta Hifadhi",

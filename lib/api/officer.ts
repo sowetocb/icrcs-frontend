@@ -276,39 +276,79 @@ export async function getDeclaration(subjectId: string): Promise<DeclarationRevi
 
 // ── Officer form PDFs ────────────────────────────────────────────────────────
 
-/** Fetch a server-rendered PDF (officer namespace, so the proxy attaches the
- * officer cookie) and trigger a browser download. Uses a data: URL so the
- * download isn't blocked as "insecure" over plain HTTP. Returns false on error. */
-async function downloadOfficerPdf(path: string, fileName: string): Promise<boolean> {
-  if (BYPASS) {
-    await delay(200);
-    return true;
-  }
+/** Fetch a server-rendered PDF as a Blob (officer namespace, so the proxy
+ * attaches the officer cookie). Shared by download + print. Null on error. */
+async function fetchOfficerPdfBlob(path: string): Promise<Blob | null> {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
   try {
     const res = await fetch(`${base}${path}`, {
       credentials: "include",
       headers: { accept: "application/pdf" },
     });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const blob = await res.blob();
-    if (!blob.size) return false;
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return true;
+    return blob.size ? blob : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** Fetch an officer PDF and trigger a browser download. Uses a data: URL so the
+ * download isn't blocked as "insecure" over plain HTTP. Returns false on error. */
+async function downloadOfficerPdf(path: string, fileName: string): Promise<boolean> {
+  if (BYPASS) {
+    await delay(200);
+    return true;
+  }
+  const blob = await fetchOfficerPdfBlob(path);
+  if (!blob) return false;
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return true;
+}
+
+/** Fetch an officer PDF and open the browser PRINT dialog (hidden same-origin
+ * blob: iframe, so contentWindow.print() is permitted). Returns false on error. */
+async function printOfficerPdf(path: string): Promise<boolean> {
+  if (BYPASS) {
+    await delay(200);
+    return true;
+  }
+  const blob = await fetchOfficerPdfBlob(path);
+  if (!blob) return false;
+  const url = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  return new Promise<boolean>((resolve) => {
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      }, 350);
+    };
+    iframe.onerror = () => resolve(false);
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      iframe.remove();
+    }, 60_000);
+  });
 }
 
 /** GET /v1/officer/registration/{subjectId}/declaration/pdf — the form PDF for a
@@ -320,6 +360,13 @@ export function downloadOfficerDeclarationPdf(
   return downloadOfficerPdf(
     `/v1/officer/registration/${encodeURIComponent(subjectId)}/declaration/pdf`,
     fileName,
+  );
+}
+
+/** Open the print dialog for a DECLARED registration's form PDF (declaration/pdf). */
+export function printOfficerDeclarationPdf(subjectId: string): Promise<boolean> {
+  return printOfficerPdf(
+    `/v1/officer/registration/${encodeURIComponent(subjectId)}/declaration/pdf`,
   );
 }
 
