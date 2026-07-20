@@ -528,7 +528,7 @@ const en = {
     yes: "Yes",
     no: "No",
     pleaseAnswer: "Please answer this question.",
-    gateEducation: "Do you have education or employment information to provide?",
+    gateEducation: "Do you have education information to provide?",
     gateEmergency: "Do you have people you can contact in case of emergency?",
     gateFamily: "Do you have family information (spouse, children, or relatives) to provide?",
     // Mirrors the backend RegistrationStatus enum — these four values only.
@@ -749,7 +749,7 @@ const en = {
     nidaNumber: "NIDA Number", // REVIEW
     birthCertNo: "Birth Certificate Number", // REVIEW
     birthCertFile: "Upload Birth Certificate",
-    indexNo: "Namba ya cheti", // REVIEW
+    indexNo: "Certificate Number", // REVIEW
     docType: "Identification Document", // REVIEW
     docNumber: "Document Number", // REVIEW
     idDocNida: "NIDA Number",
@@ -1541,7 +1541,7 @@ const sw: typeof en = {
     yes: "Ndiyo",
     no: "Hapana",
     pleaseAnswer: "Tafadhali jibu swali hili.",
-    gateEducation: "Je, una taarifa za elimu au ajira za kutoa?",
+    gateEducation: "Je, una taarifa za elimu za kutoa?",
     gateEmergency: "Je, una watu unaoweza kuwasiliana nao wakati wa dharura?",
     gateFamily: "Je, una taarifa za familia (mwenzi, watoto, au ndugu) za kutoa?",
     // Inalingana na enum ya RegistrationStatus ya backend — thamani hizi nne pekee.

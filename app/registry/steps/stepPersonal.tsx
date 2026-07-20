@@ -391,10 +391,13 @@ export default function StepPersonal() {
         </div>
       </Field>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t("fields.phone")} required>
+        {/* Phone and email are OPTIONAL on the migrant track (many migrants have
+            neither) AND for every officer registration (officers only register
+            migrants) — drop the required marker; still format-checked when filled. */}
+        <Field label={t("fields.phone")} required={!isMigrant && !isOfficerMode}>
           <PhoneInput name="phone" />
         </Field>
-        <Field label={t("fields.email")} required>
+        <Field label={t("fields.email")} required={!isMigrant && !isOfficerMode}>
           <TextInput name="email" type="email" placeholder="test@test.com" maxLength={RULES.UI_EMAIL_MAX} />
         </Field>
       </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/app/i18n/languageSwitcher";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { loadSession, subscribeSession } from "@/lib/auth/session";
+import { loadOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
 import { getApplicationStatus, type ApplicationStatus } from "@/lib/api/registry";
 import { getErrorMessage } from "@/lib/api/client";
 import { LOGO_EMBLEM, LOGO_COAT_OF_ARMS } from "@/lib/assets";
@@ -17,8 +18,21 @@ const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 // "logged-in" flag reactively during render (no effect/setState). The server
 // snapshot is always false so SSR renders the guest shell; the client then
 // re-reads localStorage and, if a session exists, redirects.
-const sessionStoreSubscribe = (cb: () => void) => subscribeSession(() => cb());
-const sessionStoreSnapshot = () => loadSession() !== null;
+//
+// BOTH session kinds gate the auth pages: a signed-in CITIZEN or a signed-in
+// OFFICER must never see the login form again (opening /login while someone is
+// already in would let a second person start signing in on top of the first —
+// they'd submit credentials and land inside the FIRST user's account). We watch
+// both flags and treat either as "logged in".
+const sessionStoreSubscribe = (cb: () => void) => {
+  const unsubSession = subscribeSession(() => cb());
+  const unsubOfficer = subscribeOfficer(() => cb());
+  return () => {
+    unsubSession();
+    unsubOfficer();
+  };
+};
+const sessionStoreSnapshot = () => loadSession() !== null || loadOfficer() !== null;
 const sessionStoreServerSnapshot = () => false;
 
 /** A gold bullet list item. */
@@ -188,7 +202,9 @@ export default function AuthShell({
     sessionStoreServerSnapshot,
   );
   useEffect(() => {
-    if (loggedIn) router.replace("/dashboard");
+    if (!loggedIn) return;
+    // Officers have no citizen dashboard — their home is the migrant registry.
+    router.replace(loadOfficer() ? "/registry" : "/dashboard");
   }, [loggedIn, router]);
 
   // Resolve a localized status label, falling back to a readable form.

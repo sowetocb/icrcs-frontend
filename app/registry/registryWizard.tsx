@@ -172,8 +172,10 @@ const REQUIRED_FIELDS: string[][] = [
 // Migrant flow only: stages 4–6 open with a "do you have this info?" question.
 // Answering NO skips the whole stage (no fields, no validation, empty submit);
 // YES reveals the normal form. Keyed by step → the boolean gate field.
+// Stage 4 is NOT a whole-stage gate: employment is always required/submitted on
+// the migrant track, and only the EDUCATION section is gated (locally, inside
+// stepEducation via `mHasEducation`). Stages 5 & 6 are fully skippable.
 const MIGRANT_STAGE_GATE: Record<number, string> = {
-  4: "mHasEducation",
   5: "mHasEmergency",
   6: "mHasFamily",
 };
@@ -181,7 +183,6 @@ const MIGRANT_STAGE_GATE: Record<number, string> = {
 // Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
 // (now hidden) stage submits empty even if fields were filled before toggling.
 const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
-  4: /^(edu\d|eduCount|neverAttendedSchool|jobStatus|occupation|otherOccupation|employer)/,
   5: /^ec\d/,
   6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
 };
@@ -546,6 +547,15 @@ export default function RegistryWizard({
             // in-session choice.
             else if (next[gate] !== true && next[gate] !== false) next[gate] = false;
           }
+          // Stage 4's EDUCATION section has its own local gate (mHasEducation),
+          // not a whole-stage gate. Open it on resume when the server returned
+          // schooling so the fetched entries show; employment renders regardless.
+          if (isMigrant && step === 4) {
+            const hasEducation =
+              next.neverAttendedSchool === false ||
+              Object.keys(mapped).some((k) => /^edu\d/.test(k));
+            if (hasEducation && next.mHasEducation !== true) next.mHasEducation = true;
+          }
           return next;
         });
         // Mark hydrated so the skeleton never blocks this stage again — it
@@ -601,6 +611,13 @@ export default function RegistryWizard({
           if (gate) {
             if (hasData) next[gate] = true;
             else if (next[gate] !== true && next[gate] !== false) next[gate] = false;
+          }
+          // Stage 4 education local gate — open it when schooling came back.
+          if (isMigrant && n === 4) {
+            const hasEducation =
+              next.neverAttendedSchool === false ||
+              Object.keys(mapped).some((k) => /^edu\d/.test(k));
+            if (hasEducation && next.mHasEducation !== true) next.mHasEducation = true;
           }
           return next;
         });
@@ -1142,12 +1159,15 @@ export default function RegistryWizard({
       return;
     }
     const adult = isAtLeast18(dob);
-    const invalid = isFirstPerson ? !adult : adult;
-    if (invalid) {
-      flagDob(isFirstPerson ? t("registry.ageError") : t("registry.minorError"));
-    } else {
-      clearDob();
+    // Officers can register a person of ANY age — skip the adult/minor gate.
+    if (!isOfficer()) {
+      const invalid = isFirstPerson ? !adult : adult;
+      if (invalid) {
+        flagDob(isFirstPerson ? t("registry.ageError") : t("registry.minorError"));
+        return;
+      }
     }
+    clearDob();
   }
 
   const isLast = step === TOTAL;
@@ -1193,6 +1213,13 @@ export default function RegistryWizard({
       // and auto-set to Single — remove it so a slow lookup doesn't falsely block.
       if (!isFirstPerson) {
         required = required.filter((n) => n !== "marriage");
+      }
+      // Phone and email are OPTIONAL for migrants (many have neither) and for
+      // every officer registration (officers only register migrants) — still
+      // format-validated on blur when filled, just not required. The officer
+      // check is a safety net for when the migrant category isn't resolvable.
+      if (isMigrant || isOfficer()) {
+        required = required.filter((n) => n !== "phone" && n !== "email");
       }
       // Migrant Travel History: when the applicant says they HAVE a travel
       // document, the backend requires its type ("Document type is required when
@@ -1416,7 +1443,18 @@ export default function RegistryWizard({
         apiFieldErrors["attach3"] = message;
       } else {
         const hit = ATTACHMENT_TYPES.find((a) => lower.includes(a.label.toLowerCase()));
-        if (hit) apiFieldErrors[`attach${hit.id}`] = message;
+        if (hit) {
+          // The passport photo row is hidden from Stage 8 (captured at Stage 1).
+          // Instead of pinning the error to an invisible field, surface a
+          // friendly banner directing the user back to Personal Information.
+          if (hit.id === PASSPORT_PHOTO_TYPE) {
+            const shown = localizeBackendMessage(t("registry.photoMissing"), locale);
+            setFormError(shown);
+            notify(shown, "error");
+            return;
+          }
+          apiFieldErrors[`attach${hit.id}`] = message;
+        }
       }
     }
     // A backend NIDA rejection ("NIDA number must be exactly 20 digits") names no
@@ -1785,17 +1823,20 @@ export default function RegistryWizard({
         return;
       }
       const adult = isAtLeastAge(dob, RULES.CLAIM_MIN_AGE);
-      if (isFirstPerson && !adult) {
-        setErrors(["dob"]);
-        setFieldErrors({ dob: t("registry.ageError") });
-        setFormError("");
-        return;
-      }
-      if (!isFirstPerson && adult) {
-        setErrors(["dob"]);
-        setFieldErrors({ dob: t("registry.minorError") });
-        setFormError("");
-        return;
+      // Officers can register a person of ANY age — skip the adult/minor gate.
+      if (!isOfficer()) {
+        if (isFirstPerson && !adult) {
+          setErrors(["dob"]);
+          setFieldErrors({ dob: t("registry.ageError") });
+          setFormError("");
+          return;
+        }
+        if (!isFirstPerson && adult) {
+          setErrors(["dob"]);
+          setFieldErrors({ dob: t("registry.minorError") });
+          setFormError("");
+          return;
+        }
       }
 
       // Each selected document type must have a number entered.
@@ -1974,8 +2015,14 @@ export default function RegistryWizard({
     }
 
     // Stage 4: if the user said they attended school, at least the primary
-    // education (first school) must be filled in.
-    if (step === 4 && data.neverAttendedSchool !== true) {
+    // education (first school) must be filled in. On the migrant track the whole
+    // education section is gated by `mHasEducation` — skip this check unless the
+    // migrant opted into providing education (else it fires on a hidden section).
+    if (
+      step === 4 &&
+      data.neverAttendedSchool !== true &&
+      (!isMigrant || data.mHasEducation === true)
+    ) {
       const filled = (n: string) =>
         typeof data[n] === "string" && (data[n] as string).trim() !== "";
       // Primary school (edu1) needs level, name and city; index number is
@@ -2237,10 +2284,12 @@ export default function RegistryWizard({
     // MUST be uploaded before the stage can be submitted.
     //
     // EXCEPT on the migrant track (Migrant / Refugee / Asylum Seeker / Alien /
-    // Undocumented Migrant / Voluntary Returnee): these applicants frequently
-    // have no civil documents at all, so uploads are COMPLETELY optional for
-    // them and this gate is skipped.
-    if (step === 8 && !isMigrant) {
+    // Undocumented Migrant / Voluntary Returnee) AND every officer registration
+    // (officers only ever register migrants): these applicants frequently have no
+    // civil documents at all, so uploads are COMPLETELY optional and this gate is
+    // skipped. The officer check is a safety net for when the migrant category
+    // isn't resolvable this deep in the flow.
+    if (step === 8 && !isMigrant && !isOfficer()) {
       const have = new Set(parseAttachments(data.attachments).map((a) => a.typeId));
       // The passport photo isn't shown as a row here — it's captured at Stage 1
       // and uploaded/merged automatically by the submit path below — so it must

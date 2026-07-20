@@ -205,8 +205,7 @@ export default function StepEducation() {
     set("eduCount", String(schoolCount - 1));
   }
 
-  const content = (
-    <div className="space-y-8">
+  const educationSection = (
       <div className="space-y-5">
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("registry.haveAttendedSchool")}</p>
@@ -283,8 +282,9 @@ export default function StepEducation() {
           </div>
         )}
       </div>
+  );
 
-      {!isMinor && (
+  const employmentSection = !isMinor ? (
         <>
           <hr className="border-line" />
 
@@ -327,16 +327,25 @@ export default function StepEducation() {
             </div>
           </div>
         </>
-      )}
-    </div>
-  );
-  // Migrant flow: gate the whole stage behind a "do you have this?" question.
+  ) : null;
+
+  // Migrant flow: gate ONLY the education section behind the "do you have
+  // education information?" question. Employment always renders — it is never
+  // hidden by the gate (a migrant may be employed with no formal schooling).
   if (isMigrant) {
     return (
-      <MigrantStageGate field="mHasEducation" question={t("registry.gateEducation")}>
-        {content}
-      </MigrantStageGate>
+      <div className="space-y-8">
+        <MigrantStageGate field="mHasEducation" question={t("registry.gateEducation")}>
+          {educationSection}
+        </MigrantStageGate>
+        {employmentSection}
+      </div>
     );
   }
-  return content;
+  return (
+    <div className="space-y-8">
+      {educationSection}
+      {employmentSection}
+    </div>
+  );
 }

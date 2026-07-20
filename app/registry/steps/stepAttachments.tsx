@@ -55,13 +55,16 @@ function readDataUrl(file: File): Promise<string> {
 
 export default function StepAttachments() {
   const { t } = useI18n();
-  const { data, set, errors, fieldErrors, isMigrant } = useWizard();
-  // On the migrant track (Migrant / Refugee / Asylum Seeker / Alien /
-  // Undocumented Migrant / Voluntary Returnee) uploads are COMPLETELY optional —
-  // these applicants often hold no civil documents at all. So no type is treated
-  // as mandatory: nothing is pre-ticked, no checkbox is force-locked, and the
-  // "Required" badge is hidden. (The wizard's Stage 8 gate is skipped too.)
-  const isRequiredType = (mandatory: boolean) => mandatory && !isMigrant;
+  const { data, set, errors, fieldErrors, isMigrant, isOfficerMode } = useWizard();
+  // Uploads are COMPLETELY optional on the migrant track (Migrant / Refugee /
+  // Asylum Seeker / Alien / Undocumented Migrant / Voluntary Returnee) — these
+  // applicants often hold no civil documents at all — AND for every officer
+  // registration (officers only ever register migrants, so the same rule applies
+  // even if the migrant category isn't resolvable at this point). So no type is
+  // treated as mandatory: nothing is pre-ticked, no checkbox is force-locked, and
+  // the "Required" badge is hidden. (The wizard's Stage 8 gate is skipped too.)
+  const uploadsOptional = isMigrant || isOfficerMode;
+  const isRequiredType = (mandatory: boolean) => mandatory && !uploadsOptional;
   const subjectId = loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ?? "";
 
   const saved = parseAttachments(data.attachments);
