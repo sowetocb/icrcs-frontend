@@ -316,18 +316,30 @@ export default function RegistryWizard({
     // Start with minimal non-sensitive defaults. The backend-fetched profile
     // will populate personal fields via the mount effect below.
     const base: Record<string, string | boolean> = {};
+    // Recover the migrant category from EITHER draft convention: the top-level
+    // metadata field OR the legacy `data.registrationType` (different save paths
+    // and the resume seeds write it in different places). This must survive a
+    // refresh — when the registryClient prop is gone — or the wizard forgets it
+    // is a migrant registration (uploads wrongly become mandatory, migrant-only
+    // fields disappear, etc.).
+    const draftRegType =
+      resumable?.registrationType ||
+      (typeof resumable?.data?.registrationType === "string"
+        ? resumable.data.registrationType
+        : "");
+    const regType = draftRegType || registrationType || "";
     // Officers registering migrants must NOT get a pre-filled nationality — the
     // migrant's nationality needs to be selected by the officer.
-    if (isOfficer() && registrationType) {
+    if (isOfficer() && regType) {
       base.nationalityCountry = "";
     } else {
-      base.nationalityCountry = isFirstPerson ? "Tanzania" : "Tanzania";
+      base.nationalityCountry = "Tanzania";
     }
     // Migrants/refugees/asylum seekers are non-citizens (citizenshipTypeId 2);
     // the citizen track stays 1.
-    base.citizenshipTypeId = registrationType ? "2" : "1";
+    base.citizenshipTypeId = regType ? "2" : "1";
     // The registrationType must survive refresh — stored in the draft metadata.
-    base.registrationType = resumable?.registrationType ?? registrationType ?? "";
+    base.registrationType = regType;
     return base;
   });
 
