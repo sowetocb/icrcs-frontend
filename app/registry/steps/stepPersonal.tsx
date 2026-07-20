@@ -14,6 +14,11 @@ import CountrySelect from "@/components/registry/countrySelect";
 import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { Camera, X, Plus } from "lucide-react";
 
+/** ISO codes of the eight countries bordering Tanzania — the only valid transit
+ * points for a migrant's travel history: Kenya, Uganda, Rwanda, Burundi, DR
+ * Congo, Zambia, Malawi, Mozambique. */
+const TZ_BORDERING_CODES = ["KE", "UG", "RW", "BI", "CD", "ZM", "MW", "MZ"];
+
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
  * it survives reloads and is rebuilt into the `photo` part on submission. */
 function PhotoUpload() {
@@ -421,7 +426,13 @@ export default function StepPersonal() {
             </Field>
           </div>
           <Field label={t("fields.transitCountry")} optional>
-            <CountrySelect name="transitCountry" placeholder={t("fields.phCountryNat")} />
+            {/* Only countries bordering Tanzania are valid transit points:
+                Kenya, Uganda, Rwanda, Burundi, DRC, Zambia, Malawi, Mozambique. */}
+            <CountrySelect
+              name="transitCountry"
+              placeholder={t("fields.phCountryNat")}
+              only={TZ_BORDERING_CODES}
+            />
           </Field>
 
           <div>

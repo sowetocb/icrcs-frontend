@@ -51,14 +51,26 @@ export default function CreateProfileFlow() {
   const router = useRouter();
   const { t } = useI18n();
   const { notify } = useToast();
-  const [step, setStep] = useState<Step>(() => (readRestorableCreateProfile() ? 2 : 1));
-  const [details, setDetails] = useState<RegistrationDetails>(() => readRestorableCreateProfile()?.details ?? emptyDetails);
-  const [preAuthToken, setPreAuthToken] = useState(() => readRestorableCreateProfile()?.preAuthToken ?? "");
+  // Initialise to the SSR-safe defaults (step 1) so the first client render
+  // matches the server. Reading sessionStorage in the useState initialiser would
+  // make the client jump to step 2 while the server rendered step 1 — a
+  // hydration mismatch. The resumable OTP step is restored in the effect below.
+  const [step, setStep] = useState<Step>(1);
+  const [details, setDetails] = useState<RegistrationDetails>(emptyDetails);
+  const [preAuthToken, setPreAuthToken] = useState("");
 
-  // After the first mount, any later mount is a client-side navigation (start
-  // clean); only a fresh document load (refresh) resumes the OTP step.
+  // Restore the resumable OTP step AFTER mount (client only). Runs before the
+  // persist effect below (declaration order) so it reads the saved state before
+  // that effect can clear it. Only a fresh document load (refresh) resumes; a
+  // later client-side navigation starts clean (the module-level mounted flag).
   useEffect(() => {
+    const restorable = readRestorableCreateProfile();
     createProfileMountedInSession = true;
+    if (restorable) {
+      setDetails(restorable.details);
+      setPreAuthToken(restorable.preAuthToken);
+      setStep(2);
+    }
   }, []);
 
   // Persist the resumable OTP step so a refresh returns to it. The password is

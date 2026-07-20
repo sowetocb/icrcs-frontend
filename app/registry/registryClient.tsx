@@ -48,25 +48,11 @@ export default function RegistryClient() {
   // no citizen landing/progress sync (their own citizen concepts don't apply).
   const [officerMode] = useState(() => typeof window !== "undefined" && isOfficer());
 
-  const [mode, setMode] = useState<Mode>(() => {
-    if (typeof window === "undefined" || hasMountedInSession) return "landing";
-    // Officers always start at the landing page; server determines card state.
-    if (isOfficer()) return "landing";
-    let saved: string | null = null;
-    try {
-      saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
-    } catch {
-      // sessionStorage unavailable — fall back to landing
-    }
-    if (saved === "wizard") {
-      const ownerId = loadProfile()?.profileId ?? "";
-      const draft = loadRegistrationFor(ownerId);
-      if (draft && !draft.completed) return "wizard";
-    } else if (saved === "gate") {
-      return "gate";
-    }
-    return "landing";
-  });
+  // Always start at "landing" so the first client render matches the server
+  // (SSR can't read sessionStorage). The persisted per-tab view is restored in a
+  // post-mount effect below — reading storage in this initialiser would cause a
+  // hydration mismatch on a refresh mid-wizard.
+  const [mode, setMode] = useState<Mode>("landing");
   // True when a verified non-citizen (foreign) profile is registering a
   // Tanzanian-origin minor rather than themselves.
   const [registeringMinor, setRegisteringMinor] = useState(false);
@@ -106,8 +92,33 @@ export default function RegistryClient() {
   // picker is constrained to their track. `null` = no prior registration yet
   // (their own first registration) → every category is offered.
   const [ownerTrack, setOwnerTrack] = useState<"citizen" | "migrant" | null>(null);
-  // Persist the current view so a page refresh can restore it (see the mode
-  // initializer above).
+  // Restore the persisted per-tab view AFTER mount (client only) so the first
+  // render matches the server ("landing"). Declared BEFORE the persist effect so
+  // it reads the saved value before that effect can overwrite it. Only a fresh
+  // document load (refresh) restores; a later client-side navigation opens
+  // landing (guarded by the module-level mounted flag).
+  useEffect(() => {
+    if (hasMountedInSession) return;
+    hasMountedInSession = true;
+    if (isOfficer()) return; // officers always start at the landing page
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
+    } catch {
+      // sessionStorage unavailable — stay on landing
+    }
+    if (saved === "wizard") {
+      const ownerId = loadProfile()?.profileId ?? "";
+      const draft = loadRegistrationFor(ownerId);
+      if (draft && !draft.completed) setMode("wizard");
+    } else if (saved === "gate") {
+      setMode("gate");
+    }
+  }, []);
+
+  // Persist the current view so a page refresh can restore it (see the effect
+  // above). Runs after the restore effect, so it never clobbers the saved value
+  // before it has been read.
   useEffect(() => {
     try {
       sessionStorage.setItem(REGISTRY_MODE_KEY, mode);
@@ -115,12 +126,6 @@ export default function RegistryClient() {
       // ignore — sessionStorage unavailable
     }
   }, [mode]);
-
-  // After the first mount, any later mount of this component is a client-side
-  // navigation, which should open landing rather than restore the saved view.
-  useEffect(() => {
-    hasMountedInSession = true;
-  }, []);
 
   useEffect(() => {
     // Officers: call the backend to determine if there are active cases.

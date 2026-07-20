@@ -58,34 +58,29 @@ export default function DashboardHome() {
     <div className="space-y-5">
       {/* Hero */}
       <section className="relative overflow-hidden rounded-2xl bg-navy-700 p-6 text-white shadow-[0_8px_40px_-12px_rgba(13,31,51,0.4)] sm:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <h1 className="font-display text-3xl font-black leading-[1.08] tracking-tight sm:text-4xl">
-              {t("dashboard.title")}
-              <span className="text-gold">.</span>
-            </h1>
+        <h1 className="font-display text-3xl font-black leading-[1.08] tracking-tight sm:text-4xl">
+          {t("dashboard.title")}
+          <span className="text-gold">.</span>
+        </h1>
 
-            <div className="mt-3 max-w-xl space-y-2 leading-relaxed text-navy-300">
-              {t("dashboard.welcome")
-                .replace("{name}", userName)
-                .split("\n")
-                .filter((para) => para.trim().length > 0)
-                .map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
-            </div>
+        {/* Full-width text so it fills the card horizontally and stays short. */}
+        <div className="mt-3 space-y-2 leading-relaxed text-navy-300">
+          {t("dashboard.welcome")
+            .replace("{name}", userName)
+            .split("\n")
+            .filter((para) => para.trim().length > 0)
+            .map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+        </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-4">
-              <Link
-                href="/registry"
-                className="rounded-lg bg-gold px-6 py-3 text-sm font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-700"
-              >
-                {t("dashboard.startRegistration")}
-              </Link>
-            </div>
-          </div>
-
-
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <Link
+            href="/registry"
+            className="rounded-lg bg-gold px-6 py-3 text-sm font-bold text-navy-900 transition hover:bg-gold-400 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-700"
+          >
+            {t("dashboard.startRegistration")}
+          </Link>
         </div>
       </section>
 

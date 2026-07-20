@@ -69,9 +69,12 @@ function readRestorableForgot(): { step: 2 | 3; identifier: string; profileId: s
 
 export default function ForgotFlow() {
   const { t } = useI18n();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(() => readRestorableForgot()?.step ?? 1);
-  const [identifier, setIdentifier] = useState(() => readRestorableForgot()?.identifier ?? "");
-  const [profileId, setProfileId] = useState(() => readRestorableForgot()?.profileId ?? "");
+  // Initialise to SSR-safe defaults (step 1) so the first client render matches
+  // the server; the resumable step is restored in the effect below. Reading
+  // sessionStorage in the useState initialiser would cause a hydration mismatch.
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [identifier, setIdentifier] = useState("");
+  const [profileId, setProfileId] = useState("");
   const [code, setCode] = useState("");
   const [otpInvalid, setOtpInvalid] = useState(false);
   const [password, setPassword] = useState("");
@@ -85,10 +88,19 @@ export default function ForgotFlow() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
-  // After the first mount, any later mount is a client-side navigation (which
-  // should start the flow clean); only a fresh document load (refresh) resumes.
+  // Restore the resumable OTP / new-password step AFTER mount (client only), so
+  // the first render matches the server. Runs before the persist effect below
+  // (declaration order) so it reads the saved state before that effect clears it.
+  // Only a fresh document load (refresh) resumes; a later client-side navigation
+  // starts clean (the module-level mounted flag inside the reader).
   useEffect(() => {
+    const restorable = readRestorableForgot();
     forgotMountedInSession = true;
+    if (restorable) {
+      setIdentifier(restorable.identifier);
+      setProfileId(restorable.profileId);
+      setStep(restorable.step);
+    }
   }, []);
 
   // Persist the resumable part of the flow so a refresh returns to the same step.

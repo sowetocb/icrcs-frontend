@@ -14,7 +14,9 @@ import { getErrorMessage } from "@/lib/api/client";
 import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadProfile } from "@/lib/auth/profile";
 import { loadSession } from "@/lib/auth/session";
+import { isOfficer } from "@/lib/auth/officerSession";
 import { registrationFormFileName } from "../printRegistrationForm";
+import OfficerPeopleList from "./officerPeopleList";
 // ── OLD client-side print mechanism (replaced by the backend /review/pdf
 //    endpoint via downloadRegistrationReviewPdf). Kept commented for reference. ──
 // import { getRegistrationReview } from "@/lib/api/registration";
@@ -89,9 +91,21 @@ export default function PeopleList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StatusCategory>("all");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "7d" | "30d">("all");
+  // Officers see a completely different "Registered People" view (three tabs of
+  // declared migrant registrations). Resolved AFTER mount so the first render
+  // matches the server (citizen shell) and there's no hydration mismatch.
+  const [officerMode, setOfficerMode] = useState(false);
 
   // Read from localStorage after mount to avoid SSR/client hydration mismatch.
   useEffect(() => {
+    // Officers don't use the citizen people store / endpoints — switch to the
+    // officer view and skip the citizen fetch entirely.
+    if (isOfficer()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOfficerMode(true);
+      setLoading(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPeople(loadPeople());
 
@@ -280,6 +294,24 @@ export default function PeopleList() {
   //     setPrintPerson(null);
   //   })();
   // }, [printPerson]);
+
+  // Officer view — three tabs (own / station / search) of declared migrant
+  // registrations, rendered on the page (not a dialog) inside the same shell.
+  if (officerMode) {
+    return (
+      <AuthGuard>
+        <div className="flex min-h-screen flex-col bg-surface">
+          <DashboardTopbar />
+          <div className="flex flex-1">
+            <CitizenSidebar />
+            <main className="flex-1 px-6 py-10 lg:px-10">
+              <OfficerPeopleList />
+            </main>
+          </div>
+        </div>
+      </AuthGuard>
+    );
+  }
 
   return (
     <AuthGuard>

@@ -157,3 +157,120 @@ export async function getOfficerCaseStatus(subjectId: string): Promise<OfficerCa
     currentStage: num(d.currentStage ?? d.current_stage),
   };
 }
+
+// ── Declared registrations (Registered People) ──────────────────────────────
+
+export type DeclaredRegistration = {
+  subjectId: string;
+  fullName: string;
+  registrationType: string;
+  status: string;
+  nationality: string;
+  gender: string;
+  dateOfBirth: string;
+  createdAt: string;
+  officerName: string;
+  stationName: string;
+};
+
+export type DeclaredPage = {
+  items: DeclaredRegistration[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+function normalizeDeclared(raw: unknown): DeclaredRegistration {
+  const d = obj(raw);
+  return {
+    subjectId: str(d.subjectId ?? d.subject_id ?? d.id),
+    fullName: str(d.fullName ?? d.full_name ?? d.name),
+    registrationType: str(d.registrationType ?? d.registration_type),
+    status: str(d.status),
+    nationality: str(d.nationality),
+    gender: str(d.gender),
+    dateOfBirth: str(d.dateOfBirth ?? d.date_of_birth ?? d.dob),
+    createdAt: str(d.createdAt ?? d.created_at),
+    officerName: str(d.officerName ?? d.officer_name ?? d.registeredBy),
+    stationName: str(d.stationName ?? d.station_name),
+  };
+}
+
+function parseDeclaredPage(raw: unknown, page: number, size: number): DeclaredPage {
+  const d = obj(raw);
+  // The response may be { data: { items: [...] } } or { items: [...] } or a bare array.
+  const inner = obj(d.data ?? d);
+  const list = Array.isArray(inner.items ?? inner.content)
+    ? (inner.items ?? inner.content)
+    : Array.isArray(d.data)
+      ? d.data
+      : Array.isArray(raw)
+        ? (raw as unknown[])
+        : [];
+  return {
+    items: (list as unknown[]).map(normalizeDeclared),
+    page: num(inner.page ?? inner.number) || page,
+    size: num(inner.size) || size,
+    totalElements: num(inner.totalElements ?? inner.total),
+    totalPages: num(inner.totalPages),
+  };
+}
+
+/**
+ * GET /v1/officer/registration/declared/mine — officer's own PENDING_ENROLLMENT
+ * registrations (submitted / declared).
+ */
+export async function getDeclaredMine(opts: {
+  page?: number;
+  size?: number;
+} = {}): Promise<DeclaredPage> {
+  const { page = 0, size = 20 } = opts;
+  if (BYPASS) {
+    await delay(200);
+    return { items: [], page, size, totalElements: 0, totalPages: 0 };
+  }
+  const qs = new URLSearchParams({ page: String(page), size: String(size) });
+  const raw = await apiGet<Row>(`/v1/officer/registration/declared/mine?${qs}`);
+  return parseDeclaredPage(raw, page, size);
+}
+
+/**
+ * GET /v1/officer/registration/declared — all PENDING_ENROLLMENT registrations
+ * at the officer's station.
+ */
+export async function getDeclaredAll(opts: {
+  page?: number;
+  size?: number;
+} = {}): Promise<DeclaredPage> {
+  const { page = 0, size = 20 } = opts;
+  if (BYPASS) {
+    await delay(200);
+    return { items: [], page, size, totalElements: 0, totalPages: 0 };
+  }
+  const qs = new URLSearchParams({ page: String(page), size: String(size) });
+  const raw = await apiGet<Row>(`/v1/officer/registration/declared?${qs}`);
+  return parseDeclaredPage(raw, page, size);
+}
+
+// ── Declaration review (full applicant data) ────────────────────────────────
+
+/** Full review data returned by GET /v1/officer/registration/{subjectId}/declaration. */
+export type DeclarationReview = Record<string, unknown>;
+
+/**
+ * GET /v1/officer/registration/{subjectId}/declaration — full review data for a
+ * declared registration. No ownership check; any officer can view once the
+ * registration reaches stage 9 / declared status.
+ */
+export async function getDeclaration(subjectId: string): Promise<DeclarationReview> {
+  if (BYPASS) {
+    await delay(200);
+    return {};
+  }
+  const raw = await apiGet<Row>(
+    `/v1/officer/registration/${encodeURIComponent(subjectId)}/declaration`,
+  );
+  return obj(raw.data ?? raw);
+}
+

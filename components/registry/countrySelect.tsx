@@ -11,12 +11,15 @@ export default function CountrySelect({
   placeholder,
   disabled = false,
   excludeTanzania = false,
+  only,
 }: {
   name: string;
   placeholder: string;
   disabled?: boolean;
   /** When true, Tanzania is excluded from the dropdown list. */
   excludeTanzania?: boolean;
+  /** When provided, ONLY these ISO country codes are selectable. */
+  only?: string[];
 }) {
   const { data, set, errors, locked } = useWizard();
   const value = (data[name] as string) ?? "";
@@ -64,6 +67,7 @@ export default function CountrySelect({
           onClose={() => setOpen(false)}
           onSelect={(c) => set(name, c.name)}
           excludeTanzania={excludeTanzania}
+          only={only}
         />
       )}
       <FieldError name={name} />
