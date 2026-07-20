@@ -1103,11 +1103,10 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-export async function downloadRegistrationReviewPdf(
-  subjectId: string,
-  fileName = "Registration Form",
-): Promise<boolean> {
-  if (!subjectId) return false;
+/** Fetch the server-rendered review PDF as a Blob (shared by download + print).
+ * Returns null when it can't be fetched (no subjectId, not submitted, error). */
+async function fetchReviewPdfBlob(subjectId: string): Promise<Blob | null> {
+  if (!subjectId) return null;
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
   const at = loadSession()?.accessToken;
   try {
@@ -1120,27 +1119,69 @@ export async function downloadRegistrationReviewPdf(
         ...(at && at !== "__httponly__" ? { authorization: `Bearer ${at}` } : {}),
       },
     });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const blob = await res.blob();
-    if (!blob.size) return false;
-    // Download via a data: URL rather than a blob: URL. When the app is served
-    // over plain HTTP, Chrome (desktop + Android) classifies a `blob:http://…`
-    // download as an "insecure download" and blocks it ("File can't be
-    // downloaded securely"). A `data:` URL is treated as part of the current
-    // document — no network scheme to flag — so it isn't blocked. (Serving the
-    // app over HTTPS is the proper end-state fix; this keeps downloads working
-    // on the internal HTTP deployment.)
-    const dataUrl = await blobToDataUrl(blob);
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return true;
+    return blob.size ? blob : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function downloadRegistrationReviewPdf(
+  subjectId: string,
+  fileName = "Registration Form",
+): Promise<boolean> {
+  const blob = await fetchReviewPdfBlob(subjectId);
+  if (!blob) return false;
+  // Download via a data: URL rather than a blob: URL. When the app is served
+  // over plain HTTP, Chrome (desktop + Android) classifies a `blob:http://…`
+  // download as an "insecure download" and blocks it ("File can't be
+  // downloaded securely"). A `data:` URL is treated as part of the current
+  // document — no network scheme to flag — so it isn't blocked. (Serving the
+  // app over HTTPS is the proper end-state fix; this keeps downloads working
+  // on the internal HTTP deployment.)
+  const dataUrl = await blobToDataUrl(blob);
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return true;
+}
+
+/** Open the browser PRINT dialog for the server-rendered review PDF (does NOT
+ * download it). Loads the PDF into a hidden same-origin iframe (a blob: URL
+ * inherits this document's origin, so we may call its print()) and invokes
+ * print once the embedded viewer has painted. Returns false if it can't fetch. */
+export async function printRegistrationReviewPdf(subjectId: string): Promise<boolean> {
+  const blob = await fetchReviewPdfBlob(subjectId);
+  if (!blob) return false;
+  const url = URL.createObjectURL(blob);
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  return new Promise<boolean>((resolve) => {
+    iframe.onload = () => {
+      // Give the embedded PDF viewer a moment to render before printing.
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      }, 350);
+    };
+    iframe.onerror = () => resolve(false);
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    // Clean up well after the (non-blocking) print dialog would have opened.
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      iframe.remove();
+    }, 60_000);
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

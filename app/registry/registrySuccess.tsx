@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import { registrationFormFileName } from "./printRegistrationForm";
-import { downloadRegistrationReviewPdf } from "@/lib/api/registration";
+import { downloadRegistrationReviewPdf, printRegistrationReviewPdf } from "@/lib/api/registration";
 import { loadRegistration, loadRegistrationFor } from "./registrationStore";
 import { CircleCheck, Download, Printer } from "lucide-react";
 import { loadProfile } from "@/lib/auth/profile";
@@ -32,26 +32,44 @@ export default function RegistrySuccess({
 
   const [busy, setBusy] = useState(false);
 
-  // Download the server-rendered PDF from the backend /review/pdf endpoint. The
-  // backend compiles the form from stored data, so no local print DOM is needed.
-  async function printForm() {
+  // The backend compiles the form PDF from stored data (GET /review/pdf), so no
+  // local print DOM is needed. Both actions pull the same PDF: Download saves the
+  // file; Print opens the browser print dialog for it (never downloads).
+  function currentSubjectId(): string {
+    return (
+      loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ??
+      loadRegistration()?.subjectId ??
+      applicationId ??
+      ""
+    );
+  }
+
+  async function downloadForm() {
     if (busy) return;
     setBusy(true);
     try {
-      const subjectId =
-        loadRegistrationFor(loadProfile()?.profileId ?? "")?.subjectId ??
-        loadRegistration()?.subjectId ??
-        applicationId ??
-        "";
       const fullName = ["applicantFirst", "applicantMiddle"]
         .map((k) => data[k])
         .filter((v): v is string => typeof v === "string" && v.trim() !== "")
         .join(" ");
-      await downloadRegistrationReviewPdf(
-        subjectId,
+      const ok = await downloadRegistrationReviewPdf(
+        currentSubjectId(),
         registrationFormFileName(fullName),
       );
-      notify(t("registry.downloadSuccess"), "success");
+      notify(ok ? t("registry.downloadSuccess") : t("registry.downloadError"), ok ? "success" : "error");
+    } catch {
+      notify(t("registry.downloadError"), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function printForm() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const ok = await printRegistrationReviewPdf(currentSubjectId());
+      if (!ok) notify(t("registry.downloadError"), "error");
     } catch {
       notify(t("registry.downloadError"), "error");
     } finally {
@@ -115,7 +133,7 @@ export default function RegistrySuccess({
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <button
             type="button"
-            onClick={printForm}
+            onClick={downloadForm}
             disabled={busy}
             className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           >

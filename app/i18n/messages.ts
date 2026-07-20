@@ -152,7 +152,7 @@ const en = {
   },
   nav: {
     dashboard: "Dashboard",
-    registry: "Registry",
+    registry: "Registration",
     people: "Registered People",
     visa: "Visa Processing",
     security: "Security Audit",
@@ -193,9 +193,10 @@ const en = {
   },
   dashboard: {
     badge: "Action Required: Legal Compliance",
-    title: "Secure Your National Identity",
+    title: "Complete Your Registration",
     welcome:
-      "Welcome, {name}. Your profile in the Integrated Citizen Registry is currently inactive. Mandatory registration is required to ensure your data sovereignty and access to essential government services.",
+      "Welcome, {name}. Your registration with the Immigration Central Registration and Citizenship System (ICRCS) is not yet complete.\n" +
+      "Complete your registration by providing the required personal and family information and submitting the necessary supporting documents. The information you provide will be reviewed by the Immigration Department as part of the process to verify your identity and determine your citizenship or immigration status.",
     startRegistration: "Start Registration",
     viewRequirements: "View Requirements",
     currentStatus: "Current Status",
@@ -1207,9 +1208,10 @@ const sw: typeof en = {
   },
   dashboard: {
     badge: "Hatua Inahitajika: Uzingatiaji wa Kisheria",
-    title: "Linda Utambulisho Wako wa Kitaifa",
+    title: "Kamilisha Usajili Wako",
     welcome:
-      "Karibu, {name}. Wasifu wako katika Daftari Jumuishi la Raia kwa sasa haujaamilishwa. Usajili wa lazima unahitajika kuhakikisha umiliki wa data yako na upatikanaji wa huduma muhimu za serikali.",
+      "Karibu, {name}. Usajili wako katika Mfumo Jumuishi wa Usajili wa Raia na Uraia (ICRCS) bado haujakamilika.\n" +
+      "Kamilisha usajili wako kwa kutoa taarifa binafsi na za familia zinazohitajika na kuwasilisha vielelezo husika. Taarifa unazotoa zitapitiwa na Idara ya Uhamiaji kama sehemu ya mchakato wa kuthibitisha utambulisho wako na kubaini hadhi yako ya uraia au uhamiaji.",
     startRegistration: "Anza Usajili",
     viewRequirements: "Angalia Mahitaji",
     currentStatus: "Hali ya Sasa",

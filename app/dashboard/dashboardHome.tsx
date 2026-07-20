@@ -65,9 +65,15 @@ export default function DashboardHome() {
               <span className="text-gold">.</span>
             </h1>
 
-            <p className="mt-3 max-w-xl leading-relaxed text-navy-300">
-              {t("dashboard.welcome").replace("{name}", userName)}
-            </p>
+            <div className="mt-3 max-w-xl space-y-2 leading-relaxed text-navy-300">
+              {t("dashboard.welcome")
+                .replace("{name}", userName)
+                .split("\n")
+                .filter((para) => para.trim().length > 0)
+                .map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+            </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-4">
               <Link
