@@ -9,9 +9,14 @@
 //
 // NOTE: serving this app over HTTPS is still the correct end state — over HTTP
 // the cookie (and everything else) travels in cleartext.
-
-export const ACCESS_TTL = 15 * 60; // 15 minutes
-export const REFRESH_TTL = 7 * 24 * 60 * 60; // 7 days
+//
+// SESSION COOKIES: these cookies deliberately have NO maxAge/expires, so they
+// are SESSION cookies — the browser discards them when it is fully closed. This
+// is the intended security behaviour: closing the browser (or powering off the
+// device) ends the session, and the user must sign in again on return. A
+// persistent (maxAge) cookie would keep them logged in across restarts, which
+// is exactly what we must avoid. The access/refresh JWTs still carry their own
+// server-side expiry, so an idle open session also eventually needs a refresh.
 
 function isHttps(request: Request): boolean {
   // Prefer the forwarded protocol set by a reverse proxy / ingress; fall back to

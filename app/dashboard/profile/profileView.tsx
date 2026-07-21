@@ -111,8 +111,9 @@ function OfficerProfileView({
   const avatar =
     ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
 
-  // Position, Region and Roles come only from the login session (not the
-  // /v1/officer/profile response), so read them from the cached officer.
+  // Position and Region come only from the login session (not the
+  // /v1/officer/profile response), so read them from the cached officer. Roles
+  // are intentionally NOT shown on the profile.
   const rows: [string, string | undefined][] = profile
     ? [
         ["Full name", profile.fullName],
@@ -122,7 +123,6 @@ function OfficerProfileView({
         ["Position", cachedOfficer.position],
         ["Station", profile.stationName],
         ["Region", cachedOfficer.regionName],
-        ["Roles", cachedOfficer.roles?.length ? cachedOfficer.roles.map((r) => r.replace(/_/g, " ")).join(", ") : undefined],
       ]
     : [];
 

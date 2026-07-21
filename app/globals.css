@@ -67,9 +67,9 @@
   --color-muted: #64748b;
   --color-muted-light: #94a3b8;
 
-  /* Typography (Ubuntu Sans) */
-  --font-display: var(--font-ubuntu-sans), system-ui, sans-serif;
-  --font-sans: var(--font-ubuntu-sans), system-ui, sans-serif;
+  /* Typography (Montserrat) */
+  --font-display: var(--font-montserrat), system-ui, sans-serif;
+  --font-sans: var(--font-montserrat), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
 
   /* Type scale (shared ICRCS) — sized for cross-platform consistency.
@@ -186,7 +186,7 @@ html {
    so they grow together — no per-component changes needed. */
 @media (min-width: 1920px) {
   html {
-    font-size: clamp(18px, calc(18px + (100vw - 1920px) * 0.0065), 28px);
+    font-size: clamp(18px, calc(18px + (100vw - 1920px) * 0.0075), 32px);
   }
 }
 

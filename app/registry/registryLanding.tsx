@@ -104,7 +104,7 @@ export default function RegistryLanding({
     <main className="flex flex-1 flex-col px-4 py-8 lg:px-8 lg:py-10">
       {/* Centred within the content area (mx-auto) so the two columns sit in the
           middle of the page, consistent with the officer cases / people views. */}
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="mx-auto w-full max-w-7xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           {/* Intro */}
           <div>

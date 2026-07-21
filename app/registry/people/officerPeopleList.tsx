@@ -29,12 +29,12 @@ import {
 
 // ── Status styling ──────────────────────────────────────────────────────────
 
+// Only the backend's real registration statuses. No fabricated values.
 const STATUS_STYLE: Record<string, string> = {
   PENDING: "bg-gold/15 text-gold-700",
   PENDING_ENROLLMENT: "bg-info/15 text-info",
   APPROVED: "bg-success/15 text-success",
   REJECTED: "bg-danger/15 text-danger",
-  DECLARED: "bg-navy-500/15 text-navy-700",
 };
 
 function statusLabel(status: string): string {
@@ -251,11 +251,13 @@ function KeyGrid({ obj }: { obj: Record<string, unknown> }) {
   const rows = flattenPairs(obj);
   if (rows.length === 0) return null;
   return (
-    <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
+    // Denser grid: up to 3 columns on wide screens and tighter row padding, so
+    // the review fits far more per screen and scrolls much less.
+    <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
       {rows.map((r, i) => (
-        <div key={i} className="bg-card px-5 py-3.5">
-          <dt className="text-xs font-medium uppercase tracking-wide text-muted">{r.label}</dt>
-          <dd className="mt-1 break-words text-sm font-semibold text-navy-700">{r.value || "—"}</dd>
+        <div key={i} className="bg-card px-4 py-2.5">
+          <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">{r.label}</dt>
+          <dd className="mt-0.5 break-words text-sm font-semibold text-navy-700">{r.value || "—"}</dd>
         </div>
       ))}
     </dl>
@@ -264,8 +266,8 @@ function KeyGrid({ obj }: { obj: Record<string, unknown> }) {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-card p-6">
-      <h3 className="mb-4 font-display text-base font-bold text-navy-700">{title}</h3>
+    <div className="rounded-2xl border border-line bg-card p-5">
+      <h3 className="mb-3 font-display text-base font-bold text-navy-700">{title}</h3>
       {children}
     </div>
   );
@@ -732,13 +734,17 @@ function SearchTab({
                   {str(result.registrationType || result.registration_type)?.replace(/_/g, " ") || "—"}
                 </td>
                 <td className="px-5 py-3.5">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      STATUS_STYLE[str(result.status).toUpperCase()] ?? STATUS_STYLE.DECLARED
-                    }`}
-                  >
-                    {statusLabel(str(result.status) || "DECLARED")}
-                  </span>
+                  {str(result.status) ? (
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        STATUS_STYLE[str(result.status).toUpperCase()] ?? "bg-navy-500/15 text-navy-700"
+                      }`}
+                    >
+                      {statusLabel(str(result.status))}
+                    </span>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <button
@@ -841,7 +847,7 @@ export default function OfficerPeopleList() {
   // If viewing details, render the detail page
   if (detailSubjectId) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="mx-auto w-full max-w-7xl">
         <DetailView subjectId={detailSubjectId} onBack={() => setDetailSubjectId(null)} t={t} />
       </div>
     );
@@ -851,7 +857,7 @@ export default function OfficerPeopleList() {
   const activeItems = activePage ? filterItems(activePage.items) : [];
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

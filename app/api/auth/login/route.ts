@@ -3,7 +3,7 @@
 // credentials/tokens from being visible in localStorage or the Network tab.
 
 import { cookies } from "next/headers";
-import { authCookieOptions, ACCESS_TTL, REFRESH_TTL } from "@/lib/auth/cookieOptions";
+import { authCookieOptions } from "@/lib/auth/cookieOptions";
 
 const BACKEND =
   process.env.BACKEND_API_BASE_URL ?? process.env.AUTH_API_BASE_URL ?? "";
@@ -22,11 +22,9 @@ export async function POST(request: Request) {
     const jar = await cookies();
     jar.set("icrcs-access", "mock-access-token", {
       ...COOKIE_OPTS,
-      maxAge: ACCESS_TTL,
     });
     jar.set("icrcs-refresh", "mock-refresh-token", {
       ...COOKIE_OPTS,
-      maxAge: REFRESH_TTL,
     });
     return Response.json({ success: true });
   }
@@ -77,12 +75,10 @@ export async function POST(request: Request) {
   const jar = await cookies();
   jar.set("icrcs-access", tokens.accessToken, {
     ...COOKIE_OPTS,
-    maxAge: ACCESS_TTL,
   });
   if (tokens.refreshToken) {
     jar.set("icrcs-refresh", tokens.refreshToken, {
       ...COOKIE_OPTS,
-      maxAge: REFRESH_TTL,
     });
   }
 

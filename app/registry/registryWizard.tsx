@@ -10,7 +10,6 @@ import { loadRegistration, loadRegistrationFor, saveRegistration } from "./regis
 import { useUnsavedChanges } from "./useUnsavedChanges";
 import { loadProfile, saveProfile, type Profile } from "@/lib/auth/profile";
 import { refreshMyProfile } from "@/lib/api/auth";
-import { generateApplicationId } from "./applicationId";
 import { emailApplicationId } from "./emailApplicationId";
 import { ArrowLeft, ArrowRight, Check, LoaderCircle } from "lucide-react";
 import {
@@ -1806,6 +1805,21 @@ export default function RegistryWizard({
         return;
       }
 
+      // Migrant travel document: the issue date must be before the expiry date
+      // (backend: "Issued date must be before expiry date"). Validate here so the
+      // travel-history submission can't fail AFTER Stage 1 is already created.
+      // ISO YYYY-MM-DD strings compare chronologically as plain strings.
+      if (isMigrant && data.hasTravelDoc === true) {
+        const issued = typeof data.travelIssuedDate === "string" ? data.travelIssuedDate : "";
+        const expiry = typeof data.travelExpiryDate === "string" ? data.travelExpiryDate : "";
+        if (issued && expiry && issued >= expiry) {
+          setErrors(["travelExpiryDate"]);
+          setFieldErrors({ travelExpiryDate: t("registry.travelDatesInvalid") });
+          setFormError("");
+          return;
+        }
+      }
+
       // Phone must have at least 7 digits to be a valid number.
       const phoneRaw = typeof data.phone === "string" ? data.phone.trim() : "";
       const phoneDigits = phoneRaw.replace(/[^\d]/g, "");
@@ -2381,7 +2395,10 @@ export default function RegistryWizard({
               try {
                 await editTravelHistory(sid, data);
               } catch (thErr) {
-                console.error("Travel history update failed (non-fatal):", thErr);
+                // Stage 1 is saved, but the user MUST know travel history didn't
+                // save (e.g. bad dates) — surface the real backend message.
+                console.error("Travel history update failed:", thErr);
+                notify(getErrorMessage(thErr, t("registry.travelHistorySaveError")), "error");
               }
             }
           } else {
@@ -2410,7 +2427,10 @@ export default function RegistryWizard({
               try {
                 await submitTravelHistory(sid, data);
               } catch (thErr) {
-                console.error("Travel history submit failed (non-fatal):", thErr);
+                // Stage 1 is created, but the user MUST know travel history didn't
+                // save (e.g. bad dates) — surface the real backend message.
+                console.error("Travel history submit failed:", thErr);
+                notify(getErrorMessage(thErr, t("registry.travelHistorySaveError")), "error");
               }
             }
           }
@@ -2512,11 +2532,14 @@ export default function RegistryWizard({
       next = REFEREE_STEP + 1;
     }
 
-    // After Personal Information: display the Application ID
+    // After Personal Information: display the REAL Application ID from the
+    // backend. NEVER fabricate one — fall back to the backend subjectId, and if
+    // the backend returned nothing usable, skip the dialog rather than show a
+    // made-up value.
     const isNewAppId = step === 1 && !applicationId;
     if (step === 1 && !appId) {
-      appId = generateApplicationId();
-      setApplicationId(appId);
+      appId = sid;
+      if (appId) setApplicationId(appId);
     }
     if (step === 1 && appId && isNewAppId) {
       const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
@@ -2572,7 +2595,7 @@ export default function RegistryWizard({
       />
 
         <main className="flex-1 px-4 py-5 lg:px-[10%]">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-7xl">
             <p className="text-base font-semibold text-success">
               {t(`registry.s${step}Tag`)}
             </p>

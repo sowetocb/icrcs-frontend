@@ -19,7 +19,7 @@ import type { RegistrationType } from "@/lib/api/registration";
 import RegistrySuccess from "./registrySuccess";
 import { clearRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
 import { addPerson, loadPeople, isSubmitted } from "./peopleStore";
-import { generateApplicationId, formatSubmittedDate } from "./applicationId";
+import { formatSubmittedDate } from "./applicationId";
 import { loadProfile } from "@/lib/auth/profile";
 import { isOfficer } from "@/lib/auth/officerSession";
 import { getOfficerCases } from "@/lib/api/officer";
@@ -314,10 +314,9 @@ export default function RegistryClient() {
     const now = new Date();
     // The backend's subjectId (e.g. ICRCS-20260719-ALN0001-Y42UOC) is the REAL,
     // status-checkable identifier — the status endpoint is
-    // GET /v1/registration/{subjectId}/status. Prefer it so the ID we show for
-    // follow-up actually resolves; the client-generated Application ID (CREG…) is
-    // only a placeholder used before Stage 1 returns and won't resolve on lookup.
-    const id = subjectId || applicationId || generateApplicationId(now);
+    // GET /v1/registration/{subjectId}/status. Use it (or the backend's
+    // applicationId). NEVER fabricate an ID — a made-up value won't resolve.
+    const id = subjectId || applicationId || "";
     const date = formatSubmittedDate(now);
     // Persist the submitted application so the status check reflects it.
     saveRegistration({

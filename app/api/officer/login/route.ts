@@ -4,7 +4,7 @@
 // citizen /api/auth/login route, so tokens never reach the browser.
 
 import { cookies } from "next/headers";
-import { authCookieOptions, ACCESS_TTL, REFRESH_TTL } from "@/lib/auth/cookieOptions";
+import { authCookieOptions } from "@/lib/auth/cookieOptions";
 
 const BACKEND =
   process.env.BACKEND_API_BASE_URL ||
@@ -19,8 +19,8 @@ export async function POST(request: Request) {
 
   if (BYPASS) {
     const jar = await cookies();
-    jar.set("icrcs-officer-access", "mock-officer-access", { ...COOKIE_OPTS, maxAge: ACCESS_TTL });
-    jar.set("icrcs-officer-refresh", "mock-officer-refresh", { ...COOKIE_OPTS, maxAge: REFRESH_TTL });
+    jar.set("icrcs-officer-access", "mock-officer-access", { ...COOKIE_OPTS });
+    jar.set("icrcs-officer-refresh", "mock-officer-refresh", { ...COOKIE_OPTS });
     return Response.json({
       success: true,
       user: {
@@ -64,9 +64,9 @@ export async function POST(request: Request) {
   }
 
   const jar = await cookies();
-  jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS, maxAge: ACCESS_TTL });
+  jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS });
   if (tokens.refreshToken) {
-    jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS, maxAge: REFRESH_TTL });
+    jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS });
   }
 
   // Return the officer profile (roles/permissions) for UI gating — never the tokens.

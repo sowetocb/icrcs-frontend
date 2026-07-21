@@ -90,7 +90,7 @@ export default function CategoryGate({
 
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:px-[10%]">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-6xl">
         <p className="text-sm font-semibold text-success">{t("category.eyebrow")}</p>
         <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-navy-700 sm:text-4xl">
           {t("category.title")}

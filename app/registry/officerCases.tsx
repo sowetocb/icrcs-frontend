@@ -139,7 +139,7 @@ export default function OfficerCases({
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8 lg:px-8 lg:py-10">
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="mx-auto w-full max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

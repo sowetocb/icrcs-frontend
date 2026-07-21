@@ -4,7 +4,7 @@
 // cookies are always replaced with the values it returns.
 
 import { cookies } from "next/headers";
-import { authCookieOptions, ACCESS_TTL, REFRESH_TTL } from "@/lib/auth/cookieOptions";
+import { authCookieOptions } from "@/lib/auth/cookieOptions";
 
 const USER_MGT = process.env.USER_MGT_API_BASE_URL ?? "";
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
@@ -15,8 +15,8 @@ export async function POST(request: Request) {
   const refreshToken = jar.get("icrcs-officer-refresh")?.value ?? "";
 
   if (BYPASS) {
-    jar.set("icrcs-officer-access", "mock-officer-access", { ...COOKIE_OPTS, maxAge: ACCESS_TTL });
-    jar.set("icrcs-officer-refresh", "mock-officer-refresh", { ...COOKIE_OPTS, maxAge: REFRESH_TTL });
+    jar.set("icrcs-officer-access", "mock-officer-access", { ...COOKIE_OPTS });
+    jar.set("icrcs-officer-refresh", "mock-officer-refresh", { ...COOKIE_OPTS });
     return Response.json({ success: true });
   }
 
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
   }
 
   const tokens = extractTokens(data, refreshToken);
-  jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS, maxAge: ACCESS_TTL });
+  jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS });
   if (tokens.refreshToken) {
-    jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS, maxAge: REFRESH_TTL });
+    jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS });
   }
   return Response.json({ success: true });
 }
