@@ -31,13 +31,17 @@ export const CATEGORY_TRACK: Record<RegistrationCategory, RegistrationTrack> = {
 
 /** The `registrationType` sent to /stage1/migrant for migrant-track categories.
  * Citizen / Foreign are not migrant-track and have no entry here. */
+// The category KEYS (left) are internal identifiers; the VALUES (right) are the
+// exact strings the backend accepts. The "Immigrant with Undetermined Status"
+// card (ALIEN key) maps to IMMIGRANT_WITH_UNDETERMINED_STATUS, and the "Migrant"
+// card (UNDOCUMENTED_MIGRANT key) maps to MIGRANT.
 export const CATEGORY_REGISTRATION_TYPE: Partial<
   Record<RegistrationCategory, RegistrationType>
 > = {
   ASYLUM_SEEKER: "ASYLUM_SEEKER",
   REFUGEE: "REFUGEE",
-  ALIEN: "ALIEN",
-  UNDOCUMENTED_MIGRANT: "UNDOCUMENTED_MIGRANT",
+  ALIEN: "IMMIGRANT_WITH_UNDETERMINED_STATUS",
+  UNDOCUMENTED_MIGRANT: "MIGRANT",
   VOLUNTARY_RETURNEE: "VOLUNTARY_RETURNEE",
 };
 

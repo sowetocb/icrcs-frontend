@@ -22,6 +22,14 @@ const num = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+/** Strip literal "null"/"undefined" tokens a backend name-join can leave behind
+ * when a middle name is absent (e.g. "MAIMUNA null HABYARIMANA"). Renders the
+ * remaining names only. */
+const cleanName = (v: unknown): string =>
+  str(v)
+    .split(/\s+/)
+    .filter((w) => w && w.toLowerCase() !== "null" && w.toLowerCase() !== "undefined")
+    .join(" ");
 
 // ── Officer profile ─────────────────────────────────────────────────────────
 export type OfficerProfile = {
@@ -91,7 +99,7 @@ function normalizeCase(raw: unknown): OfficerCase {
   const d = obj(raw);
   return {
     subjectId: str(d.subjectId ?? d.subject_id ?? d.id),
-    fullName: str(d.fullName ?? d.full_name ?? d.name),
+    fullName: cleanName(d.fullName ?? d.full_name ?? d.name),
     registrationType: str(d.registrationType ?? d.registration_type),
     status: str(d.status),
     currentStage: num(d.currentStage ?? d.current_stage),
@@ -185,7 +193,7 @@ function normalizeDeclared(raw: unknown): DeclaredRegistration {
   const d = obj(raw);
   return {
     subjectId: str(d.subjectId ?? d.subject_id ?? d.id),
-    fullName: str(d.fullName ?? d.full_name ?? d.name),
+    fullName: cleanName(d.fullName ?? d.full_name ?? d.name),
     registrationType: str(d.registrationType ?? d.registration_type),
     status: str(d.status),
     nationality: str(d.nationality),

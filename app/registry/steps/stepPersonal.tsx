@@ -256,7 +256,15 @@ export default function StepPersonal() {
       {/* Nationality. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.nationality")} required>
-          <CountrySelect name="nationalityCountry" placeholder={t("fields.phCountryNat")} disabled={!canPickNationality} />
+          {/* When the nationality is freely pickable it's a NON-Tanzanian subject
+              (migrant / officer-registered migrant / foreign minor), so Tanzania
+              must not be offered. */}
+          <CountrySelect
+            name="nationalityCountry"
+            placeholder={t("fields.phCountryNat")}
+            disabled={!canPickNationality}
+            excludeTanzania={canPickNationality}
+          />
         </Field>
       </div>
 

@@ -465,11 +465,13 @@ const stage2Suffix = (data: Data) =>
  * FOREIGN values instead and keeps /stage1/domestic and /stage1/foreign, so they
  * are deliberately NOT part of this union (submitStage1Migrant must only ever be
  * called with a migrant type). */
+// The exact migrant registrationType values the backend accepts (from its
+// RegistrationType constants). These strings are sent as-is to /stage1/migrant.
 export type RegistrationType =
   | "ASYLUM_SEEKER"
   | "REFUGEE"
-  | "ALIEN"
-  | "UNDOCUMENTED_MIGRANT"
+  | "IMMIGRANT_WITH_UNDETERMINED_STATUS"
+  | "MIGRANT"
   | "VOLUNTARY_RETURNEE";
 
 /** Physical-characteristics + otherNames block, shared by the v002 person model
