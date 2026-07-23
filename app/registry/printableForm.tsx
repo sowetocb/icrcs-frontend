@@ -2,7 +2,6 @@
 
 import { useI18n } from "@/app/i18n/localeProvider";
 import {
-  citizenshipTypeIdOptions,
   documentTypeOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
@@ -72,7 +71,6 @@ export default function PrintableForm({
   const tr: Tr = (en, sw) => (locale === "sw" ? sw : en);
 
   // Locale-aware lookup option lists, built once per render.
-  const CITIZENSHIP_TYPE_ID_OPTIONS = citizenshipTypeIdOptions(t);
   // Relationship/occupation come from the lookup (the backend ids don't match
   // the static 1–8 lists).
   const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
@@ -130,9 +128,6 @@ export default function PrintableForm({
     const name = (maritalOptions.find((o) => String(o.id) === v)?.name ?? v).toUpperCase();
     return maritalMap[name] ?? name.charAt(0) + name.slice(1).toLowerCase();
   })();
-
-  // Citizenship type
-  const citizenshipType = optionLabel(CITIZENSHIP_TYPE_ID_OPTIONS, s("citizenshipTypeId"));
 
   // Applicant identification documents
   const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
@@ -204,10 +199,8 @@ export default function PrintableForm({
           <Row label={tr("Gender", "Jinsia")} value={gender} />
           <Row label={tr("Marital Status", "Hali ya Ndoa")} value={maritalStatus} />
         </RowGroup>
-        <RowGroup>
-          <Row label={tr("Citizenship", "Uraia")} value={citizenshipType || "—"} />
-          <Row label={tr("Nationality", "Utaifa")} value={val("nationalityCountry")} />
-        </RowGroup>
+        {/* Citizenship data is intentionally NOT shown anywhere. */}
+        <Row label={tr("Nationality", "Utaifa")} value={val("nationalityCountry")} />
         <Row label={tr("Country of Birth", "Nchi ya Kuzaliwa")} value={val("pobCountry")} />
         <RowGroup>
           <Row label={tr("Region", "Mkoa")} value={titleCase(s("pobRegion"))} />

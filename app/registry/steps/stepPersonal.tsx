@@ -372,7 +372,7 @@ export default function StepPersonal() {
             <TextInput name="hairColor" placeholder={t("fields.phHairColor")} lettersOnly maxLength={RULES.HAIR_COLOR_MAX} />
           </Field>
           <Field label={t("fields.languageSpoken")} required>
-            <TextInput name="languageSpoken" placeholder={t("fields.phLanguageSpoken")} lettersOnly maxLength={RULES.LANGUAGE_SPOKEN_MAX} />
+            <TextInput name="languageSpoken" placeholder={t("fields.phLanguageSpoken")} allowChars="\p{L} ''\-," maxLength={100} />
           </Field>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -489,10 +489,10 @@ export default function StepPersonal() {
         {/* Phone and email are OPTIONAL on the migrant track (many migrants have
             neither) AND for every officer registration (officers only register
             migrants) — drop the required marker; still format-checked when filled. */}
-        <Field label={t("fields.phone")} required={!isMigrant && !isOfficerMode}>
+        <Field label={t("fields.phone")} required>
           <PhoneInput name="phone" />
         </Field>
-        <Field label={t("fields.email")} required={!isMigrant && !isOfficerMode}>
+        <Field label={t("fields.email")} required={!isMigrant && !isOfficerMode} optional={!!isMigrant || !!isOfficerMode}>
           <TextInput name="email" type="email" placeholder="test@test.com" maxLength={RULES.UI_EMAIL_MAX} />
         </Field>
       </div>

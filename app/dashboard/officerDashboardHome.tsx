@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useI18n } from "../i18n/localeProvider";
-import { ShieldCheck, Users, Lock, Gavel, ArrowRight } from "lucide-react";
+import { loadOfficer } from "@/lib/auth/officerSession";
+import { ShieldCheck, Users, Lock, Gavel, ArrowRight, Download } from "lucide-react";
 
 // Officer landing dashboard — shown after a government officer signs in (instead
 // of the citizen self-registration home). A welcome hero plus a "Quick Access"
@@ -16,17 +17,27 @@ const DUTIES = [
 
 export default function OfficerDashboardHome() {
   const { t } = useI18n();
+  const officer = loadOfficer();
+
+  // Build a short display name: first + last if fullName has ≥ 3 parts,
+  // otherwise use whatever is available.
+  const displayName = (() => {
+    const raw = officer?.fullName || "";
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 2) return `${parts[0]} ${parts[parts.length - 1]}`;
+    return raw || officer?.username || "";
+  })();
 
   return (
     <div className="space-y-5">
       {/* Hero */}
       <section className="relative overflow-hidden rounded-2xl bg-navy-700 p-6 text-white shadow-[0_8px_40px_-12px_rgba(13,31,51,0.4)] sm:p-7">
         <h1 className="font-display text-3xl font-black leading-[1.08] tracking-tight sm:text-4xl">
-          {t("officerDash.title")}
+          {t("officerDash.title").replace("{name}", displayName)}
           <span className="text-gold">.</span>
         </h1>
 
-        <div className="mt-3 max-w-3xl space-y-2 leading-relaxed text-navy-300">
+        <div className="mt-3 space-y-2 leading-relaxed text-navy-300">
           {t("officerDash.welcome")
             .split("\n")
             .filter((para) => para.trim().length > 0)
@@ -43,6 +54,13 @@ export default function OfficerDashboardHome() {
             {t("officerDash.cta")}
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
+          <a
+            href="/documents/registration-guide.pdf"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-navy-700"
+          >
+            <Download size={16} aria-hidden="true" />
+            {t("officerDash.downloadGuide")}
+          </a>
         </div>
       </section>
 

@@ -379,14 +379,7 @@ export default function StepPreviewDeclaration() {
           </>
         )}
 
-        {s("citizenshipTypeId") === "3" && (
-          <>
-            <PreviewSubTitle>{t("preview.naturalization")}</PreviewSubTitle>
-            <PreviewRow label={t("preview.certNo")} value={s("naturalizationCertNo")} />
-            <PreviewRow label={t("preview.issuePlace")} value={s("naturalizationPlace")} />
-            <PreviewRow label={t("preview.issueDate")} value={s("naturalizationDate")} />
-          </>
-        )}
+        {/* Citizenship data (incl. naturalization) is intentionally NOT shown. */}
       </PreviewSection>
 
       {/* ─── Step 2: Address ─── */}

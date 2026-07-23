@@ -7,6 +7,7 @@ import DashboardTopbar from "@/components/layout/dashboardTopbar";
 import AuthGuard from "@/components/auth/authGuard";
 import { useI18n } from "../../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
+import Pagination from "@/components/ui/pagination";
 import { Download, User, Search } from "lucide-react";
 import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
@@ -95,6 +96,8 @@ export default function PeopleList() {
   // declared migrant registrations). Resolved AFTER mount so the first render
   // matches the server (citizen shell) and there's no hydration mismatch.
   const [officerMode, setOfficerMode] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
 
   // Read from localStorage after mount to avoid SSR/client hydration mismatch.
   useEffect(() => {
@@ -221,6 +224,15 @@ export default function PeopleList() {
 
     return true;
   });
+
+  // Reset page when filters change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); }, [search, statusFilter, dateFilter, pageSize]);
+
+  // Pagination
+  const totalItems = filteredPeople.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedPeople = filteredPeople.slice(page * pageSize, (page + 1) * pageSize);
 
   /** The account holder is a single, deterministic row (see accountHolderId). */
   function isAccountHolder(person: Person | RegisteredPerson): boolean {
@@ -422,13 +434,13 @@ export default function PeopleList() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredPeople.length === 0 ? (
+                        {paginatedPeople.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
                               {t("people.noResults")}
                             </td>
                           </tr>
-                        ) : filteredPeople.map((p) => {
+                        ) : paginatedPeople.map((p) => {
                           const remote = isRemotePerson(p);
                           const name = remote ? p.fullName : p.name;
                           const id = remote ? p.subjectId : p.applicationId;
@@ -507,6 +519,19 @@ export default function PeopleList() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination */}
+                  {totalItems > 0 && (
+                    <Pagination
+                      page={page}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      pageSize={pageSize}
+                      onPageChange={setPage}
+                      onPageSizeChange={setPageSize}
+                      t={t}
+                    />
+                  )}
                 </>
               )}
             </div>

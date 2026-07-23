@@ -14,6 +14,7 @@ import {
   type DeclarationReview,
 } from "@/lib/api/officer";
 import { getErrorMessage } from "@/lib/api/client";
+import Pagination from "@/components/ui/pagination";
 import {
   Search,
   RotateCcw,
@@ -22,8 +23,6 @@ import {
   LoaderCircle,
   UserCheck,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Download,
 } from "lucide-react";
 
@@ -89,7 +88,9 @@ function DeclaredTable({
   page,
   totalPages,
   totalElements,
+  pageSize,
   onPageChange,
+  onPageSizeChange,
   onView,
   showOfficer,
   t,
@@ -98,7 +99,9 @@ function DeclaredTable({
   page: number;
   totalPages: number;
   totalElements: number;
+  pageSize: number;
   onPageChange: (p: number) => void;
+  onPageSizeChange: (size: number) => void;
   onView: (subjectId: string) => void;
   showOfficer?: boolean;
   t: (key: string) => string;
@@ -175,28 +178,16 @@ function DeclaredTable({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            disabled={page <= 0}
-            onClick={() => onPageChange(page - 1)}
-            className="inline-flex items-center gap-1 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-navy-700 transition hover:bg-surface disabled:opacity-40"
-          >
-            <ChevronLeft size={14} aria-hidden="true" />
-          </button>
-          <span className="text-xs font-medium text-muted">
-            {page + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= totalPages - 1}
-            onClick={() => onPageChange(page + 1)}
-            className="inline-flex items-center gap-1 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-navy-700 transition hover:bg-surface disabled:opacity-40"
-          >
-            <ChevronRight size={14} aria-hidden="true" />
-          </button>
-        </div>
+      {totalElements > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalElements}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          t={t}
+        />
       )}
     </>
   );
@@ -226,13 +217,17 @@ function officerFileUrl(raw: string): string | null {
 /** Flatten an object's primitive fields into label/value rows, recursing ONE
  * level into nested objects (e.g. an address `location`) so their fields show
  * too. Arrays and deeper nesting are handled by dedicated sections. */
+// Citizenship data must NEVER be shown — any key mentioning it is dropped here,
+// so it can't slip through from the backend payload regardless of shape.
+const isCitizenshipKey = (k: string) => /citizenship/i.test(k);
+
 function flattenPairs(o: Record<string, unknown>): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = [];
   for (const [k, v] of Object.entries(o)) {
-    if (v === null || v === undefined || v === "") continue;
+    if (v === null || v === undefined || v === "" || isCitizenshipKey(k)) continue;
     if (isObj(v)) {
       for (const [k2, v2] of Object.entries(v)) {
-        if (v2 === null || v2 === undefined || v2 === "" || typeof v2 === "object") continue;
+        if (v2 === null || v2 === undefined || v2 === "" || typeof v2 === "object" || isCitizenshipKey(k2)) continue;
         rows.push({ label: humanize(k2), value: S(v2) });
       }
     } else if (!Array.isArray(v)) {
@@ -364,9 +359,8 @@ function DetailView({
       content: (
         <div className="space-y-5">
           <Section title="Personal Details">
-            <KeyGrid
-              obj={{ ...personal, citizenshipType: d.citizenshipType, registrationType: d.registrationType }}
-            />
+            {/* Citizenship data is intentionally NOT shown anywhere. */}
+            <KeyGrid obj={{ ...personal, registrationType: d.registrationType }} />
           </Section>
           {isObj(d.birthDetails) && (
             <Section title="Birth Details">
@@ -782,6 +776,7 @@ export default function OfficerPeopleList() {
   const [stationPage, setStationPage] = useState<DeclaredPage | null>(null);
   const [minePageNum, setMinePageNum] = useState(0);
   const [stationPageNum, setStationPageNum] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -791,11 +786,11 @@ export default function OfficerPeopleList() {
   // Search filter for mine/station lists
   const [listSearch, setListSearch] = useState("");
 
-  const fetchMine = useCallback(async (page = 0) => {
+  const fetchMine = useCallback(async (page = 0, size?: number) => {
     setLoading(true);
     setError("");
     try {
-      const data = await getDeclaredMine({ page });
+      const data = await getDeclaredMine({ page, size: size ?? pageSize });
       setMinePage(data);
       setMinePageNum(data.page);
     } catch (err) {
@@ -803,13 +798,13 @@ export default function OfficerPeopleList() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, pageSize]);
 
-  const fetchStation = useCallback(async (page = 0) => {
+  const fetchStation = useCallback(async (page = 0, size?: number) => {
     setLoading(true);
     setError("");
     try {
-      const data = await getDeclaredAll({ page });
+      const data = await getDeclaredAll({ page, size: size ?? pageSize });
       setStationPage(data);
       setStationPageNum(data.page);
     } catch (err) {
@@ -817,7 +812,7 @@ export default function OfficerPeopleList() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, pageSize]);
 
   // Fetch on tab change
   useEffect(() => {
@@ -946,9 +941,15 @@ export default function OfficerPeopleList() {
                 page={tab === "mine" ? minePageNum : stationPageNum}
                 totalPages={activePage.totalPages}
                 totalElements={activePage.totalElements}
+                pageSize={pageSize}
                 onPageChange={(p) => {
                   if (tab === "mine") { setMinePageNum(p); setMinePage(null); fetchMine(p); }
                   else { setStationPageNum(p); setStationPage(null); fetchStation(p); }
+                }}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  if (tab === "mine") { setMinePageNum(0); setMinePage(null); fetchMine(0, size); }
+                  else { setStationPageNum(0); setStationPage(null); fetchStation(0, size); }
                 }}
                 onView={handleView}
                 showOfficer={tab === "station"}

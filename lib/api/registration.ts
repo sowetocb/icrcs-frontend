@@ -1113,6 +1113,11 @@ export async function deliverPdf(blob: Blob, fileName: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
+  a.style.display = "none";
+  // Marks this as a programmatic download so the wizard's unsaved-changes
+  // navigation guard ignores the synthetic click (see useUnsavedChanges) — it
+  // never leaves the page, so it must not prompt "You have unsaved changes".
+  a.setAttribute("data-download", "");
   if (secure) {
     a.download = name;
   } else {

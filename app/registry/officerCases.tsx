@@ -6,6 +6,7 @@ import { loadOfficer } from "@/lib/auth/officerSession";
 import { getOfficerCases, type OfficerCase } from "@/lib/api/officer";
 import { toMigrantRegistrationType } from "@/lib/registry/registrationCategory";
 import type { RegistrationType } from "@/lib/api/registration";
+import Pagination from "@/components/ui/pagination";
 import {
   Plus,
   ArrowRight as ArrowRightIcon,
@@ -49,6 +50,8 @@ function StageBar({ current, total = 9 }: { current: number; total?: number }) {
   );
 }
 
+const DEFAULT_PAGE_SIZE = 5;
+
 export default function OfficerCases({
   onResume,
   onStartNew,
@@ -64,13 +67,15 @@ export default function OfficerCases({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   async function fetchCases() {
     setLoading(true);
     setError("");
     try {
-      const page = await getOfficerCases({ scope: "mine" });
-      setCases(page.items);
+      const data = await getOfficerCases({ scope: "mine" });
+      setCases(data.items);
     } catch {
       setError(t("officer.casesError"));
     } finally {
@@ -121,6 +126,14 @@ export default function OfficerCases({
     }
     return [...list].sort((a, b) => b.currentStage - a.currentStage);
   }, [cases, search]);
+
+  // Pagination for filtered cases
+  const totalItems = filteredCases.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedCases = filteredCases.slice(page * pageSize, (page + 1) * pageSize);
+
+  // Reset page when filters or page size change
+  useEffect(() => { setPage(0); }, [search, pageSize]);
 
   // If auto-resume will fire (exactly 1 active case), show a loading state
   if (!loading && !error && activeCases.length === 1) {
@@ -236,82 +249,97 @@ export default function OfficerCases({
 
         {/* Table view — for multiple cases */}
         {!loading && !error && showTable && (
-          <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-navy-50/60">
-                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colName")}</th>
-                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colType")}</th>
-                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStage")}</th>
-                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStatus")}</th>
-                    <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colDate")}</th>
-                    <th className="px-5 py-3.5 text-right font-semibold text-navy-700">{t("officer.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {filteredCases.map((c) => {
-                    const isActive = c.status.toUpperCase() === "PENDING" && c.currentStage < 9;
-                    const regType = toMigrantRegistrationType(c.registrationType);
-                    return (
-                      <tr
-                        key={c.subjectId}
-                        className="transition hover:bg-surface/60"
-                      >
-                        {/* Name */}
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
-                              <UserCheck size={16} strokeWidth={1.8} aria-hidden="true" />
-                            </span>
-                            <span className="font-semibold text-navy-700">{c.fullName || "—"}</span>
-                          </div>
-                        </td>
-                        {/* Type — humanized (ASYLUM_SEEKER → ASYLUM SEEKER). */}
-                        <td className="px-5 py-3.5 text-muted">{c.registrationType ? c.registrationType.replace(/_/g, " ") : "—"}</td>
-                        {/* Stage progress */}
-                        <td className="px-5 py-3.5" style={{ minWidth: 160 }}>
-                          <StageBar current={c.currentStage} />
-                        </td>
-                        {/* Status badge */}
-                        <td className="px-5 py-3.5">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[c.status.toUpperCase()] ?? STATUS_STYLE.PENDING}`}
-                          >
-                            {t(statusKey(c.status))}
-                          </span>
-                        </td>
-                        {/* Date */}
-                        <td className="px-5 py-3.5 text-xs text-muted">
-                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}
-                        </td>
-                        {/* Actions */}
-                        <td className="px-5 py-3.5 text-right">
-                          {isActive && (
-                            <button
-                              type="button"
-                              onClick={() => onResume(c.subjectId, c.currentStage + 1, regType ?? undefined)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20 focus-visible:ring-2 focus-visible:ring-gold"
+          <>
+            <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-navy-50/60">
+                      <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colName")}</th>
+                      <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colType")}</th>
+                      <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStage")}</th>
+                      <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colStatus")}</th>
+                      <th className="px-5 py-3.5 font-semibold text-navy-700">{t("officer.colDate")}</th>
+                      <th className="px-5 py-3.5 text-right font-semibold text-navy-700">{t("officer.colActions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {paginatedCases.map((c) => {
+                      const isActive = c.status.toUpperCase() === "PENDING" && c.currentStage < 9;
+                      const regType = toMigrantRegistrationType(c.registrationType);
+                      return (
+                        <tr
+                          key={c.subjectId}
+                          className="transition hover:bg-surface/60"
+                        >
+                          {/* Name */}
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
+                                <UserCheck size={16} strokeWidth={1.8} aria-hidden="true" />
+                              </span>
+                              <span className="font-semibold text-navy-700">{c.fullName || "—"}</span>
+                            </div>
+                          </td>
+                          {/* Type — humanized (ASYLUM_SEEKER → ASYLUM SEEKER). */}
+                          <td className="px-5 py-3.5 text-muted">{c.registrationType ? c.registrationType.replace(/_/g, " ") : "—"}</td>
+                          {/* Stage progress */}
+                          <td className="px-5 py-3.5" style={{ minWidth: 160 }}>
+                            <StageBar current={c.currentStage} />
+                          </td>
+                          {/* Status badge */}
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[c.status.toUpperCase()] ?? STATUS_STYLE.PENDING}`}
                             >
-                              {t("officer.resume")}
-                              <ArrowRightIcon size={12} aria-hidden="true" />
-                            </button>
-                          )}
+                              {t(statusKey(c.status))}
+                            </span>
+                          </td>
+                          {/* Date */}
+                          <td className="px-5 py-3.5 text-xs text-muted">
+                            {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}
+                          </td>
+                          {/* Actions */}
+                          <td className="px-5 py-3.5 text-right">
+                            {isActive && (
+                              <button
+                                type="button"
+                                onClick={() => onResume(c.subjectId, c.currentStage + 1, regType ?? undefined)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20 focus-visible:ring-2 focus-visible:ring-gold"
+                              >
+                                {t("officer.resume")}
+                                <ArrowRightIcon size={12} aria-hidden="true" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paginatedCases.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-sm text-muted">
+                          {t("people.noResults")}
                         </td>
                       </tr>
-                    );
-                  })}
-                  {filteredCases.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-sm text-muted">
-                        {t("people.noResults")}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                t={t}
+              />
+            )}
+          </>
         )}
 
         {/* Single card view — for exactly one (non-active) case */}

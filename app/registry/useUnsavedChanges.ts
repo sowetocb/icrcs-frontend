@@ -44,7 +44,19 @@ export function useUnsavedChanges(enabled: boolean, message: string) {
       ) as HTMLAnchorElement | null;
       if (!anchor) return;
       const href = anchor.getAttribute("href") ?? "";
-      if (!href || href.startsWith("#") || anchor.target === "_blank") return;
+      // Never prompt for things that don't navigate away: in-page anchors,
+      // object/data URLs, new-tab links, and programmatic file downloads
+      // (deliverPdf marks its synthetic anchor with data-download).
+      if (
+        !href ||
+        href.startsWith("#") ||
+        href.startsWith("blob:") ||
+        href.startsWith("data:") ||
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download") ||
+        anchor.hasAttribute("data-download")
+      )
+        return;
       // Compare destinations so in-page anchors / no-op links don't prompt.
       let dest: URL;
       try {

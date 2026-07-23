@@ -1221,12 +1221,13 @@ export default function RegistryWizard({
       if (!isFirstPerson) {
         required = required.filter((n) => n !== "marriage");
       }
-      // Phone and email are OPTIONAL for migrants (many have neither) and for
-      // every officer registration (officers only register migrants) — still
-      // format-validated on blur when filled, just not required. The officer
-      // check is a safety net for when the migrant category isn't resolvable.
+      // Phone is MANDATORY on every track — a contact number is always needed.
+      // Email stays OPTIONAL for migrants (many have none) and for every officer
+      // registration (officers only register migrants); it's still format-
+      // validated on blur when filled, just not required. The officer check is a
+      // safety net for when the migrant category isn't resolvable.
       if (isMigrant || isOfficer()) {
-        required = required.filter((n) => n !== "phone" && n !== "email");
+        required = required.filter((n) => n !== "email");
       }
       // Migrant Travel History: when the applicant says they HAVE a travel
       // document, the backend requires its type ("Document type is required when

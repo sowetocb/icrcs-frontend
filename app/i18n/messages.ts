@@ -192,13 +192,14 @@ const en = {
     noResults: "No registered people match your filters.",
   },
   officerDash: {
-    title: "Welcome, Immigration Officer",
+    title: "Welcome {name}",
     welcome:
       "You are logged in to the Central Registration and Citizenship System (CRCS).\n" +
       "This system enables you to register and manage individuals applying for immigration status including Migrants, Refugees, Asylum Seekers and other categories.\n" +
       "Ensure all information is captured accurately and in accordance with the laws, policies and procedures of the United Republic of Tanzania.",
     cta: "Start a registration",
     quickAccess: "Quick Access",
+    downloadGuide: "Download Officer Guide",
     proceduresTitle: "Follow Procedures",
     proceduresDesc: "Always follow official immigration procedures and guidelines.",
     accuracyTitle: "Ensure Accuracy",
@@ -743,7 +744,7 @@ const en = {
     phHairColor: "e.g. Black",
     phHeightCm: "e.g. 170",
     phSpecialMark: "Scar / birthmark / tattoo (optional)",
-    phLanguageSpoken: "e.g. Swahili",
+    phLanguageSpoken: "e.g. Swahili, English (use comma to separate)",
     travelHistory: "Travel History",
     travelHistoryHint: "Your entry into Tanzania and travel-document details.",
     hasTravelDoc: "Do you have a travel document?",
@@ -1086,6 +1087,14 @@ const en = {
     stationEmptyHint: "Registrations submitted by officers at your station will appear here.",
     totalRegistrations: "{n} registration(s)",
   },
+  pagination: {
+    rows: "Rows",
+    showing: "Showing {start} to {end} of {total}",
+    first: "First",
+    prev: "Prev",
+    next: "Next",
+    last: "Last",
+  },
   footer: "© 2026 All rights reserved.",
 };
 
@@ -1274,13 +1283,14 @@ const sw: typeof en = {
     noResults: "Hakuna watu waliosajiliwa wanaolingana na vichujio vyako.",
   },
   officerDash: {
-    title: "Karibu, Afisa wa Uhamiaji",
+    title: "Karibu {name}",
     welcome:
       "Umeingia katika Mfumo Jumuishi wa Usajili wa Raia na Uraia (CRCS).\n" +
       "Mfumo huu unakuwezesha kusajili na kusimamia watu wanaoomba hadhi ya uhamiaji wakiwemo Wahamiaji, Wakimbizi, Waomba Hifadhi na makundi mengine.\n" +
       "Hakikisha taarifa zote zinakusanywa kwa usahihi na kwa kuzingatia sheria, sera na taratibu za Jamhuri ya Muungano wa Tanzania.",
     cta: "Anza usajili",
     quickAccess: "Ufikiaji wa Haraka",
+    downloadGuide: "Pakua Mwongozo wa Afisa PDF",
     proceduresTitle: "Fuata Taratibu",
     proceduresDesc: "Daima fuata taratibu na miongozo rasmi ya uhamiaji.",
     accuracyTitle: "Hakikisha Usahihi",
@@ -1822,7 +1832,7 @@ const sw: typeof en = {
     phHairColor: "mf. Nyeusi",
     phHeightCm: "mf. 170",
     phSpecialMark: "Kovu / alama ya kuzaliwa / tattoo (hiari)",
-    phLanguageSpoken: "mf. Kiswahili",
+    phLanguageSpoken: "mf. Kiswahili, Kiingereza (tumia koma kutenganisha)",
     travelHistory: "Historia ya Safari",
     travelHistoryHint: "Kuingia kwako Tanzania na taarifa za hati ya safari.",
     hasTravelDoc: "Je, una hati ya safari?",
@@ -2160,6 +2170,14 @@ const sw: typeof en = {
     stationEmpty: "Bado hakuna usajili katika kituo chako.",
     stationEmptyHint: "Usajili uliowasilishwa na maafisa katika kituo chako utaonekana hapa.",
     totalRegistrations: "Usajili {n}",
+  },
+  pagination: {
+    rows: "Safu",
+    showing: "Inaonyesha {start} hadi {end} kati ya {total}",
+    first: "Kwanza",
+    prev: "Iliyopita",
+    next: "Inayofuata",
+    last: "Mwisho",
   },
   footer: "© 2026 Haki zote zimehifadhiwa.",
 };
