@@ -3,7 +3,7 @@ import AuthShell from "@/components/auth/authShell";
 import LoginForm from "./loginForm";
 
 export const metadata: Metadata = {
-  title: "Sign In — ICRCS Tanzania",
+  title: "Sign In — CRCS Tanzania",
   description:
     "Sovereign Access to the Integrated Citizen Registry and Control System.",
 };

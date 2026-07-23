@@ -12,6 +12,7 @@ export default function CountryMenu({
   showDial = false,
   excludeTanzania = false,
   only,
+  exclude,
 }: {
   onClose: () => void;
   onSelect: (country: Country) => void;
@@ -22,6 +23,9 @@ export default function CountryMenu({
   /** When provided, ONLY these ISO country codes are selectable (e.g. the
    * countries bordering Tanzania for a transit-country field). */
   only?: string[];
+  /** ISO country codes to REMOVE from the list (e.g. Tanzania + the 8 transit
+   * countries for the international "Home Country" field). */
+  exclude?: string[];
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -48,6 +52,12 @@ export default function CountryMenu({
     }
     // Exclude Tanzania when the caller asks for it (non-citizen nationality).
     if (excludeTanzania) pool = pool.filter((c) => c.code !== "TZ");
+    // Remove an explicit deny-list of ISO codes (e.g. the transit countries for
+    // the international "Home Country" field).
+    if (exclude && exclude.length > 0) {
+      const deny = new Set(exclude.map((c) => c.toUpperCase()));
+      pool = pool.filter((c) => !deny.has(c.code.toUpperCase()));
+    }
     const base = !q
       ? pool
       : pool.filter(
@@ -64,7 +74,7 @@ export default function CountryMenu({
       return [...tz, ...rest];
     }
     return base;
-  }, [query, excludeTanzania, only]);
+  }, [query, excludeTanzania, only, exclude]);
 
   return (
     <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-line bg-card shadow-lg">

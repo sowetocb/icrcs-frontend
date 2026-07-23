@@ -95,9 +95,13 @@ async function forward(
   if (!auth) {
     const jar = await cookies();
     const isOfficerPath = path[0] === "v1" && path[1] === "officer";
-    const accessToken = isOfficerPath
-      ? jar.get("icrcs-officer-access")?.value
-      : jar.get("icrcs-access")?.value;
+    const citizenToken = jar.get("icrcs-access")?.value;
+    const officerToken = jar.get("icrcs-officer-access")?.value;
+    // Officer namespace → officer token. Everything else → citizen token, but
+    // fall back to the officer token for SHARED authenticated endpoints (e.g. the
+    // public-ish GET /v1/files/view, which an officer must reach with THEIR token
+    // since they have no citizen session — otherwise it 401s "unauthorized").
+    const accessToken = isOfficerPath ? officerToken : (citizenToken ?? officerToken);
     if (accessToken) auth = `Bearer ${accessToken}`;
   }
   if (auth) headers.set("authorization", auth);

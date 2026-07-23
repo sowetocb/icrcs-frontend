@@ -283,11 +283,23 @@ export function DateInput({
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
+  // Valid ranges for MANUAL entry: day 1–31, month 1–12, and the year within the
+  // field's own bounds (1900..currentYear for a birth date; wider when a maxDate
+  // like expiry is set). Each segment is clamped once it's fully typed so an
+  // invalid value (e.g. month 60, year 1850) can never be entered.
+  const yearMax = effectiveMax ? Number(effectiveMax.slice(0, 4)) : new Date().getFullYear();
+  const yearMin = minDate ? Number(minDate.slice(0, 4)) : 1900;
   function handleTextChange(e: React.ChangeEvent<HTMLInputElement>) {
     const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-    let out = digits;
-    if (digits.length > 4) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    else if (digits.length > 2) out = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    let dd = digits.slice(0, 2);
+    let mm = digits.slice(2, 4);
+    let yyyy = digits.slice(4, 8);
+    if (dd.length === 2) dd = String(Math.min(31, Math.max(1, Number(dd) || 1))).padStart(2, "0");
+    if (mm.length === 2) mm = String(Math.min(12, Math.max(1, Number(mm) || 1))).padStart(2, "0");
+    if (yyyy.length === 4) yyyy = String(Math.min(yearMax, Math.max(yearMin, Number(yyyy) || yearMin)));
+    let out = dd;
+    if (digits.length > 2) out = `${dd}/${mm}`;
+    if (digits.length > 4) out = `${dd}/${mm}/${yyyy}`;
     setText(out);
     set(name, displayToIso(out));
   }

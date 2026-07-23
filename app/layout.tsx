@@ -26,7 +26,7 @@ const jetbrains = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ICRCS Tanzania — Sovereign Access",
+  title: "CRCS Tanzania — Sovereign Access",
   description:
     "Integrated Citizen Registry and Control System — Tanzania Immigration Services Department. Your gateway to national immigration services.",
   icons: {

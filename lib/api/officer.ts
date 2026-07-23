@@ -11,6 +11,7 @@
 // (the proxy attaches the icrcs-officer-access cookie for these paths).
 
 import { apiGet } from "./client";
+import { deliverPdf } from "./registration";
 
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -310,18 +311,7 @@ async function downloadOfficerPdf(path: string, fileName: string): Promise<boole
   }
   const blob = await fetchOfficerPdfBlob(path);
   if (!blob) return false;
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-  const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  await deliverPdf(blob, fileName);
   return true;
 }
 

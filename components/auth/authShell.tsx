@@ -45,7 +45,7 @@ function Bullet({ text }: { text: string }) {
   );
 }
 
-/** Modal showing the full "About ICRCS" applicant guide for the active locale. */
+/** Modal showing the full "About CRCS" applicant guide for the active locale. */
 function AboutDialog({ onClose }: { onClose: () => void }) {
   const { t, locale } = useI18n();
   const guide = ABOUT_GUIDE[locale];
@@ -203,8 +203,9 @@ export default function AuthShell({
   );
   useEffect(() => {
     if (!loggedIn) return;
-    // Officers have no citizen dashboard — their home is the migrant registry.
-    router.replace(loadOfficer() ? "/registry" : "/dashboard");
+    // Both officers and citizens land on the dashboard — officers get their own
+    // welcome/quick-access view there (with a CTA into the migrant registry).
+    router.replace("/dashboard");
   }, [loggedIn, router]);
 
   // Resolve a localized status label, falling back to a readable form.
@@ -236,7 +237,7 @@ export default function AuthShell({
     }
   }
 
-  // Status check + About ICRCS are shown in two places with different colour
+  // Status check + About CRCS are shown in two places with different colour
   // themes: on the deep-blue left panel (desktop) and below the form (mobile).
   // `dark` picks the palette so the same markup works on both backgrounds.
   const renderStatusCheck = (dark: boolean) => (
@@ -368,9 +369,9 @@ export default function AuthShell({
 
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
-        {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
+        {/* Gold institutional accent bar (matches the CRCS portal masthead). */}
         <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 py-3 sm:gap-6">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-6 sm:px-6 sm:py-3">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -378,21 +379,21 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={124}
             height={124}
-            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-14 w-14 shrink-0 object-contain sm:h-24 sm:w-24"
           />
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-lg font-bold uppercase tracking-wide text-white/80 sm:text-xl">
+            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-xl">
               {t("brand.country")}
             </p>
-            <p className="font-display text-base font-bold text-white sm:text-lg">
+            <p className="font-display text-sm font-bold text-white sm:text-lg">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-sm font-black uppercase tracking-tight text-white sm:text-base">
+            <p className="font-display text-xs font-black uppercase tracking-tight text-white sm:text-base">
               {t("brand.servicesDepartment")}
             </p>
-            <span className="mt-1.5 flex h-1 w-52 max-w-full overflow-hidden rounded-full sm:w-64">
+            <span className="mt-1 flex h-1 w-44 max-w-full overflow-hidden rounded-full sm:mt-1.5 sm:w-64">
               <span className="flex-1 bg-[#1eb53a]" />
               <span className="flex-1 bg-[#fcd116]" />
               <span className="flex-1 bg-black" />
@@ -408,21 +409,21 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={124}
             height={124}
-            className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
+            className="h-14 w-14 shrink-0 object-contain sm:h-24 sm:w-24"
           />
         </div>
       </header>
 
       {/* Language switcher — floats below the header, right-aligned, with no
           visible background bar. */}
-      <div className="relative z-20 flex items-center justify-end px-6 py-1">
+      <div className="relative z-20 flex items-center justify-end px-6 py-0.5 sm:py-1">
         <LanguageSwitcher variant="onLight" />
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-2 sm:px-6 ${wide ? "sm:py-2" : ""}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-1 sm:px-6 sm:py-2 ${wide ? "sm:py-2" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
-            check + "About ICRCS" are rendered below the form instead. */}
+            check + "About CRCS" are rendered below the form instead. */}
         <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
           <div className={`hidden flex-col items-center justify-start gap-3 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-4 py-4 md:flex ${wide ? "md:w-[32%]" : "w-[40%]"}`}>
@@ -450,22 +451,22 @@ export default function AuthShell({
               </div> */}
             </div>
 
-            {/* Status check (login only) + About ICRCS — dark theme for the
+            {/* Status check (login only) + About CRCS — dark theme for the
                 deep-blue panel. On mobile these render below the form instead. */}
             {showStatusCheck && renderStatusCheck(true)}
             {renderAbout(true)}
           </div>
 
           {/* Right panel — form only */}
-          <div className={`flex w-full flex-col justify-center px-5 sm:px-6 ${wide ? "py-3 md:w-[68%]" : "py-4 md:w-[60%]"}`}>
+          <div className={`flex w-full flex-col justify-center px-5 sm:px-6 ${wide ? "py-3 md:w-[68%]" : "py-3 sm:py-4 md:w-[60%]"}`}>
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
             {/* Mobile-only: the left panel is hidden below md, so the status
-                check (login only) + About ICRCS live here, below the form and
+                check (login only) + About CRCS live here, below the form and
                 above the footer. Wrapped in the same deep-blue panel so they
                 keep their bluish look on the white card. */}
-            <div className="mt-6 space-y-3 rounded-2xl bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 p-4 md:hidden">
+            <div className="mt-3 space-y-2.5 rounded-2xl bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 p-3 md:hidden">
               {showStatusCheck && renderStatusCheck(true)}
               {renderAbout(true)}
             </div>

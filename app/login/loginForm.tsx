@@ -183,8 +183,8 @@ export default function LoginForm() {
   return (
     <div className="w-full">
       {/* Heading */}
-      <div className="mb-4">
-        <h2 className="font-display text-2xl font-bold text-navy-700">
+      <div className="mb-3 sm:mb-4">
+        <h2 className="font-display text-xl font-bold text-navy-700 sm:text-2xl">
           {t("brand.system")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>
@@ -199,7 +199,7 @@ export default function LoginForm() {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate autoComplete="off">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate autoComplete="off">
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-navy-700">
             {t("form.email")}
@@ -296,7 +296,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70 sm:py-3"
         >
           {submitting && <Spinner />}
           {submitting ? t("form.signingIn") : t("form.signIn")}

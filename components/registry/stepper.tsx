@@ -57,7 +57,7 @@ export default function Stepper({
 
       <aside
         onMouseLeave={() => setOpen(false)}
-        className={`flex w-64 shrink-0 flex-col overflow-y-auto bg-sidebar transition-transform duration-300 ease-in-out
+        className={`flex w-64 shrink-0 flex-col overflow-hidden bg-sidebar transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
           lg:sticky lg:top-20 lg:z-auto lg:h-[calc(100vh-5rem)] lg:translate-x-0 lg:self-start lg:overflow-hidden lg:shadow-none`}
       >
@@ -79,9 +79,10 @@ export default function Stepper({
           </button>
         </div>
 
-        {/* Step list — STATIC (never scrolls). Steps are compact so all 8 fit in
-            the sidebar height; any leftover space sits below the last step. */}
-        <ol className="flex-1 space-y-0 px-2 pb-1">
+        {/* Step list. On lg+ all 8 steps fit statically. On small screens the list
+            scrolls INTERNALLY if it can't fit, so Save & Exit (below) always stays
+            pinned and visible without a long page scroll. */}
+        <ol className="min-h-0 flex-1 space-y-0 overflow-y-auto px-2 pb-1 lg:overflow-hidden">
           {VISIBLE_STEPS.map((n, idx) => {
             const active = n === current;
             // Ticked once submitted (or simply passed on the way forward), but the
@@ -146,7 +147,7 @@ export default function Stepper({
           })}
         </ol>
 
-        <div className="border-t border-white/10 p-1.5">
+        <div className="shrink-0 border-t border-white/10 p-1.5">
           <button
             type="button"
             onClick={() => {

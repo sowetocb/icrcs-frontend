@@ -6,11 +6,13 @@ import {
   useMarriageOptions,
   usePersonDocumentTypeOptions,
   useTravelDocumentTypeOptions,
+  PointOfEntryField,
 } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
 import PhoneInput from "@/components/registry/phoneInput";
 import WardCascade from "@/components/registry/wardCascade";
 import CountrySelect from "@/components/registry/countrySelect";
+import { COUNTRIES } from "@/lib/countries";
 import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { Camera, X, Plus } from "lucide-react";
 
@@ -18,6 +20,80 @@ import { Camera, X, Plus } from "lucide-react";
  * points for a migrant's travel history: Kenya, Uganda, Rwanda, Burundi, DR
  * Congo, Zambia, Malawi, Mozambique. */
 const TZ_BORDERING_CODES = ["KE", "UG", "RW", "BI", "CD", "ZM", "MW", "MZ"];
+
+/** Entry-route picker for a migrant's travel history. Two routes:
+ *  - Neighbouring country (land border) → the transit country is one of the 8
+ *    countries bordering Tanzania.
+ *  - International (air/sea port) → the migrant flew/sailed in, so their "Home
+ *    Country" is any country EXCEPT Tanzania and the 8 transit countries.
+ * Both store the chosen country in `transitCountry` (the field the backend
+ * already resolves); `entryInternational` is a UI-only flag that selects the
+ * route and the country list. Switching route clears the value (a country valid
+ * in one route isn't valid in the other). */
+function EntryCountryField() {
+  const { t } = useI18n();
+  const { data, set } = useWizard();
+  const intl = data.entryInternational === true;
+
+  // Rehydrate the route on resume: if a transit country was saved that ISN'T one
+  // of the 8 land-border countries, it must have been an international entry.
+  useEffect(() => {
+    if (typeof data.entryInternational === "boolean") return;
+    const tc = typeof data.transitCountry === "string" ? data.transitCountry.trim() : "";
+    if (!tc) return;
+    const isLand = COUNTRIES.some(
+      (c) => TZ_BORDERING_CODES.includes(c.code) && c.name === tc,
+    );
+    set("entryInternational", !isLand);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <span className="block text-sm font-medium text-ink">{t("fields.entryRoute")}</span>
+        <div className="mt-2 flex flex-wrap gap-6">
+          {[
+            { v: false, label: t("fields.entryLand") },
+            { v: true, label: t("fields.entryInternational") },
+          ].map(({ v, label }) => (
+            <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="entryInternational"
+                checked={intl === v}
+                onChange={() => {
+                  set("entryInternational", v);
+                  // A country valid in one route isn't valid in the other, and
+                  // the point-of-entry list depends on it — clear both.
+                  set("transitCountry", "");
+                  set("pointOfEntry", "");
+                  set("pointOfEntrySel", "");
+                }}
+                className="h-4 w-4 accent-navy-700"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+      <Field label={intl ? t("fields.homeCountry") : t("fields.transitCountry")} optional>
+        <CountrySelect
+          name="transitCountry"
+          placeholder={t("fields.phCountryNat")}
+          onValueChange={() => {
+            // The point-of-entry list is filtered by this country — reset it.
+            set("pointOfEntry", "");
+            set("pointOfEntrySel", "");
+          }}
+          {...(intl
+            ? { excludeTanzania: true, exclude: TZ_BORDERING_CODES }
+            : { only: TZ_BORDERING_CODES })}
+        />
+      </Field>
+    </div>
+  );
+}
 
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
  * it survives reloads and is rebuilt into the `photo` part on submission. */
@@ -144,7 +220,10 @@ export default function StepPersonal() {
   // account holder — every dependent registration (a citizen account holder's
   // dependents, or a foreign profile's Tanzanian minor) — and for any minor.
   // The account holder picks their own status.
-  const isMinor = !isFirstPerson || (() => {
+  // Age-based minor check (from the entered DOB). Drives the identification
+  // document options: a minor of ANY flow carries only a birth certificate,
+  // while an adult (incl. an officer-registered migrant ≥ 18) gets every type.
+  const ageIsMinor = (() => {
     const dob = typeof data.dob === "string" ? data.dob : "";
     if (!dob) return false;
     const birth = new Date(dob);
@@ -155,6 +234,7 @@ export default function StepPersonal() {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age < 18;
   })();
+  const isMinor = !isFirstPerson || ageIsMinor;
   const forceSingle = !isFirstPerson || isMinor;
   const singleValue = maritalStatuses.find((o) => /single/i.test(o.label))?.value ?? "";
   useEffect(() => {
@@ -163,13 +243,14 @@ export default function StepPersonal() {
   }, [forceSingle, singleValue]);
 
   // Minors only carry a birth certificate — filter the lookup to that type only.
+  // Adults (≥ 18), including officer-registered migrants, get EVERY document type.
   const birthCertOptions = idDocTypeOptions.filter((o) => /birth/i.test(o.label));
-  const effectiveDocOptions = isMinor ? birthCertOptions : idDocTypeOptions;
+  const effectiveDocOptions = ageIsMinor ? birthCertOptions : idDocTypeOptions;
 
   // When switching to minor context (or when options first load), collapse extra
   // documents to 1 and clear any non-birth-cert selection on document 1.
   useEffect(() => {
-    if (!isMinor || birthCertOptions.length === 0) return;
+    if (!ageIsMinor || birthCertOptions.length === 0) return;
     const bcIds = new Set(birthCertOptions.map((o) => o.value));
     for (let n = 2; n <= idDocCount; n++) {
       for (const s of ID_DOC_SUFFIXES) set(`idDoc${n}${s}`, "");
@@ -181,7 +262,7 @@ export default function StepPersonal() {
       set("idDoc1Number", "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMinor, birthCertOptions.length]);
+  }, [ageIsMinor, birthCertOptions.length]);
 
   function addIdDoc() {
     set("idDocCount", String(idDocCount + 1));
@@ -430,18 +511,15 @@ export default function StepPersonal() {
             <Field label={t("fields.firstDateOfEntry")} optional>
               <DateInput name="firstDateOfEntry" />
             </Field>
-            <Field label={t("fields.pointOfEntry")} optional>
-              <TextInput name="pointOfEntry" placeholder={t("fields.phPointOfEntry")} maxLength={RULES.POINT_OF_ENTRY_MAX} />
-            </Field>
           </div>
-          <Field label={t("fields.transitCountry")} optional>
-            {/* Only countries bordering Tanzania are valid transit points:
-                Kenya, Uganda, Rwanda, Burundi, DRC, Zambia, Malawi, Mozambique. */}
-            <CountrySelect
-              name="transitCountry"
-              placeholder={t("fields.phCountryNat")}
-              only={TZ_BORDERING_CODES}
-            />
+          {/* Entry route: through a neighbouring country (land border → one of
+              the 8 transit countries) OR an air/sea port ("International" → any
+              other country as the Home Country). Then the point-of-entry border. */}
+          <EntryCountryField />
+          {/* Point of entry — chosen from the borders lookup; "Others" reveals a
+              free-text field for a border not in the list. */}
+          <Field label={t("fields.pointOfEntry")} optional>
+            <PointOfEntryField />
           </Field>
 
           <div>

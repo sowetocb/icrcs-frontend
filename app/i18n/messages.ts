@@ -10,7 +10,7 @@ export const DEFAULT_LOCALE: Locale = "en";
 const en = {
   brand: {
     country: "The United Republic of Tanzania",
-    system: "Immigration Central Registration and Citizenship System",
+    system: "Central Registration and Citizenship System",
     department: "Immigration Services Department",
     ministry: "Ministry of Home Affairs",
     servicesDepartment: "Immigration Services Department",
@@ -19,7 +19,7 @@ const en = {
     badge: "ISO Certified · 24/7 Secure Access",
     title: "Sovereign Access",
     subtitle:
-      "Access the Immigration Central Registration and Citizenship System. Your gateway to national immigration services.",
+      "Access the Central Registration and Citizenship System. Your gateway to national immigration services.",
   },
   status: {
     heading: "Application Status Check",
@@ -33,8 +33,8 @@ const en = {
     notStarted: "Not started",
   },
   about: {
-    trigger: "About ICRCS",
-    title: "Immigration Central Registration & Citizenship System",
+    trigger: "About CRCS",
+    title: "Central Registration & Citizenship System",
     intro: "A unified national platform for citizenship and immigration services.",
     point1: "Securely register and manage citizenship and residency records.",
     point2: "Apply for and track citizenship and immigration applications online.",
@@ -53,7 +53,7 @@ const en = {
     emailInvalid: "Please enter a valid email address",
     passwordRequired: "Please enter your password",
     loginFailed: "Invalid email or password.",
-    officerNoIcrcs: "Your account is not authorized for ICRCS registration.",
+    officerNoIcrcs: "Your account is not authorized for CRCS registration.",
     connectionError: "We can't reach the server right now. Please check your connection and try again shortly.",
     signIn: "Sign In",
     signingIn: "Signing in…",
@@ -127,7 +127,7 @@ const en = {
     close: "Close",
     termsTitle: "Terms of Service",
     termsBody:
-      "By registering for the Integrated Citizen Registry and Control System (ICRCS), you agree to use the portal solely for lawful immigration and citizen-registry purposes.\n\nYou confirm that all information you provide is true, accurate, and complete. Providing false information constitutes a criminal offence under the National Security and Digital Identity Act.\n\nYour account is personal and non-transferable. You are responsible for safeguarding your credentials and for all activity conducted under your Authorization ID.\n\nThe Tanzania Immigration Services Department may suspend or revoke access where misuse, fraud, or a security risk is identified.",
+      "By registering for the Integrated Citizen Registry and Control System (CRCS), you agree to use the portal solely for lawful immigration and citizen-registry purposes.\n\nYou confirm that all information you provide is true, accurate, and complete. Providing false information constitutes a criminal offence under the National Security and Digital Identity Act.\n\nYour account is personal and non-transferable. You are responsible for safeguarding your credentials and for all activity conducted under your Authorization ID.\n\nThe Tanzania Immigration Services Department may suspend or revoke access where misuse, fraud, or a security risk is identified.",
     privacyTitle: "Privacy Policy",
     privacyBody:
       "Your data is processed by the Tanzania Immigration Services Department (TISD) in accordance with the Electronic and Postal Communications Act and the Cybercrimes Act.\n\nAll personal data is encrypted at rest and in transit (AES-256 / TLS 1.3) and is linked exclusively to Tanzania's sovereign national registry.\n\nData is cross-validated against NIDA, RITA, and biometric systems strictly for identity verification. Every access to your record is permanently logged with officer ID, timestamp, and sector.\n\nWe do not sell or share your data with third parties except as required by Tanzanian law.",
@@ -191,11 +191,28 @@ const en = {
     filter30Days: "Last 30 days",
     noResults: "No registered people match your filters.",
   },
+  officerDash: {
+    title: "Welcome, Immigration Officer",
+    welcome:
+      "You are logged in to the Central Registration and Citizenship System (CRCS).\n" +
+      "This system enables you to register and manage individuals applying for immigration status including Migrants, Refugees, Asylum Seekers and other categories.\n" +
+      "Ensure all information is captured accurately and in accordance with the laws, policies and procedures of the United Republic of Tanzania.",
+    cta: "Start a registration",
+    quickAccess: "Quick Access",
+    proceduresTitle: "Follow Procedures",
+    proceduresDesc: "Always follow official immigration procedures and guidelines.",
+    accuracyTitle: "Ensure Accuracy",
+    accuracyDesc: "Capture accurate and complete information for all individuals.",
+    dataTitle: "Protect Data",
+    dataDesc: "Handle personal data securely and maintain confidentiality.",
+    lawsTitle: "Comply with Laws",
+    lawsDesc: "Ensure compliance with Tanzanian laws and immigration policies.",
+  },
   dashboard: {
     badge: "Action Required: Legal Compliance",
     title: "Complete Your Registration",
     welcome:
-      "Welcome, {name}. Your registration with the Immigration Central Registration and Citizenship System (ICRCS) is not yet complete.\n" +
+      "Welcome, {name}. Your registration with the Central Registration and Citizenship System (CRCS) is not yet complete.\n" +
       "Complete your registration by providing the required personal and family information and submitting the necessary supporting documents. The information you provide will be reviewed by the Immigration Department as part of the process to verify your identity and determine your citizenship or immigration status.",
     startRegistration: "Start Registration",
     viewRequirements: "View Requirements",
@@ -366,6 +383,12 @@ const en = {
     attachEmpty: "No documents uploaded yet.",
     attachOnlyPdf: "Only PDF files are allowed.",
     attachListTitle: "Uploaded documents",
+    otherDocsTitle: "Other Supporting Documents",
+    otherDocsHint: "Upload any additional supporting documents such as affidavits, letters, or other relevant paperwork (JPG, PNG or PDF, max 300KB each).",
+    otherDocsCount: "{n} of {max} documents added",
+    otherDocLabel: "Document name",
+    otherDocsAdd: "Add Supporting Document",
+    otherDocNamePlaceholder: "e.g. Affidavit, Police Report, etc.",
     previewEdit: "Edit",
     previewLoading: "Loading your application summary…",
     reviewPrev: "Previous",
@@ -459,7 +482,7 @@ const en = {
       "I, {name}, hereby declare that all information provided in this registration form is true, complete, and accurate to the best of my knowledge. I understand that any false statements or omission of material facts may result in the rejection of my application or criminal prosecution under the National Security and Digital Identity Act.",
     agree: "I agree to the terms and conditions and the legal declaration above.",
     landingTitle: "Register with",
-    landingTitleAccent: "ICRCS",
+    landingTitleAccent: "CRCS",
     landingIntro:
       "This registration enables the Immigration Services Department to verify your identity and determine your immigration status.\n" +
       "During the registration process, you will be required to provide your Personal Information, Parents' Information, Emergency Contact Information, Close Relatives' Information, Education and Employment Information, and upload the necessary supporting documents.\n" +
@@ -550,6 +573,8 @@ const en = {
     idDialogHelp:
       "Keep this ID safe. You can check your registration status anytime using it — even before you finish all the forms.",
     idDialogContinue: "Continue",
+    idDialogDownload: "Download Application ID",
+    idDialogIssued: "Issued",
     statusLoginPrompt: "Please sign in to continue your registration.",
   },
   forgot: {
@@ -620,7 +645,7 @@ const en = {
     updateError: "Could not update your profile. Please try again.",
   },
   infoCards: {
-    eyebrow: "Why ICRCS",
+    eyebrow: "Why CRCS",
     identityTitle: "One National Identity",
     identityBody:
       "A single, verified identity for every citizen and resident — no duplicate records, no fraud.",
@@ -727,7 +752,12 @@ const en = {
     firstDateOfEntry: "First Date of Entry",
     pointOfEntry: "Point of Entry",
     phPointOfEntry: "e.g. Namanga Border",
+    phSelectBorder: "Select border / point of entry",
     transitCountry: "Transit Country",
+    entryRoute: "How did you enter Tanzania?",
+    entryLand: "Through a neighbouring country (land border)",
+    entryInternational: "Air or sea port (international)",
+    homeCountry: "Home Country",
     travelDocType: "Travel Document Type",
     phTravelDocType: "e.g. Passport",
     travelDocNo: "Document Number",
@@ -1105,7 +1135,7 @@ const sw: typeof en = {
     emailInvalid: "Tafadhali weka anuani sahihi ya barua pepe",
     passwordRequired: "Tafadhali weka nenosiri lako",
     loginFailed: "Barua pepe au nenosiri si sahihi.",
-    officerNoIcrcs: "Akaunti yako haina ruhusa ya usajili wa ICRCS.",
+    officerNoIcrcs: "Akaunti yako haina ruhusa ya usajili wa CRCS.",
     connectionError: "Hatuwezi kufikia seva kwa sasa. Tafadhali angalia muunganisho wako na ujaribu tena baadaye.",
     signIn: "Ingia",
     signingIn: "Inaingia…",
@@ -1179,7 +1209,7 @@ const sw: typeof en = {
     close: "Funga",
     termsTitle: "Masharti ya Huduma",
     termsBody:
-      "Kwa kujisajili katika Mfumo Jumuishi wa Usajili na Udhibiti wa Raia (ICRCS), unakubali kutumia mfumo kwa madhumuni halali ya uhamiaji na usajili wa raia pekee.\n\nUnathibitisha kuwa taarifa zote unazotoa ni za kweli, sahihi na kamili. Kutoa taarifa za uongo ni kosa la jinai chini ya Sheria ya Usalama wa Taifa na Utambulisho wa Kidijitali.\n\nAkaunti yako ni ya binafsi na hairuhusiwi kuhamishiwa mtu mwingine. Una jukumu la kulinda taarifa zako za kuingia na shughuli zote zinazofanyika chini ya Kitambulisho chako.\n\nIdara ya Uhamiaji Tanzania inaweza kusimamisha au kufuta ufikiaji pale matumizi mabaya, udanganyifu au hatari ya kiusalama inapobainika.",
+      "Kwa kujisajili katika Mfumo Jumuishi wa Usajili na Udhibiti wa Raia (CRCS), unakubali kutumia mfumo kwa madhumuni halali ya uhamiaji na usajili wa raia pekee.\n\nUnathibitisha kuwa taarifa zote unazotoa ni za kweli, sahihi na kamili. Kutoa taarifa za uongo ni kosa la jinai chini ya Sheria ya Usalama wa Taifa na Utambulisho wa Kidijitali.\n\nAkaunti yako ni ya binafsi na hairuhusiwi kuhamishiwa mtu mwingine. Una jukumu la kulinda taarifa zako za kuingia na shughuli zote zinazofanyika chini ya Kitambulisho chako.\n\nIdara ya Uhamiaji Tanzania inaweza kusimamisha au kufuta ufikiaji pale matumizi mabaya, udanganyifu au hatari ya kiusalama inapobainika.",
     privacyTitle: "Sera ya Faragha",
     privacyBody:
       "Taarifa zako zinashughulikiwa na Idara ya Uhamiaji Tanzania (TISD) kwa mujibu wa Sheria ya Mawasiliano ya Kielektroniki na Posta na Sheria ya Makosa ya Mtandao.\n\nTaarifa zote binafsi zimesimbwa wakati wa kuhifadhi na kusafirisha (AES-256 / TLS 1.3) na zimeunganishwa na daftari la kitaifa la Tanzania pekee.\n\nTaarifa zinahakikiwa dhidi ya NIDA, RITA na mifumo ya kibaiometriki kwa ajili ya uthibitisho wa utambulisho pekee. Kila ufikiaji wa kumbukumbu yako huhifadhiwa kwa kudumu na kitambulisho cha afisa, muda na sekta.\n\nHatuuzi wala kushiriki taarifa zako na watu wa tatu isipokuwa inapohitajika na sheria za Tanzania.",
@@ -1243,11 +1273,28 @@ const sw: typeof en = {
     filter30Days: "Siku 30 zilizopita",
     noResults: "Hakuna watu waliosajiliwa wanaolingana na vichujio vyako.",
   },
+  officerDash: {
+    title: "Karibu, Afisa wa Uhamiaji",
+    welcome:
+      "Umeingia katika Mfumo Jumuishi wa Usajili wa Raia na Uraia (CRCS).\n" +
+      "Mfumo huu unakuwezesha kusajili na kusimamia watu wanaoomba hadhi ya uhamiaji wakiwemo Wahamiaji, Wakimbizi, Waomba Hifadhi na makundi mengine.\n" +
+      "Hakikisha taarifa zote zinakusanywa kwa usahihi na kwa kuzingatia sheria, sera na taratibu za Jamhuri ya Muungano wa Tanzania.",
+    cta: "Anza usajili",
+    quickAccess: "Ufikiaji wa Haraka",
+    proceduresTitle: "Fuata Taratibu",
+    proceduresDesc: "Daima fuata taratibu na miongozo rasmi ya uhamiaji.",
+    accuracyTitle: "Hakikisha Usahihi",
+    accuracyDesc: "Kusanya taarifa sahihi na kamili kwa kila mtu.",
+    dataTitle: "Linda Taarifa",
+    dataDesc: "Shughulikia taarifa binafsi kwa usalama na dumisha usiri.",
+    lawsTitle: "Zingatia Sheria",
+    lawsDesc: "Hakikisha uzingatiaji wa sheria za Tanzania na sera za uhamiaji.",
+  },
   dashboard: {
     badge: "Hatua Inahitajika: Uzingatiaji wa Kisheria",
     title: "Kamilisha Usajili Wako",
     welcome:
-      "Karibu, {name}. Usajili wako katika Mfumo Jumuishi wa Usajili wa Raia na Uraia (ICRCS) bado haujakamilika.\n" +
+      "Karibu, {name}. Usajili wako katika Mfumo Jumuishi wa Usajili wa Raia na Uraia (CRCS) bado haujakamilika.\n" +
       "Kamilisha usajili wako kwa kutoa taarifa binafsi na za familia zinazohitajika na kuwasilisha vielelezo husika. Taarifa unazotoa zitapitiwa na Idara ya Uhamiaji kama sehemu ya mchakato wa kuthibitisha utambulisho wako na kubaini hadhi yako ya uraia au uhamiaji.",
     startRegistration: "Anza Usajili",
     viewRequirements: "Angalia Mahitaji",
@@ -1418,6 +1465,12 @@ const sw: typeof en = {
     attachEmpty: "Bado hakuna nyaraka zilizopakiwa.",
     attachOnlyPdf: "Faili za PDF pekee zinaruhusiwa.",
     attachListTitle: "Nyaraka zilizopakiwa",
+    otherDocsTitle: "Nyaraka Nyingine za Kusaidia",
+    otherDocsHint: "Pakia nyaraka zingine za kusaidia kama vile viapo, barua, au karatasi nyingine muhimu (JPG, PNG au PDF, kisichozidi 300KB kila moja).",
+    otherDocsCount: "{n} kati ya {max} nyaraka zimeongezwa",
+    otherDocLabel: "Nyaraka ya Kusaidia {n}",
+    otherDocsAdd: "Ongeza Nyaraka ya Kusaidia",
+    otherDocNamePlaceholder: "mf. Kiapo, Ripoti ya Polisi, n.k.",
     previewEdit: "Hariri",
     previewLoading: "Inapakia muhtasari wa maombi yako…",
     reviewPrev: "Iliyotangulia",
@@ -1511,7 +1564,7 @@ const sw: typeof en = {
       "Mimi, {name}, natamka kwamba taarifa zote nilizotoa katika fomu hii ya usajili ni za kweli, kamili na sahihi kwa ufahamu wangu wote. Naelewa kuwa taarifa zozote za uongo au kuficha ukweli muhimu kunaweza kusababisha kukataliwa kwa maombi yangu au mashtaka ya jinai chini ya Sheria ya Usalama wa Taifa na Utambulisho wa Kidijitali.",
     agree: "Nakubali masharti na kanuni pamoja na tamko la kisheria hapo juu.",
     landingTitle: "Jisajili na",
-    landingTitleAccent: "ICRCS",
+    landingTitleAccent: "CRCS",
     landingIntro:
       "Usajili huu unaiwezesha Idara ya Huduma za Uhamiaji kuthibitisha utambulisho wako na kubaini hadhi yako ya kiuhamiaji.\n" +
       "Wakati wa mchakato wa usajili, utatakiwa kutoa Taarifa zako Binafsi, Taarifa za Wazazi, Taarifa za Mtu wa Kuwasiliana Naye Dharura, Taarifa za Ndugu wa Karibu, Taarifa za Elimu na Ajira, na kupakia vielelezo vinavyohitajika.\n" +
@@ -1600,6 +1653,8 @@ const sw: typeof en = {
     idDialogHelp:
       "Hifadhi namba hii. Unaweza kuangalia hali ya usajili wako wakati wowote kwa kuitumia — hata kabla ya kumaliza fomu zote.",
     idDialogContinue: "Endelea",
+    idDialogDownload: "Pakua Namba ya Maombi",
+    idDialogIssued: "Imetolewa",
     statusLoginPrompt: "Tafadhali ingia ili kuendelea na usajili wako.",
   },
   forgot: {
@@ -1670,7 +1725,7 @@ const sw: typeof en = {
     updateError: "Imeshindwa kusasisha wasifu wako. Tafadhali jaribu tena.",
   },
   infoCards: {
-    eyebrow: "Kwa Nini ICRCS",
+    eyebrow: "Kwa Nini CRCS",
     identityTitle: "Utambulisho Mmoja wa Kitaifa",
     identityBody:
       "Utambulisho mmoja uliothibitishwa kwa kila raia na mkazi — hakuna kumbukumbu zinazojirudia wala udanganyifu.",
@@ -1776,7 +1831,12 @@ const sw: typeof en = {
     firstDateOfEntry: "Tarehe ya Kwanza ya Kuingia",
     pointOfEntry: "Mahali pa Kuingilia",
     phPointOfEntry: "mf. Mpaka wa Namanga",
+    phSelectBorder: "Chagua mpaka / kituo cha kuingilia",
     transitCountry: "Nchi ya Kupitia",
+    entryRoute: "Uliingiaje Tanzania?",
+    entryLand: "Kupitia nchi jirani (mpaka wa nchi kavu)",
+    entryInternational: "Kituo cha ndege au bandari (kimataifa)",
+    homeCountry: "Nchi ya Asili",
     travelDocType: "Aina ya Hati ya Safari",
     phTravelDocType: "mf. Pasipoti",
     travelDocNo: "Namba ya Hati",

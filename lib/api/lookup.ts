@@ -442,6 +442,29 @@ export function getForeignNationalTravelDocuments(): Promise<LookupItem[]> {
   })).catch(() => MOCK_FN_TRAVEL_DOCS);
 }
 
+// A border / point-of-entry post. `borderTo` is the country the crossing leads
+// to ("Kenya", "Zambia", "DRC", …) or "International" for air/sea ports; the
+// "Others" row has borderTo "N/A". Used to filter the point-of-entry dropdown by
+// the applicant's transit country (or International route).
+export type BorderItem = { id: number; name: string; code: string; borderTo: string };
+
+/** GET /v1/lookup/borders → { borderId, borderName, code, transportModeCategory,
+ * territory, borderTo }. Public (no auth), like every other lookup. The "Others"
+ * row (code OTHERS) lets the applicant type an unofficial entry point. Data comes
+ * ONLY from the endpoint — no mock fallback; an error yields an empty list. */
+export function getBorders(): Promise<BorderItem[]> {
+  return apiGet("/v1/lookup/borders")
+    .then((raw) =>
+      listEnvelope(raw).map((o) => ({
+        id: num(o.borderId ?? o.id),
+        name: str(o.borderName ?? o.name),
+        code: str(o.code),
+        borderTo: str(o.borderTo),
+      })),
+    )
+    .catch(() => []);
+}
+
 /** GET /v1/lookup/attachment-types */
 export function getAttachmentTypes(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_ATTACHMENT_TYPES);

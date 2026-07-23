@@ -46,6 +46,15 @@ export const ATTACHMENT_TYPES: AttachmentType[] = [
  * Stage 8 list — captured at Stage 1 and uploaded/merged automatically. */
 export const PASSPORT_PHOTO_TYPE = 5;
 
+/** Attachment type for arbitrary "other supporting documents". Uses the backend's
+ * generic document type (12) — the same one the per-person document upload uses
+ * (see documentUpload.tsx). Each extra doc is uploaded individually under this
+ * type, with a unique slot index to distinguish them in the local attachment list. */
+export const OTHER_SUPPORTING_DOC_TYPE = 12;
+
+/** Maximum number of extra "other supporting documents" a user may add. */
+export const MAX_OTHER_SUPPORTING_DOCS = 10;
+
 /** Attachment types that MUST be uploaded before Stage 8 can be submitted. */
 export const MANDATORY_ATTACHMENT_TYPE_IDS = ATTACHMENT_TYPES.filter((a) => a.mandatory).map(
   (a) => a.id,

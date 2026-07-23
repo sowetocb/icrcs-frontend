@@ -439,7 +439,7 @@ export default function RegistryClient() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen flex-col bg-surface">
+      <div className="flex min-h-screen flex-col overflow-x-clip bg-surface">
         <DashboardTopbar />
 
         {mode === "officer-cases" && (

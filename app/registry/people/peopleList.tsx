@@ -300,11 +300,11 @@ export default function PeopleList() {
   if (officerMode) {
     return (
       <AuthGuard>
-        <div className="flex min-h-screen flex-col bg-surface">
+        <div className="flex min-h-screen flex-col overflow-x-clip bg-surface">
           <DashboardTopbar />
           <div className="flex flex-1">
             <CitizenSidebar />
-            <main className="flex-1 px-6 py-10 lg:px-10">
+            <main className="min-w-0 flex-1 px-6 py-10 lg:px-10">
               <OfficerPeopleList />
             </main>
           </div>
@@ -315,12 +315,12 @@ export default function PeopleList() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen flex-col bg-surface">
+      <div className="flex min-h-screen flex-col overflow-x-clip bg-surface">
         <DashboardTopbar />
         <div className="flex flex-1">
           <CitizenSidebar />
-          <main className="flex-1 px-6 py-10 lg:px-10">
-            <div className="mx-auto w-full max-w-6xl">
+          <main className="min-w-0 flex-1 px-6 py-10 lg:px-10">
+            <div className="mx-auto w-full min-w-0 max-w-6xl">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h1 className="font-display text-3xl font-black tracking-tight text-navy-700">
