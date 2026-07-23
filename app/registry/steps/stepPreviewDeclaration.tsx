@@ -101,7 +101,7 @@ function PreviewRow({
   return (
     <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4">
       <dt className="text-xs font-medium text-muted">{label}</dt>
-      <dd className={`text-sm text-ink${preserveCase ? "" : " uppercase"}`}>{value}</dd>
+      <dd className={`break-words text-sm text-ink${preserveCase ? "" : " uppercase"}`}>{value}</dd>
     </div>
   );
 }
@@ -263,8 +263,11 @@ export default function StepPreviewDeclaration() {
       )}
 
       {/* Horizontal stage tabs (left → right). A tick appears once a stage has
-          been reviewed; every stage must be viewed to enable submission. */}
-      <div className="flex w-full border-b border-line">
+          been reviewed; every stage must be viewed to enable submission. On all
+          screens the row scrolls horizontally (so labels aren't cramped) and stays
+          sticky just BELOW the fixed 5rem masthead (top-20) — at every breakpoint,
+          so the tabs never scroll away or slide under the topbar while reviewing. */}
+      <div className="sticky top-20 z-20 -mx-5 flex overflow-x-auto border-y border-line bg-card px-5 sm:-mx-6 sm:px-6">
         {STAGES.map((n) => {
           const isActive = activeStage === n;
           const done = reviewed.has(n);
@@ -273,7 +276,7 @@ export default function StepPreviewDeclaration() {
               key={n}
               type="button"
               onClick={() => selectStage(n)}
-              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-1.5 py-3 text-center text-sm font-semibold transition ${
+              className={`flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-3 text-center text-sm font-semibold transition sm:flex-1 ${
                 isActive
                   ? "border-navy-700 text-navy-700"
                   : "border-transparent text-muted hover:text-navy-700"
@@ -359,7 +362,10 @@ export default function StepPreviewDeclaration() {
             <PreviewSubTitle>{t("fields.travelHistory")}</PreviewSubTitle>
             <PreviewRow label={t("fields.firstDateOfEntry")} value={s("firstDateOfEntry")} />
             <PreviewRow label={t("fields.pointOfEntry")} value={s("pointOfEntry")} />
-            <PreviewRow label={t("fields.transitCountry")} value={s("transitCountry")} />
+            <PreviewRow
+              label={data.entryInternational === true ? t("fields.homeCountry") : t("fields.transitCountry")}
+              value={s("transitCountry")}
+            />
             {data.hasTravelDoc === true && (
               <>
                 <PreviewRow label={t("fields.travelDocType")} value={s("travelDocType")} />
@@ -516,22 +522,28 @@ export default function StepPreviewDeclaration() {
           />
         )}
 
-        <PreviewSubTitle>{t("fields.emergencyContactN").replace("{n}", "2")}</PreviewSubTitle>
-        <PreviewRow label={t("preview.fullName")} value={fullName("ec2")} />
-        <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s("ec2RelType"))} />
-        <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s("ec2OccType"))} />
-        <PreviewRow label={t("preview.dob")} value={s("ec2Dob")} />
-        <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec2Gender"))} />
-        <PreviewRow label={t("preview.phone")} value={s("ec2Phone")} />
-        <PreviewRow label={t("preview.nationality")} value={s("ec2NatCountry")} />
-        {/* Emergency contacts do NOT collect place of birth — only residence. */}
-        <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
-        {cascadeRows("ec2Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec2ResCity"))} />)}
-        {s("ec2DocType") && (
-          <PreviewRow
-            label={t("preview.document")}
-            value={`${optionLabel(documentTypeOptions(t), s("ec2DocType"))}: ${s("ec2DocNumber")}`}
-          />
+        {/* Only render the SECOND contact when one was actually provided — the
+            second is optional, so an empty ec2 must not appear in the preview. */}
+        {(s("ec2First") || s("ec2Last") || s("ec2RelType") || s("ec2Phone")) && (
+          <>
+            <PreviewSubTitle>{t("fields.emergencyContactN").replace("{n}", "2")}</PreviewSubTitle>
+            <PreviewRow label={t("preview.fullName")} value={fullName("ec2")} />
+            <PreviewRow label={t("preview.relationship")} value={optLabel(relationshipOpts,s("ec2RelType"))} />
+            <PreviewRow label={t("preview.occupation")} value={optLabel(occupationOpts,s("ec2OccType"))} />
+            <PreviewRow label={t("preview.dob")} value={s("ec2Dob")} />
+            <PreviewRow label={t("preview.gender")} value={genderLabel(s("ec2Gender"))} />
+            <PreviewRow label={t("preview.phone")} value={s("ec2Phone")} />
+            <PreviewRow label={t("preview.nationality")} value={s("ec2NatCountry")} />
+            {/* Emergency contacts do NOT collect place of birth — only residence. */}
+            <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
+            {cascadeRows("ec2Res", <PreviewRow label={t("preview.city")} value={titleCase(s("ec2ResCity"))} />)}
+            {s("ec2DocType") && (
+              <PreviewRow
+                label={t("preview.document")}
+                value={`${optionLabel(documentTypeOptions(t), s("ec2DocType"))}: ${s("ec2DocNumber")}`}
+              />
+            )}
+          </>
         )}
       </PreviewSection>
 

@@ -5,7 +5,6 @@ import {
   useGenderOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
-  MigrantStageGate,
 } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
@@ -101,7 +100,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
 }
 
 export default function StepEmergency() {
-  const { data, set, setQuiet, isMigrant } = useWizard();
+  const { data, set, setQuiet } = useWizard();
   const { t } = useI18n();
 
   // The 2nd contact is optional and hidden until the user adds it (or it already
@@ -115,7 +114,10 @@ export default function StepEmergency() {
     for (const k of Object.keys(data)) if (k.startsWith("ec2")) setQuiet(k, "");
   }
 
-  const content = (
+  // At least one emergency contact is ALWAYS required (backend minimum is 1) —
+  // for every flow, including migrants. So the stage renders the form directly
+  // with no "do you have this?" gate question.
+  return (
     <div className="space-y-8">
       <ContactBlock prefix="ec1" index={1} />
       {ec2Shown ? (
@@ -145,13 +147,4 @@ export default function StepEmergency() {
       )}
     </div>
   );
-  // Migrant flow: gate the whole stage behind a "do you have this?" question.
-  if (isMigrant) {
-    return (
-      <MigrantStageGate field="mHasEmergency" question={t("registry.gateEmergency")}>
-        {content}
-      </MigrantStageGate>
-    );
-  }
-  return content;
 }

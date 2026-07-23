@@ -284,7 +284,9 @@ export default function StepEducation() {
       </div>
   );
 
-  const employmentSection = !isMinor ? (
+  // Employment status is shown in ALL flows and for EVERY subject (minors
+  // included) — it is never hidden.
+  const employmentSection = (
         <>
           <hr className="border-line" />
 
@@ -327,7 +329,7 @@ export default function StepEducation() {
             </div>
           </div>
         </>
-  ) : null;
+  );
 
   // Migrant flow: gate ONLY the education section behind the "do you have
   // education information?" question. Employment always renders — it is never

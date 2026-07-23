@@ -4,8 +4,8 @@ import AuthShell from "@/components/auth/authShell";
 import UnlockAccountFlow from "./unlockAccountFlow";
 
 export const metadata: Metadata = {
-  title: "Unlock Account — ICRCS Tanzania",
-  description: "Unlock your ICRCS account.",
+  title: "Unlock Account — CRCS Tanzania",
+  description: "Unlock your CRCS account.",
 };
 
 export default function UnlockAccountPage() {

@@ -426,17 +426,26 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
 
   // ── Stage 8: Attachments ───────────────────────────────────────────────────
   if (stage === 8) {
+    // OTHER_SUPPORTING_DOC_TYPE = 12 — multiple attachments with the same type
+    // id need unique slot numbers so they are restored as separate entries in the
+    // "Other Supporting Documents" repeatable section.
+    const OTHER_TYPE = 12;
     const attachments = arr(d.attachments).filter((a) => a.attachmentTypeId != null);
+    let otherSlotCounter = 1;
     const list = attachments.map((a) => {
       const typeId = Number(a.attachmentTypeId);
       const fileUrl = str(a.fileUrl);
+      const isOther = typeId === OTHER_TYPE;
+      const slot = isOther ? otherSlotCounter++ : undefined;
       return {
-        id: `att-${typeId}`,
+        id: isOther ? `att-other-${slot}` : `att-${typeId}`,
         typeId,
         name: fileNameFromUrl(fileUrl) || `attachment-${typeId}`,
         fileUrl,
         mimeType: str(a.mimeType),
         fileSizeBytes: Number(a.fileSizeBytes) || 0,
+        ...(slot != null ? { otherSlot: slot } : {}),
+        ...(isOther && a.docLabel ? { docLabel: str(a.docLabel) } : {}),
       };
     });
     if (list.length > 0) out.attachments = JSON.stringify(list);

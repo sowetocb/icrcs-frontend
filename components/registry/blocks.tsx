@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { FieldError, TextInput, useWizard } from "./field";
+import { FieldError, Select, TextInput, useWizard } from "./field";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { localizeOccupation } from "@/lib/i18n/occupations";
 import { RULES } from "@/lib/validation/rules";
@@ -15,9 +15,12 @@ import {
   getEmploymentStatuses,
   getPersonDocumentTypes,
   getForeignNationalTravelDocuments,
+  getBorders,
   type LookupItem,
+  type BorderItem,
   type PersonGroup,
 } from "@/lib/api/lookup";
+import { COUNTRIES } from "@/lib/countries";
 import WardCascade from "./wardCascade";
 
 type Opt = { value: string; label: string };
@@ -161,6 +164,103 @@ export const useTravelDocumentTypeOptions = (): Opt[] => {
   const { options: items } = useLookup(getForeignNationalTravelDocuments, []);
   return items.map((i) => ({ value: i.name, label: i.name }));
 };
+
+// Sentinel select value for the "Others" border row — when picked, the border
+// dropdown reveals a free-text field so the applicant can type an unofficial
+// entry point that isn't listed. Kept distinct from any real border name.
+export const OTHER_BORDER = "__OTHER_BORDER__";
+
+// The `borderTo` value each of Tanzania's 8 land-border countries maps to in the
+// borders lookup, keyed by ISO code. (DR Congo is "DRC" in the border data even
+// though its country name differs.) International entries use "International".
+const BORDER_TO_BY_CODE: Record<string, string> = {
+  KE: "Kenya",
+  UG: "Uganda",
+  RW: "Rwanda",
+  BI: "Burundi",
+  CD: "DRC",
+  ZM: "Zambia",
+  MW: "Malawi",
+  MZ: "Mozambique",
+};
+
+/** Point-of-entry (border) picker. Fetches /v1/lookup/borders and filters it by
+ * the applicant's route: a specific transit country shows only that country's
+ * land crossings; the International route shows all air/sea ports. The "Others"
+ * row is ALWAYS available (unofficial entry point) and, when picked, reveals a
+ * free-text field. The resolved value is stored in `pointOfEntry` (the free-text
+ * field the backend already expects); `pointOfEntrySel` holds the dropdown
+ * selection only. */
+export function PointOfEntryField() {
+  const { t } = useI18n();
+  const { data, set } = useWizard();
+  const [borders, setBorders] = useState<BorderItem[]>([]);
+  useEffect(() => {
+    let alive = true;
+    getBorders().then((b) => {
+      if (alive) setBorders(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Which borders to show: International → every "International" port; a transit
+  // country → only that country's crossings. "Others" is always kept.
+  const intl = data.entryInternational === true;
+  const transit = typeof data.transitCountry === "string" ? data.transitCountry.trim() : "";
+  const transitCode = COUNTRIES.find((c) => c.name === transit)?.code ?? "";
+  const targetBorderTo = intl ? "International" : BORDER_TO_BY_CODE[transitCode] ?? "";
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  const options: Opt[] = borders
+    .filter((b) => {
+      if (b.code.toUpperCase() === "OTHERS") return true; // always available
+      if (!targetBorderTo) return false; // no route chosen yet → only "Others"
+      return norm(b.borderTo) === norm(targetBorderTo);
+    })
+    .map((b) => ({
+      value: b.code.toUpperCase() === "OTHERS" ? OTHER_BORDER : b.name,
+      label: b.name,
+    }));
+
+  const sel = typeof data.pointOfEntrySel === "string" ? data.pointOfEntrySel : "";
+  const isOther = sel === OTHER_BORDER;
+
+  // Rehydrate the dropdown from a resumed `pointOfEntry`: match a filtered border
+  // by name, else fall back to "Others" (manual entry). Runs once borders load.
+  useEffect(() => {
+    if (sel || options.length === 0) return;
+    const poe = typeof data.pointOfEntry === "string" ? data.pointOfEntry.trim() : "";
+    if (!poe) return;
+    const match = options.find((o) => o.value !== OTHER_BORDER && o.value === poe);
+    set("pointOfEntrySel", match ? match.value : OTHER_BORDER);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borders.length]);
+
+  return (
+    <div className="space-y-3">
+      <Select
+        name="pointOfEntrySel"
+        placeholder={t("fields.phSelectBorder")}
+        options={options}
+        onValueChange={(v) => {
+          // A specific border → store its name as pointOfEntry; "Others" or the
+          // empty placeholder → clear it so the manual field (or nothing) drives
+          // the submitted value.
+          set("pointOfEntry", v === OTHER_BORDER || v === "" ? "" : v);
+        }}
+      />
+      {isOther && (
+        <TextInput
+          name="pointOfEntry"
+          placeholder={t("fields.phPointOfEntry")}
+          maxLength={RULES.POINT_OF_ENTRY_MAX}
+        />
+      )}
+    </div>
+  );
+}
 
 /** Migrant-flow gate for stages 4–6: a Yes/No question shown before the stage
  * form. The stage's fields (children) render only when the user answers "Yes";

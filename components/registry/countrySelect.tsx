@@ -12,6 +12,8 @@ export default function CountrySelect({
   disabled = false,
   excludeTanzania = false,
   only,
+  exclude,
+  onValueChange,
 }: {
   name: string;
   placeholder: string;
@@ -20,6 +22,12 @@ export default function CountrySelect({
   excludeTanzania?: boolean;
   /** When provided, ONLY these ISO country codes are selectable. */
   only?: string[];
+  /** ISO country codes to remove from the list (e.g. Tanzania + transit
+   * countries for the international "Home Country" field). */
+  exclude?: string[];
+  /** Called with the newly-selected country name after it's stored (e.g. to
+   * reset a dependent field like the point-of-entry border). */
+  onValueChange?: (value: string) => void;
 }) {
   const { data, set, errors, locked } = useWizard();
   const value = (data[name] as string) ?? "";
@@ -65,9 +73,13 @@ export default function CountrySelect({
       {open && (
         <CountryMenu
           onClose={() => setOpen(false)}
-          onSelect={(c) => set(name, c.name)}
+          onSelect={(c) => {
+            set(name, c.name);
+            onValueChange?.(c.name);
+          }}
           excludeTanzania={excludeTanzania}
           only={only}
+          exclude={exclude}
         />
       )}
       <FieldError name={name} />

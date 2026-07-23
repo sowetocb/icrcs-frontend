@@ -216,16 +216,11 @@ const humanize = (k: string) =>
 const arr = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? v.filter(isObj) : [];
 
-/** Resolve a backend file URL for an OFFICER viewer. toProxyUrl routes it through
- * the same-origin proxy but yields the CITIZEN path (/v1/files/view); an officer
- * has no citizen cookie, so that 401s. Rewrite it into the officer namespace
- * (/v1/officer/files/view) so the proxy attaches the officer cookie instead. */
+/** Resolve a backend file URL for viewing through the same-origin proxy. The
+ * backend's GET /v1/files/view is PUBLIC (no auth needed), so the plain proxied
+ * path works for officers too — there is NO /v1/officer/files/view endpoint. */
 function officerFileUrl(raw: string): string | null {
-  const url = toProxyUrl(raw);
-  if (!url) return null;
-  return url.includes("/v1/officer/files/")
-    ? url
-    : url.replace(/\/v1\/files\//, "/v1/officer/files/");
+  return toProxyUrl(raw);
 }
 
 /** Flatten an object's primitive fields into label/value rows, recursing ONE
@@ -344,7 +339,17 @@ function DetailView({
 
   const d = data ?? {};
   const personal = isObj(d.personalDetails) ? d.personalDetails : {};
-  const documents = arr(d.documents);
+  // Drop duplicate identification documents (same type + number appearing more
+  // than once), keeping the first of each.
+  const documents = (() => {
+    const seen = new Set<string>();
+    return arr(d.documents).filter((doc) => {
+      const key = `${S(doc.documentType).toUpperCase()}|${S(doc.documentNumber)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
   const attachments = arr(d.attachments);
   const spouses = arr(d.spouses);
   const relatives = arr(d.relatives);

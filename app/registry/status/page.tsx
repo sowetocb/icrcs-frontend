@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import StatusChecker from "./statusChecker";
 
 export const metadata: Metadata = {
-  title: "Application Status — ICRCS Tanzania",
+  title: "Application Status — CRCS Tanzania",
   description:
     "Check the status of a Citizen Registry application by its Application ID.",
 };

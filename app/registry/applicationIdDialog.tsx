@@ -1,20 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/localeProvider";
-import { Send } from "lucide-react";
+import { Send, Download, LoaderCircle } from "lucide-react";
 
 export default function ApplicationIdDialog({
   open,
   applicationId,
   email,
+  onDownload,
   onContinue,
 }: {
   open: boolean;
   applicationId: string;
   email: string;
+  /** Download the current registration form PDF. Returns false on failure. */
+  onDownload?: () => Promise<boolean>;
   onContinue: () => void;
 }) {
+  const [downloading, setDownloading] = useState(false);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -67,10 +71,34 @@ export default function ApplicationIdDialog({
           {t("registry.idDialogHelp")}
         </p>
 
+        {onDownload && (
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={async () => {
+              if (downloading) return;
+              setDownloading(true);
+              try {
+                await onDownload();
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-navy-700 py-3 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {downloading ? (
+              <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Download size={16} aria-hidden="true" />
+            )}
+            {t("registry.idDialogDownload")}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onContinue}
-          className="mt-6 w-full rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500"
+          className="mt-3 w-full rounded-lg bg-navy-700 py-3 text-sm font-semibold text-white transition hover:bg-navy-500"
         >
           {t("registry.idDialogContinue")}
         </button>

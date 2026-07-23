@@ -41,6 +41,7 @@ import {
 } from "@/lib/api/registration";
 import type { RegistrationType } from "@/lib/api/registration";
 import { isOfficer } from "@/lib/auth/officerSession";
+import { downloadApplicationIdPdf } from "@/lib/registry/applicationIdPdf";
 import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm, travelHistoryToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
@@ -175,14 +176,14 @@ const REQUIRED_FIELDS: string[][] = [
 // the migrant track, and only the EDUCATION section is gated (locally, inside
 // stepEducation via `mHasEducation`). Stages 5 & 6 are fully skippable.
 const MIGRANT_STAGE_GATE: Record<number, string> = {
-  5: "mHasEmergency",
+  // Stage 5 (Emergency Contacts) is NOT gated — at least one contact is always
+  // required (backend minimum is 1), so the form is shown directly for migrants.
   6: "mHasFamily",
 };
 
 // Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
 // (now hidden) stage submits empty even if fields were filled before toggling.
 const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
-  5: /^ec\d/,
   6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
 };
 
@@ -2594,8 +2595,8 @@ export default function RegistryWizard({
         onSaveExit={saveExit}
       />
 
-        <main className="flex-1 px-4 py-5 lg:px-[10%]">
-          <div className="mx-auto w-full max-w-7xl">
+        <main className="min-w-0 flex-1 px-4 py-5 lg:px-[10%]">
+          <div className="mx-auto w-full min-w-0 max-w-7xl">
             <p className="text-base font-semibold text-success">
               {t(`registry.s${step}Tag`)}
             </p>
@@ -2678,6 +2679,33 @@ export default function RegistryWizard({
         open={showIdDialog}
         applicationId={applicationId}
         email={typeof data.email === "string" ? data.email : ""}
+        onDownload={async () => {
+          if (!applicationId) return false;
+          const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
+            .map((k) => data[k])
+            .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+            .join(" ");
+          // The Application ID is issued at Stage 1, before any backend form
+          // exists — so the receipt is generated entirely on the client (no
+          // /stage9/preview/pdf call, which 401'd / had nothing to return).
+          try {
+            return await downloadApplicationIdPdf({
+              applicationId,
+              applicantName: fullName,
+              labels: {
+                country: t("brand.country"),
+                department: t("brand.servicesDepartment"),
+                idLabel: t("registry.applicationId"),
+                nameLabel: t("preview.fullName"),
+                dateLabel: t("registry.idDialogIssued"),
+                help: t("registry.idDialogHelp"),
+              },
+            });
+          } catch {
+            notify(t("registry.downloadError"), "error");
+            return false;
+          }
+        }}
         onContinue={() => setShowIdDialog(false)}
       />
     </div>

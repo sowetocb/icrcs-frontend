@@ -1094,25 +1094,44 @@ export async function openRefereesForm(subjectId: string): Promise<boolean> {
  * PrintableForm), so the downloaded document always matches what the backend
  * stored. Streams the PDF blob and triggers a browser download. Returns false
  * when the PDF can't be fetched (no subjectId, not submitted, backend error). */
-/** Read a Blob into a base64 `data:` URL (used so downloads work over HTTP —
- * see downloadRegistrationReviewPdf). */
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+/** Deliver a PDF blob to the user. Uses a blob: object URL (created
+ *  synchronously — no FileReader await) so it never loses the click's user
+ *  activation.
+ *  - SECURE context (HTTPS or localhost): a real download via the `download`
+ *    attribute. NOTE: a `data:` URL was tried here before but Chrome can drop
+ *    the download and NAVIGATE the page to it instead (especially once the
+ *    async FileReader lost user activation), which tripped the wizard's
+ *    unsaved-changes `beforeunload` guard. A blob: URL downloads without ever
+ *    navigating.
+ *  - INSECURE context (plain HTTP, e.g. an internal http:// deployment on a
+ *    phone): a FORCED download is blocked ("File can't be downloaded securely"
+ *    on mobile Chrome), so open the PDF in a NEW TAB — the built-in viewer lets
+ *    the user save it without the warning. */
+export async function deliverPdf(blob: Blob, fileName: string): Promise<void> {
+  const name = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+  const secure = typeof window !== "undefined" && window.isSecureContext;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  if (secure) {
+    a.download = name;
+  } else {
+    a.target = "_blank";
+    a.rel = "noreferrer";
+  }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Fetch the server-rendered review PDF as a Blob (shared by download + print).
- * Returns null when it can't be fetched (no subjectId, not submitted, error). */
-async function fetchReviewPdfBlob(subjectId: string): Promise<Blob | null> {
-  if (!subjectId) return null;
+/** Fetch a server-rendered registration PDF (by path) as a Blob. Returns null on
+ * any failure (missing subjectId, not available yet, network/HTTP error). */
+async function fetchRegistrationPdfBlob(path: string): Promise<Blob | null> {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
   const at = loadSession()?.accessToken;
   try {
-    const res = await fetch(`${base}/v1/registration/${subjectId}/review/pdf`, {
+    const res = await fetch(`${base}${path}`, {
       // The auth token is in an HttpOnly cookie — include it on this same-origin
       // proxy request; never send the "__httponly__" stub as a Bearer header.
       credentials: "include",
@@ -1129,26 +1148,35 @@ async function fetchReviewPdfBlob(subjectId: string): Promise<Blob | null> {
   }
 }
 
+/** Fetch the post-declaration review PDF as a Blob (shared by download + print). */
+async function fetchReviewPdfBlob(subjectId: string): Promise<Blob | null> {
+  if (!subjectId) return null;
+  return fetchRegistrationPdfBlob(`/v1/registration/${subjectId}/review/pdf`);
+}
+
+/** Download the PRE-declaration form PDF (GET /stage9/preview/pdf). Works before
+ * the registration is declared — used e.g. when the Application ID is issued at
+ * Stage 1. Returns false when the PDF can't be produced yet. */
+export async function downloadRegistrationPreviewPdf(
+  subjectId: string,
+  fileName = "Registration Form",
+): Promise<boolean> {
+  if (!subjectId) return false;
+  const blob = await fetchRegistrationPdfBlob(
+    `/v1/registration/${subjectId}/stage9/preview/pdf`,
+  );
+  if (!blob) return false;
+  await deliverPdf(blob, fileName);
+  return true;
+}
+
 export async function downloadRegistrationReviewPdf(
   subjectId: string,
   fileName = "Registration Form",
 ): Promise<boolean> {
   const blob = await fetchReviewPdfBlob(subjectId);
   if (!blob) return false;
-  // Download via a data: URL rather than a blob: URL. When the app is served
-  // over plain HTTP, Chrome (desktop + Android) classifies a `blob:http://…`
-  // download as an "insecure download" and blocks it ("File can't be
-  // downloaded securely"). A `data:` URL is treated as part of the current
-  // document — no network scheme to flag — so it isn't blocked. (Serving the
-  // app over HTTPS is the proper end-state fix; this keeps downloads working
-  // on the internal HTTP deployment.)
-  const dataUrl = await blobToDataUrl(blob);
-  const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  await deliverPdf(blob, fileName);
   return true;
 }
 

@@ -6,6 +6,7 @@ import Modal from "@/components/ui/modal";
 import { useI18n } from "../i18n/localeProvider";
 import { loadProfile } from "@/lib/auth/profile";
 import { isOfficer, loadOfficer } from "@/lib/auth/officerSession";
+import OfficerDashboardHome from "./officerDashboardHome";
 import { FileText, Camera, Users, Mail, Download } from "lucide-react";
 
 type IconProps = { className?: string };
@@ -27,11 +28,15 @@ export default function DashboardHome() {
   const { t } = useI18n();
   const [showRequirements, setShowRequirements] = useState(false);
   const [userName, setUserName] = useState("");
+  // Officers get a different landing page (welcome + quick access), not the
+  // citizen self-registration home. Resolved client-side to stay hydration-safe.
+  const [officer, setOfficer] = useState(false);
 
   // Read the cached profile (stored once after login) — client-only to stay
   // hydration-safe. Officers use their officer identity, not the citizen profile.
   useEffect(() => {
     if (isOfficer()) {
+      setOfficer(true);
       const o = loadOfficer();
       if (o) {
         const parts = (o.fullName || "").trim().split(/\s+/).filter(Boolean);
@@ -46,6 +51,8 @@ export default function DashboardHome() {
       setUserName([p.firstName, p.lastName].filter(Boolean).join(" "));
     }
   }, []);
+
+  if (officer) return <OfficerDashboardHome />;
 
   const checklist = [
     { key: "photo", Icon: CameraIcon },

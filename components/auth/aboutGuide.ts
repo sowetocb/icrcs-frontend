@@ -1,4 +1,4 @@
-// Structured "About ICRCS" applicant guide, rendered by AboutDialog. Kept out of
+// Structured "About CRCS" applicant guide, rendered by AboutDialog. Kept out of
 // the i18n string table because it's a whole document (headings, lists, steps)
 // rather than discrete UI strings.
 
@@ -20,10 +20,10 @@ export type AboutGuide = {
 };
 
 const EN: AboutGuide = {
-  systemName: "Immigration Central Registration and Citizenship System (ICRCS)",
+  systemName: "Immigration Central Registration and Citizenship System (CRCS)",
   heading: "Applicant Guide",
   intro:
-    "The Immigration Central Registration and Citizenship System (ICRCS) is an electronic system developed by the Immigration Department to register and determine the immigration status of everyone living in the country. It lets a person submit their personal details, key documents and biometric data for assessment and a decision on their immigration status.",
+    "The Immigration Central Registration and Citizenship System (CRCS) is an electronic system developed by the Immigration Department to register and determine the immigration status of everyone living in the country. It lets a person submit their personal details, key documents and biometric data for assessment and a decision on their immigration status.",
   sections: [
     {
       title: "Why Must I Use This System?",
@@ -139,10 +139,10 @@ const EN: AboutGuide = {
 };
 
 const SW: AboutGuide = {
-  systemName: "Immigration Central Registration and Citizenship System (ICRCS)",
+  systemName: "Immigration Central Registration and Citizenship System (CRCS)",
   heading: "Mwongozo kwa Mwombaji",
   intro:
-    "Mfumo Jumuishi wa Usajili na Uraia wa Uhamiaji (ICRCS) ni mfumo wa kielektroniki ulioundwa na Idara ya Uhamiaji kwa ajili ya kusajili na kubaini hadhi ya uhamiaji ya watu wote wanaoishi nchini. Mfumo huu unamwezesha mtu kuwasilisha taarifa zake binafsi, nyaraka muhimu na taarifa za biometriki kwa ajili ya tathmini na uamuzi wa hadhi yake ya kiuhamiaji.",
+    "Mfumo Jumuishi wa Usajili na Uraia wa Uhamiaji (CRCS) ni mfumo wa kielektroniki ulioundwa na Idara ya Uhamiaji kwa ajili ya kusajili na kubaini hadhi ya uhamiaji ya watu wote wanaoishi nchini. Mfumo huu unamwezesha mtu kuwasilisha taarifa zake binafsi, nyaraka muhimu na taarifa za biometriki kwa ajili ya tathmini na uamuzi wa hadhi yake ya kiuhamiaji.",
   sections: [
     {
       title: "Kwa Nini Natakiwa Kutumia Mfumo Huu?",
