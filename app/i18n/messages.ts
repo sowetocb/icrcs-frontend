@@ -376,6 +376,7 @@ const en = {
     tinInvalid: "TIN must be 9 digits (Business) or 10 digits (Individual).",
     marriageConflict: "You selected \"{status}\" as your marital status in Personal Information (Step 1). Please go back and update your marital status to \"Married\" before answering \"Yes\" here.",
     marriageLocked: "This is set automatically from your marital status in Personal Information (Step 1): \"{status}\". To change it, go back and update Step 1.",
+    marriageWidowedLocked: "Your marital status is \"{status}\" (set in Personal Information, Step 1). Please provide your late spouse's details below.",
     unsavedWarning: "You have unsaved changes. Save before leaving, or your changes on this step will be lost. Leave anyway?",
     childrenMinorLocked: "An applicant under 18 cannot register children. This is set automatically from your date of birth in Personal Information (Step 1).",
     attachAdd: "Add document",
@@ -771,6 +772,7 @@ const en = {
     campHint: "If you live in a refugee or settlement camp, provide its details.",
     campName: "Camp Name",
     phCampName: "e.g. Nyakabande Transit Camp",
+    phSelectCamp: "Select camp",
     properties: "Properties Under your ownership",
     phProperties: "e.g. House, Land, Vehicle, Business",
     curAddress: "Current Address", // REVIEW
@@ -798,6 +800,7 @@ const en = {
     eduCompleted: "I have completed this level",
     eduCompletedOpt: "Completed",
     eduStudyingOpt: "Still studying",
+    education: "Education",
     employment: "Employment", // REVIEW
     employmentStatus: "Employment Status", // REVIEW
     employmentStatusOpt: "Employment Status", // REVIEW
@@ -812,8 +815,10 @@ const en = {
     relativesNote: "Add close relatives.", // REVIEW
     relativeN: "Relative {n}",
     spouseN: "Spouse {n}",
+    deceasedSpouseN: "Late Spouse {n}",
     childN: "Child {n}",
     spouseNote: "Add your spouse's details.", // REVIEW
+    deceasedSpouseNote: "Provide details of your late (deceased) spouse.",
     schoolN: "School", // REVIEW
     schoolNote: "Add each school attended.", // REVIEW
     emergencyContactN: "Emergency Contact", // REVIEW
@@ -821,6 +826,7 @@ const en = {
     emergencyContact2: "Emergency Contact 2",
     addRelative: "Add Relative", // REVIEW
     addSpouse: "Add Spouse", // REVIEW
+    addDeceasedSpouse: "Add Late Spouse",
     addChild: "Add Child",
     maxReached: "Maximum of {n} reached",
     addSchool: "Add School", // REVIEW
@@ -835,6 +841,14 @@ const en = {
     photoTypeError: "Invalid photo type.", // REVIEW
     uploadPhoto: "Upload Photo", // REVIEW
     changePhoto: "Change Photo", // REVIEW
+    capturePhoto: "Capture Photo",
+    cameraTitle: "Capture Passport Photo",
+    cameraCapture: "Capture",
+    cameraRetake: "Retake",
+    cameraUse: "Use Photo",
+    cameraError: "Could not access the camera. Check the browser permission and try again.",
+    cameraUnavailable:
+      "The camera is unavailable. It requires a secure (HTTPS) connection — upload a photo instead.",
     uploaded: "Uploaded", // REVIEW
     uploadFailed: "Upload failed", // REVIEW
     uploadsNeedId: "At least one identification document is required.", // REVIEW
@@ -966,7 +980,7 @@ const en = {
     refugeeDesc: "A person recognized or being registered as a refugee in accordance with applicable procedures.",
     asylumTitle: "Asylum Seeker",
     asylumDesc: "A person seeking international protection whose claim for refugee status is awaiting determination.",
-    alienTitle: "Immigrant with Undetermined Status",
+    alienTitle: "Migrant with Undetermined Status",
     alienDesc:
       "A non-citizen whose entry, stay, or residence in Tanzania is not in accordance with applicable immigration laws or requirements.",
     undocumentedTitle: "Migrant",
@@ -1057,13 +1071,13 @@ const en = {
     colDate: "Date",
     // Registered People (officer) — tabbed page
     declaredTitle: "Registered People",
-    declaredSubtitle: "View declared registrations awaiting enrollment.",
+    declaredSubtitle: "View submitted registrations awaiting enrollment.",
     tabMine: "My Registrations",
     tabStation: "Station Registrations",
     tabSearch: "Search All",
     declaredLoading: "Loading registrations…",
     declaredError: "Could not load registrations. Please try again.",
-    declaredEmpty: "No declared registrations found.",
+    declaredEmpty: "No submitted registrations found.",
     declaredEmptyHint: "Registrations that have been fully submitted will appear here.",
     declaredRetry: "Retry",
     colNationality: "Nationality",
@@ -1290,7 +1304,7 @@ const sw: typeof en = {
       "Hakikisha taarifa zote zinakusanywa kwa usahihi na kwa kuzingatia sheria, sera na taratibu za Jamhuri ya Muungano wa Tanzania.",
     cta: "Anza usajili",
     quickAccess: "Ufikiaji wa Haraka",
-    downloadGuide: "Pakua Mwongozo wa Afisa PDF",
+    downloadGuide: "Pakua Mwongozo wa Afisa",
     proceduresTitle: "Fuata Taratibu",
     proceduresDesc: "Daima fuata taratibu na miongozo rasmi ya uhamiaji.",
     accuracyTitle: "Hakikisha Usahihi",
@@ -1467,6 +1481,7 @@ const sw: typeof en = {
     tinInvalid: "TIN lazima iwe na tarakimu 9 (Biashara) au 10 (Mtu binafsi).",
     marriageConflict: "Umechagua \"{status}\" kama hali ya ndoa katika Taarifa Binafsi (Hatua ya 1). Tafadhali rudi na ubadilishe hali ya ndoa kuwa \"Ameoa/Ameolewa\" kabla ya kujibu \"Ndiyo\" hapa.",
     marriageLocked: "Hii imewekwa moja kwa moja kutoka hali yako ya ndoa katika Taarifa Binafsi (Hatua ya 1): \"{status}\". Ili kuibadilisha, rudi Hatua ya 1.",
+    marriageWidowedLocked: "Hali yako ya ndoa ni \"{status}\" (imewekwa katika Taarifa Binafsi, Hatua ya 1). Tafadhali jaza taarifa za marehemu mwenzi wako hapa chini.",
     unsavedWarning: "Una mabadiliko ambayo hayajahifadhiwa. Hifadhi kabla ya kuondoka, vinginevyo mabadiliko ya hatua hii yatapotea. Ondoka hata hivyo?",
     childrenMinorLocked: "Mwombaji aliye chini ya miaka 18 hawezi kusajili watoto. Hii imewekwa moja kwa moja kutoka tarehe yako ya kuzaliwa katika Taarifa Binafsi (Hatua ya 1).",
     attachAdd: "Ongeza nyaraka",
@@ -1859,6 +1874,7 @@ const sw: typeof en = {
     campHint: "Kama unaishi katika kambi ya wakimbizi au makazi, toa taarifa zake.",
     campName: "Jina la Kambi",
     phCampName: "mf. Kambi ya Mpito ya Nyakabande",
+    phSelectCamp: "Chagua kambi",
     properties: "Mali unazozimiliki",
     phProperties: "mf. Nyumba, Shamba, Genge",
     curAddress: "Anuani ya Sasa", // REVIEW
@@ -1886,6 +1902,7 @@ const sw: typeof en = {
     eduCompleted: "Nimemaliza kiwango hiki",
     eduCompletedOpt: "Nimemaliza",
     eduStudyingOpt: "Bado nasoma",
+    education: "Elimu",
     employment: "Ajira", // REVIEW
     employmentStatus: "Hali ya Ajira", // REVIEW
     employmentStatusOpt: "Hali ya Ajira (hiari)", // REVIEW
@@ -1900,8 +1917,10 @@ const sw: typeof en = {
     relativesNote: "Ongeza ndugu wa karibu.", // REVIEW
     relativeN: "Ndugu {n}",
     spouseN: "Mwenzi {n}",
+    deceasedSpouseN: "Marehemu Mwenzi {n}",
     childN: "Mtoto {n}",
     spouseNote: "Ongeza taarifa za mwenzi wako.", // REVIEW
+    deceasedSpouseNote: "Jaza taarifa za marehemu mwenzi wako.",
     schoolN: "Shule", // REVIEW
     schoolNote: "Ongeza kila shule uliyosoma.", // REVIEW
     emergencyContactN: "Mtu wa Dharura", // REVIEW
@@ -1909,6 +1928,7 @@ const sw: typeof en = {
     emergencyContact2: "Mtu wa Pili wa Dharura",
     addRelative: "Ongeza Ndugu", // REVIEW
     addSpouse: "Ongeza Mwenzi", // REVIEW
+    addDeceasedSpouse: "Ongeza Marehemu Mwenzi",
     addChild: "Ongeza Mtoto",
     maxReached: "Kiwango cha juu cha {n} kimefikiwa",
     addSchool: "Ongeza Shule", // REVIEW
@@ -1923,6 +1943,14 @@ const sw: typeof en = {
     photoTypeError: "Aina ya picha si sahihi.", // REVIEW
     uploadPhoto: "Pakia Picha", // REVIEW
     changePhoto: "Badilisha Picha", // REVIEW
+    capturePhoto: "Piga Picha",
+    cameraTitle: "Piga Picha ya Pasipoti",
+    cameraCapture: "Piga",
+    cameraRetake: "Piga Tena",
+    cameraUse: "Tumia Picha",
+    cameraError: "Imeshindwa kufikia kamera. Angalia ruhusa ya kivinjari kisha jaribu tena.",
+    cameraUnavailable:
+      "Kamera haipatikani. Inahitaji muunganisho salama (HTTPS) — pakia picha badala yake.",
     uploaded: "Imepakiwa", // REVIEW
     uploadFailed: "Upakiaji umeshindwa", // REVIEW
     uploadsNeedId: "Angalau hati moja ya utambulisho inahitajika.", // REVIEW
@@ -1954,8 +1982,8 @@ const sw: typeof en = {
   },
   // RECONSTRUCTED — all values reconstructed; verify `// REVIEW`.
   opt: {
-    male: "Mwanamume", // REVIEW
-    female: "Mwanamke", // REVIEW
+    male: "Mwanaume",
+    female: "Mwanamke",
     other: "Nyingine", // REVIEW
     single: "Hajaoa/Hajaolewa", // REVIEW
     married: "Ameoa/Ameolewa", // REVIEW
@@ -2156,14 +2184,14 @@ const sw: typeof en = {
     colOfficer: "Alisajiliwa na",
     colStation: "Kituo",
     viewDetails: "Angalia",
-    searchAllPlaceholder: "Weka Kitambulisho cha Somo kutafuta…",
+    searchAllPlaceholder: "Weka Utambulisho wa Ombi kutafuta…",
     searchBtn: "Tafuta",
     searching: "Inatafuta…",
     searchEmpty: "Hakuna usajili uliopatikana kwa Kitambulisho hiki.",
     searchHint: "Weka Kitambulisho cha Somo kutafuta mtu yeyote aliyesajiliwa katika vituo vyote.",
     detailBack: "Rudi kwenye orodha",
     detailTitle: "Maelezo ya Usajili",
-    detailSubjectId: "Kitambulisho cha Somo",
+    detailSubjectId: "Utambulisho wa ombi",
     downloadPdf: "Pakua PDF",
     detailType: "Aina ya Usajili",
     detailDeclaredDate: "Tarehe ya Kutangazwa",

@@ -465,6 +465,35 @@ export function getBorders(): Promise<BorderItem[]> {
     .catch(() => []);
 }
 
+/** GET /v1/lookup/camp-names — refugee / settlement camps, for the migrant
+ * address block. Public (no auth), like every other lookup. Data comes ONLY from
+ * the endpoint — no mock fallback; an error yields an empty list.
+ *
+ * NOTE: unlike every other lookup this one returns `data` as a plain array of
+ * NAME STRINGS (["KABANGA", "KAKONKO", …]) rather than objects, so it can't use
+ * getList(). Object rows are still handled in case the shape is normalised
+ * later. The index is used as a synthetic id — the camp NAME is what's stored
+ * and submitted, so no real id is needed. */
+export function getCampNames(): Promise<LookupItem[]> {
+  return apiGet("/v1/lookup/camp-names")
+    .then((raw) => {
+      const data = (raw as { data?: unknown })?.data;
+      if (!Array.isArray(data)) return [];
+      return data
+        .map((row, i): LookupItem => {
+          if (typeof row === "string") return { id: i + 1, name: row.trim() };
+          const o = (row ?? {}) as Row;
+          return {
+            id: num(o.campId ?? o.campNameId ?? o.id) || i + 1,
+            name: str(o.campName ?? o.name).trim(),
+            code: str(o.code),
+          };
+        })
+        .filter((c) => c.name !== "");
+    })
+    .catch(() => []);
+}
+
 /** GET /v1/lookup/attachment-types */
 export function getAttachmentTypes(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_ATTACHMENT_TYPES);

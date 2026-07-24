@@ -587,14 +587,19 @@ function DetailView({
       {!loading && !error && data && (
         <div className="space-y-5">
           {/* Horizontal tabs (left → right) — one section group shown at a time,
-              like the Preview & Declaration step. */}
-          <div className="flex w-full overflow-x-auto border-b border-line">
+              like the Preview & Declaration step. The strip is STICKY just below
+              the 5rem masthead (top-20) with an opaque background, so the case
+              data scrolls BEHIND it and the section names never move. The
+              negative margins bleed the opaque bar to the page edges (cancelling
+              <main>'s px-6/lg:px-10) so nothing peeks past it while scrolling.
+              On narrow screens the strip itself scrolls horizontally. */}
+          <div className="sticky top-20 z-20 -mx-6 flex overflow-x-auto border-b border-line bg-surface px-6 lg:-mx-10 lg:px-10">
             {tabs.map((tb) => (
               <button
                 key={tb.key}
                 type="button"
                 onClick={() => setActiveTab(tb.key)}
-                className={`flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-sm font-semibold transition ${
+                className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-center text-sm font-semibold transition sm:flex-1 ${
                   active?.key === tb.key
                     ? "border-navy-700 text-navy-700"
                     : "border-transparent text-muted hover:text-navy-700"
@@ -605,7 +610,14 @@ function DetailView({
             ))}
           </div>
 
-          <div>{active?.content}</div>
+          {/* ONLY this panel scrolls — the back link, title, Subject ID, the
+              Download button and the tab strip all stay put. The height is
+              whatever the viewport has left after the 5rem masthead, <main>'s
+              vertical padding and the header/tabs above (~20rem), expressed in
+              rem so it scales with the root font-size on large monitors. */}
+          <div className="max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
+            {active?.content}
+          </div>
         </div>
       )}
     </div>

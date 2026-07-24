@@ -5,6 +5,7 @@ import { refresh } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { clearSession, loadSession, saveSession } from "@/lib/auth/session";
 import { isOfficer, clearOfficer } from "@/lib/auth/officerSession";
+import { verifySession } from "@/lib/auth/verifySession";
 
 // Proactively refresh the access token so it never expires mid-use. The interval
 // is shorter than typical access-token TTLs; the reactive refresh in
@@ -55,7 +56,10 @@ export default function SessionKeepAlive() {
       }
     }
 
-    keepAlive();
+    // The first check goes through verifySession() so it shares AuthGuard's
+    // in-flight request — two independent refreshes on load could rotate the
+    // token twice and invalidate a perfectly good session.
+    verifySession();
     const id = setInterval(keepAlive, REFRESH_INTERVAL_MS);
     // Refresh again as soon as the tab becomes visible after being backgrounded.
     function onVisible() {

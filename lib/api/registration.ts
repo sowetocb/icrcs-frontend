@@ -490,16 +490,27 @@ function physicalCharacteristics(data: Data): Record<string, unknown> {
 }
 
 /** Migrant Stage 1 payload — the shared base (names, sex, DOB, nationality,
- * citizenship, place of birth, documents) plus `registrationType` and the
- * physical-characteristics block. Migrants are foreign-born, so the base's
- * foreign branch (countryOfBirthCode + cityOfBirth) applies. */
+ * citizenship, place of birth, documents) plus `registrationType`, the
+ * physical-characteristics block, and the applicant's contact details. Migrants
+ * are foreign-born, so the base's foreign branch (countryOfBirthCode +
+ * cityOfBirth) applies.
+ *
+ * `phoneNumber` / `email` are part of the migrant Stage 1 contract (POST and
+ * PUT). Phone is mandatory in the UI; email is optional on this track, so an
+ * empty value collapses to null rather than "". The citizen Stage 1 doesn't
+ * carry them — those come from the account profile. */
 async function buildMigrantStage1Payload(
   data: Data,
   registrationType: RegistrationType,
 ): Promise<Record<string, unknown>> {
   const base = await buildStage1Payload(data, true);
   // buildStage1Payload already includes the physical-characteristics block.
-  return { ...base, registrationType };
+  return {
+    ...base,
+    registrationType,
+    phoneNumber: phone(data, "phone") || null,
+    email: str(data, "email") || null,
+  };
 }
 
 export async function submitStage1Migrant(

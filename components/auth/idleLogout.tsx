@@ -6,6 +6,7 @@ import { logout } from "@/lib/api/auth";
 import { clearSession, loadSession, setSignoutNotice } from "@/lib/auth/session";
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
+import { clearRegistration } from "@/app/registry/registrationStore";
 
 // Sign the user out after 15 minutes of inactivity (no mouse/keyboard/scroll/
 // touch). There is no warning dialog — when the session lapses the user is
@@ -49,8 +50,10 @@ export default function IdleLogout() {
     }
     clearSession();
     clearProfile();
-    // Keep the in-progress registration draft (cached by Application ID) so an
-    // unsubmitted registration survives an idle auto-logout and can be resumed.
+    // The auto-saved draft is session cache — an idle timeout ENDS the session,
+    // so wipe it rather than leaving an applicant's data on an unattended
+    // workstation. Submitted stages remain on the backend.
+    clearRegistration();
     clearPeople();
     window.localStorage.removeItem(ACTIVITY_KEY);
     // Inform the user WHY they were signed out — the login screen shows a notice.

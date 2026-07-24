@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { DateInput, Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import {
   useGenderOptions,
@@ -95,10 +95,164 @@ function EntryCountryField() {
   );
 }
 
+/** Webcam capture for the passport photo (officer registrations — the applicant
+ * is physically at the desk). Streams the camera, grabs a centre-cropped square
+ * frame, and hands back a JPEG data URL compressed under the 300KB cap.
+ * NOTE: getUserMedia only works in a SECURE context (HTTPS or localhost) — over
+ * plain http:// the browser hides the API, so we surface a clear message. */
+function CameraCapture({
+  onClose,
+  onCapture,
+}: {
+  onClose: () => void;
+  onCapture: (dataUrl: string) => void;
+}) {
+  const { t } = useI18n();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState("");
+  const [shot, setShot] = useState("");
+
+  const stop = useCallback(() => {
+    streamRef.current?.getTracks().forEach((tr) => tr.stop());
+    streamRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError(t("fields.cameraUnavailable"));
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((tr) => tr.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+      } catch {
+        if (!cancelled) setError(t("fields.cameraError"));
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function capture() {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    // Centre-crop to a square (passport framing), capped at 640px.
+    const side = Math.min(v.videoWidth, v.videoHeight);
+    const out = Math.min(640, side);
+    const canvas = document.createElement("canvas");
+    canvas.width = out;
+    canvas.height = out;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, out, out);
+    // Step the JPEG quality down until the encoded image fits the 300KB cap.
+    let q = 0.9;
+    let url = canvas.toDataURL("image/jpeg", q);
+    while (url.length * 0.75 > 300 * 1024 && q > 0.3) {
+      q -= 0.1;
+      url = canvas.toDataURL("image/jpeg", q);
+    }
+    setShot(url);
+  }
+
+  function use() {
+    onCapture(shot);
+    stop();
+    onClose();
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("fields.cameraTitle")}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div className="absolute inset-0 bg-navy-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-line bg-card p-6 shadow-2xl">
+        <h3 className="font-display text-lg font-bold text-navy-700">{t("fields.cameraTitle")}</h3>
+
+        <div className="mt-4 overflow-hidden rounded-xl bg-surface">
+          {error ? (
+            <p role="alert" className="px-4 py-8 text-center text-sm font-medium text-danger">
+              {error}
+            </p>
+          ) : shot ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={shot} alt="" className="mx-auto block aspect-square w-full max-w-xs object-cover" />
+          ) : (
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="mx-auto block aspect-square w-full max-w-xs object-cover"
+            />
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface"
+          >
+            {t("fields.cancel")}
+          </button>
+          {!error && !shot && (
+            <button
+              type="button"
+              onClick={capture}
+              className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+            >
+              {t("fields.cameraCapture")}
+            </button>
+          )}
+          {shot && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShot("")}
+                className="rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+              >
+                {t("fields.cameraRetake")}
+              </button>
+              <button
+                type="button"
+                onClick={use}
+                className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+              >
+                {t("fields.cameraUse")}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Mandatory passport-style photo captured at Stage 1. Stored as a data URL so
  * it survives reloads and is rebuilt into the `photo` part on submission. */
 function PhotoUpload() {
-  const { data, set, errors } = useWizard();
+  const { data, set, errors, isOfficerMode } = useWizard();
+  const [cameraOpen, setCameraOpen] = useState(false);
   const { t } = useI18n();
   const invalid = errors.includes("stage1PhotoData");
   const preview = (data.stage1PhotoData as string) || "";
@@ -150,15 +304,32 @@ function PhotoUpload() {
           )}
         </span>
         <div className="min-w-0">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-navy-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-navy-500">
-            {preview ? t("fields.changePhoto") : t("fields.uploadPhoto")}
-            <input
-              type="file"
-              accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
-              onChange={handle}
-              className="sr-only"
-            />
-          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-navy-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-navy-500">
+              {preview ? t("fields.changePhoto") : t("fields.uploadPhoto")}
+              <input
+                type="file"
+                accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
+                onChange={handle}
+                className="sr-only"
+              />
+            </label>
+            {/* Officer registrations happen with the applicant at the desk, so the
+                photo can be taken on the spot instead of uploaded. */}
+            {isOfficerMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorKey("");
+                  setCameraOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-3.5 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+              >
+                <Camera size={16} strokeWidth={2} aria-hidden="true" />
+                {t("fields.capturePhoto")}
+              </button>
+            )}
+          </div>
           <p className="mt-2 text-xs text-muted">{t("fields.photoHint")}</p>
           {/* Upload error (type/size) takes precedence; otherwise show the
               required message when validation flagged a missing photo. */}
@@ -173,6 +344,16 @@ function PhotoUpload() {
           ) : null}
         </div>
       </div>
+
+      {cameraOpen && (
+        <CameraCapture
+          onClose={() => setCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            set("stage1PhotoData", dataUrl);
+            set("stage1PhotoName", "captured-photo.jpg");
+          }}
+        />
+      )}
     </Field>
   );
 }
@@ -190,6 +371,14 @@ export default function StepPersonal() {
   const maritalStatuses = useMarriageOptions();
   const travelDocTypes = useTravelDocumentTypeOptions();
   const currentYear = new Date().getFullYear();
+
+  // "Do you have a travel document?" defaults to No — most migrants have none,
+  // and an unanswered question would otherwise leave the travel-document block
+  // in limbo. setQuiet so the default doesn't mark the form dirty.
+  useEffect(() => {
+    if (isMigrant && data.hasTravelDoc === undefined) setQuiet("hasTravelDoc", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMigrant]);
 
   // Identification documents repeater (one or more): idDoc1Type/Number, …
   // Options come from the lookup; the option value is the backend documentTypeId.

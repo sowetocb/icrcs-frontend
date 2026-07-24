@@ -241,11 +241,13 @@ export default function StepFamily() {
   }, [isMinor]);
 
   // "Are you married?" is DERIVED from the Stage 1 marital status and locked:
-  // a "Married" status forces Yes, anything else forces No. The user can't
-  // change it here — attempting to does nothing and surfaces the locked notice.
+  // a "Married" or "Widowed" status forces Yes (widowed persons must still
+  // provide their late spouse's details), anything else forces No. The user
+  // can't change it here — attempting to does nothing and surfaces the notice.
   const maritalOptions = useMarriageOptions();
   const maritalCode = typeof data.marriage === "string" ? data.marriage : "";
-  const marriedAtStage1 = maritalCode.toUpperCase().includes("MARRIED");
+  const isWidowed = maritalCode.toUpperCase() === "WIDOWED";
+  const marriedAtStage1 = maritalCode.toUpperCase().includes("MARRIED") || isWidowed;
   const maritalLabel = maritalOptions.find((o) => o.value === maritalCode)?.label || maritalCode;
   const isMarried = marriedAtStage1;
   const [maritalConflict, setMaritalConflict] = useState(false);
@@ -402,21 +404,27 @@ export default function StepFamily() {
                 : "bg-navy-50 text-navy-700"
             }`}
           >
-            {t("registry.marriageLocked").replace("{status}", maritalLabel)}
+            {isWidowed
+              ? t("registry.marriageWidowedLocked").replace("{status}", maritalLabel)
+              : t("registry.marriageLocked").replace("{status}", maritalLabel)}
           </p>
         </div>
 
         {isMarried && (
           <div className="space-y-5">
             <p className="text-sm text-muted">
-              {t("fields.spouseNote")}
+              {isWidowed ? t("fields.deceasedSpouseNote") : t("fields.spouseNote")}
             </p>
 
             {Array.from({ length: spouseCount }, (_, i) => i + 1).map((n) => (
               <PersonBlock
                 key={n}
                 prefix={`sp${n}`}
-                label={t("fields.spouseN").replace("{n}", String(n))}
+                label={
+                  isWidowed
+                    ? t("fields.deceasedSpouseN").replace("{n}", String(n))
+                    : t("fields.spouseN").replace("{n}", String(n))
+                }
                 withRelationship={false}
                 lockGenderOpposite
                 onRemove={
@@ -432,7 +440,7 @@ export default function StepFamily() {
                 className="inline-flex items-center gap-2 rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-700 hover:text-white"
               >
                 <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-                {t("fields.addSpouse")}
+                {isWidowed ? t("fields.addDeceasedSpouse") : t("fields.addSpouse")}
               </button>
             ) : (
               <p className="text-sm font-medium text-muted">

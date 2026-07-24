@@ -6,11 +6,10 @@ import { WizardProvider } from "@/components/registry/field";
 import Stepper from "@/components/registry/stepper";
 import HelpfulTip from "@/components/registry/helpfulTip";
 import { useI18n } from "../i18n/localeProvider";
-import { loadRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
+import { clearRegistration, loadRegistration, loadRegistrationFor, saveRegistration } from "./registrationStore";
 import { useUnsavedChanges } from "./useUnsavedChanges";
 import { loadProfile, saveProfile, type Profile } from "@/lib/auth/profile";
 import { refreshMyProfile } from "@/lib/api/auth";
-import { emailApplicationId } from "./emailApplicationId";
 import { ArrowLeft, ArrowRight, Check, LoaderCircle } from "lucide-react";
 import {
   submitStage1,
@@ -435,6 +434,13 @@ export default function RegistryWizard({
   // Whenever the current step advances past the known frontier, push it out.
   useEffect(() => {
     setMaxStep((m) => Math.max(m, step));
+  }, [step]);
+
+  // Scroll to the top of the page on every step change so the user always
+  // sees the stage heading and the beginning of the form — not the bottom
+  // left over from the previous stage's scroll depth.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [step]);
 
   // Fetch the profile from the backend on mount — the single source of truth
@@ -1383,9 +1389,8 @@ export default function RegistryWizard({
     // Allow navigation to any stage already reached (not just earlier ones), so
     // editing an earlier stage doesn't lock the user out of later completed ones.
     if (n >= 1 && n <= maxStep && n !== step) {
-      // Switching stages doesn't persist the current step — warn if it has
-      // unsaved edits, since they aren't written until the stage is saved.
-      if (dirty && !window.confirm(t("registry.unsavedWarning"))) return;
+      // No prompt: edits are continuously auto-saved to the local draft (see the
+      // auto-save effect), so switching stages can't lose them.
       setErrors([]);
       setFieldErrors({});
       setFormError("");
@@ -1413,11 +1418,28 @@ export default function RegistryWizard({
     setDirty(false);
   }
 
-  // Session expired mid-flow: keep the draft (so it can be resumed after
-  // re-login), then automatically sign the user out to the login screen — no
-  // blocking dialog. The login screen shows a notice explaining why.
+  // ── AUTO-SAVE ──────────────────────────────────────────────────────────────
+  // Mirror every edit into the LOCAL draft (debounced), so moving between
+  // stages, a reload or a crash never loses typed data — and the user is never
+  // nagged with an "unsaved changes" prompt on stage navigation.
+  //
+  // This writes to localStorage ONLY. Submitting a stage to the backend is still
+  // an explicit Save, so nothing half-finished is ever POSTed. The draft is
+  // wiped when the session ends or the user signs out (see clearDraft callers),
+  // so an abandoned registration can't linger on a shared workstation.
+  useEffect(() => {
+    if (!dirty) return;
+    const id = setTimeout(persistDraft, 600);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, dirty]);
+
+  // Session expired mid-flow: the session is over, so the auto-saved draft (its
+  // cache) is discarded rather than left behind on a shared workstation. Stages
+  // already submitted live on the backend and are re-fetched on resume. Then
+  // sign the user out — no blocking dialog; the login screen explains why.
   function signOutToLogin() {
-    persistDraft();
+    clearRegistration();
     setSignoutNotice("expired");
     router.push("/login");
   }
@@ -2364,6 +2386,12 @@ export default function RegistryWizard({
 
     let sid = subjectId;
     let appId = applicationId;
+    // True only when THIS save created the registration (the Stage 1 POST path).
+    // The Application ID dialog keys off this rather than "applicationId is
+    // empty" — a resumed case (e.g. an officer reopening a case, or a draft
+    // saved without an applicationId) has no stored id yet, and re-saving
+    // Stage 1 there must NOT pop the "Application ID Created" dialog again.
+    let createdStage1 = false;
     const updatedStages = new Set(submittedStages);
     const edit = submittedStages.has(step);
     // Holds the form data merged with the server-compiled preview (fetched after
@@ -2413,6 +2441,7 @@ export default function RegistryWizard({
             setSubjectId(sid);
             appId = response.applicationId || response.subjectId;
             if (appId) setApplicationId(appId);
+            createdStage1 = true;
             // Track the decoupled photo upload; if it failed (e.g. network), the
             // user retries at the Stage 8 gate without losing any data. On
             // success, record it in the attachments so Stage 8 can register it.
@@ -2538,21 +2567,15 @@ export default function RegistryWizard({
     // backend. NEVER fabricate one — fall back to the backend subjectId, and if
     // the backend returned nothing usable, skip the dialog rather than show a
     // made-up value.
-    const isNewAppId = step === 1 && !applicationId;
     if (step === 1 && !appId) {
       appId = sid;
       if (appId) setApplicationId(appId);
     }
-    if (step === 1 && appId && isNewAppId) {
-      const fullName = ["applicantFirst", "applicantMiddle", "applicantLast"]
-        .map((k) => data[k])
-        .filter((v): v is string => typeof v === "string" && v.trim() !== "")
-        .join(" ");
-      void emailApplicationId({
-        email: typeof data.email === "string" ? data.email : "",
-        applicationId: appId,
-        fullName,
-      });
+    // Only on a genuine first creation — never when re-saving an edited Stage 1.
+    // NOTE: emailing the Application ID is deliberately NOT part of this flow —
+    // it is a notification concern, not a submission step, and its endpoint
+    // failing (502) must never ride along with a successful registration.
+    if (step === 1 && appId && createdStage1) {
       setShowIdDialog(true);
     }
 
@@ -2572,9 +2595,9 @@ export default function RegistryWizard({
   }
 
   function handleBack() {
-    // Going back — whether exiting from Stage 1 or stepping to an earlier stage —
-    // doesn't persist the current step, so remind the user of unsaved edits first.
-    if (dirty && !window.confirm(t("registry.unsavedWarning"))) return;
+    // Stepping back to an earlier stage never prompts — edits are auto-saved to
+    // the local draft. Leaving the wizard entirely from Stage 1 still asks.
+    if (step === 1 && dirty && !window.confirm(t("registry.unsavedWarning"))) return;
     setErrors([]);
     setFieldErrors({});
     setFormError("");

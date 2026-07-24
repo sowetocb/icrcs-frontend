@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useWizard } from "@/components/registry/field";
 import { useI18n } from "@/app/i18n/localeProvider";
+import StageSkeleton from "@/components/registry/stageSkeleton";
+import { localizeLookup } from "@/lib/i18n/lookupLabels";
 import { loadProfile } from "@/lib/auth/profile";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
 import { getStage9Preview } from "@/lib/api/registration";
@@ -117,7 +119,7 @@ function PreviewSubTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function StepPreviewDeclaration() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data, set, isMigrant, onGoToStep, onSessionExpired } = useWizard();
 
   const s = (key: string) => {
@@ -136,8 +138,11 @@ export default function StepPreviewDeclaration() {
 
   // Translate id/enum-coded values (fetched by id) to readable labels.
   const { options: eduLevels } = useLookup(getEducationLevels, []);
-  const eduLevelName = (id: string) =>
-    id ? titleCase(eduLevels.find((o) => String(o.id) === id)?.name ?? id) : "";
+  const eduLevelName = (id: string) => {
+    if (!id) return "";
+    const name = eduLevels.find((o) => String(o.id) === id)?.name ?? id;
+    return titleCase(localizeLookup(name, "education", locale));
+  };
   const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
   const MARITAL_LABELS: Record<string, string> = {
     SINGLE: t("opt.single"),
@@ -249,13 +254,14 @@ export default function StepPreviewDeclaration() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Hold the whole stage behind the skeleton until the server-compiled preview
+  // has arrived — same lazy-load behaviour as navigating back to a wizard stage.
+  // Rendering the sections early showed a page of "—" placeholders that filled
+  // in field-by-field as the fetch resolved.
+  if (previewState === "loading") return <StageSkeleton />;
+
   return (
     <div className="space-y-5">
-      {previewState === "loading" && (
-        <p className="rounded-lg border border-line bg-surface/40 px-4 py-3 text-sm text-muted">
-          {t("registry.previewLoading")}
-        </p>
-      )}
       {previewState === "error" && (
         <p role="alert" className="rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger">
           {previewError}
@@ -548,9 +554,14 @@ export default function StepPreviewDeclaration() {
         {isMarried &&
           Array.from({ length: spouseCount }, (_, i) => i + 1)
             .filter((n) => s(`sp${n}First`))
-            .map((n) => (
+            .map((n) => {
+              const widowed = s("marriage").toUpperCase() === "WIDOWED";
+              const spLabel = widowed
+                ? t("fields.deceasedSpouseN").replace("{n}", String(n))
+                : t("fields.spouseN").replace("{n}", String(n));
+              return (
               <div key={`sp${n}`}>
-                <PreviewSubTitle>{t("fields.spouseN").replace("{n}", String(n))}</PreviewSubTitle>
+                <PreviewSubTitle>{spLabel}</PreviewSubTitle>
                 <PreviewRow label={t("preview.fullName")} value={fullName(`sp${n}`)} />
                 <PreviewRow label={t("preview.dob")} value={s(`sp${n}Dob`)} />
                 <PreviewRow label={t("preview.gender")} value={genderLabel(s(`sp${n}Gender`))} />
@@ -561,7 +572,8 @@ export default function StepPreviewDeclaration() {
                 <PreviewSubTitle>{t("preview.residence")}</PreviewSubTitle>
                 {cascadeRows(`sp${n}Res`, <PreviewRow label={t("preview.city")} value={titleCase(s(`sp${n}ResCity`))} />)}
               </div>
-            ))}
+              );
+            })}
 
         {hasChildren &&
           Array.from({ length: childCount }, (_, i) => i + 1)

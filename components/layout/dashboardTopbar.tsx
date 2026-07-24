@@ -10,6 +10,7 @@ import { clearSession, loadSession } from "@/lib/auth/session";
 import { isOfficer, clearOfficer, loadOfficer, type OfficerUser } from "@/lib/auth/officerSession";
 import { getOfficerProfile } from "@/lib/api/officer";
 import { clearPeople } from "@/app/registry/peopleStore";
+import { clearRegistration } from "@/app/registry/registrationStore";
 import { LOGO_EMBLEM } from "@/lib/assets";
 import { UserRound, LogOut, Menu } from "lucide-react";
 import { useMobileNav } from "@/components/layout/mobileNav";
@@ -140,6 +141,8 @@ export default function DashboardTopbar() {
         // ignore — clear the local officer session regardless
       }
       clearOfficer();
+      clearRegistration();
+      clearPeople();
       router.push("/login");
       return;
     }
@@ -153,8 +156,10 @@ export default function DashboardTopbar() {
     }
     clearSession();
     clearProfile();
-    // Keep the in-progress registration draft so the user can resume it after
-    // signing back in; only clear the dependents list. (Mirrors the sidebar.)
+    // The auto-saved registration draft is CACHE, not storage: wipe it on sign
+    // out so nothing typed for one applicant lingers on a shared workstation.
+    // Submitted stages live on the backend and are re-fetched on resume.
+    clearRegistration();
     clearPeople();
     router.push("/login");
   }

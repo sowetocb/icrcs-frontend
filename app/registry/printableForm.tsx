@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/app/i18n/localeProvider";
+import { localizeLookup } from "@/lib/i18n/lookupLabels";
 import {
   documentTypeOptions,
   useRelationshipTypeOptions,
@@ -112,7 +113,8 @@ export default function PrintableForm({
   const eduLevelName = (key: string) => {
     const id = s(key);
     if (!id) return "—";
-    return titleCase(eduLevels.find((o) => String(o.id) === id)?.name ?? id);
+    const name = eduLevels.find((o) => String(o.id) === id)?.name ?? id;
+    return titleCase(localizeLookup(name, "education", locale));
   };
   const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
   const maritalMap: Record<string, string> = {

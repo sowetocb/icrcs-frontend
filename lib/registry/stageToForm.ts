@@ -110,6 +110,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
   const isoToName = (code: unknown) => {
     const c = str(code).toUpperCase();
     if (!c) return "";
+    // The form + WardCascade expect the short canonical name ("Tanzania"), but
+    // /v1/lookup/countries may return "United Republic of Tanzania" for TZA —
+    // that strict mismatch hides the TZ address cascade on resume.
+    if (c === "TZA" || c === "TZ") return "Tanzania";
     // Backend lookup first, then the local alpha-3 map, then the raw code.
     return countryByCode.get(c) ?? LOCAL_ALPHA3_TO_NAME.get(c) ?? str(code);
   };
@@ -227,6 +231,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     // (applicant + father + mother), so split them by person group into each
     // repeater (applicant → idDoc, father → fatherIdDoc, mother → motherIdDoc).
     applyGroupedDocuments(arr(d.documents));
+    // Contact — stored on Stage 1 (and echoed on Stage 2 GET); map to the form
+    // field names the PhoneInput / TextInput widgets read (`phone`, `email`).
+    if (d.phoneNumber != null) out.phone = str(d.phoneNumber);
+    if (d.email != null) out.email = strNN(d.email);
     // Passport photo — the Stage 1 preview renders any <img src>, so the stored
     // file URL works. Look for a direct url or a type-5 entry in documents.
     const photoUrl =
@@ -312,6 +320,10 @@ export async function stageToForm(stage: number, raw: unknown): Promise<Data> {
     const campProps = d.properties ?? campAddr.properties;
     if (campName != null) out.campName = strNN(campName);
     if (campProps != null) out.properties = strNN(campProps);
+    // Stage 2 GET also echoes contact details — keep them when resuming here
+    // without revisiting Stage 1.
+    if (d.phoneNumber != null) out.phone = str(d.phoneNumber);
+    if (d.email != null) out.email = strNN(d.email);
     return out;
   }
 
@@ -478,6 +490,7 @@ export async function travelHistoryToForm(raw: unknown): Promise<Data> {
   const isoToName = (code: unknown) => {
     const c = str(code).toUpperCase();
     if (!c) return "";
+    if (c === "TZA" || c === "TZ") return "Tanzania";
     return countryByCode.get(c) ?? LOCAL_ALPHA3_TO_NAME.get(c) ?? str(code);
   };
 

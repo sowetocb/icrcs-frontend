@@ -9,6 +9,7 @@ import { clearSession, loadSession } from "@/lib/auth/session";
 import { isOfficer, clearOfficer } from "@/lib/auth/officerSession";
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
+import { clearRegistration } from "@/app/registry/registrationStore";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -40,6 +41,8 @@ export default function CitizenSidebar() {
         // ignore — clear the local officer session regardless
       }
       clearOfficer();
+      clearRegistration();
+      clearPeople();
       router.push("/login");
       return;
     }
@@ -53,9 +56,10 @@ export default function CitizenSidebar() {
     }
     clearSession();
     clearProfile();
-    // NOTE: do NOT clear the in-progress registration draft on logout — an
-    // unsubmitted registration is kept (cached by Application ID) so the user
-    // can resume it after signing back in. Foreign drafts are cleared on login.
+    // The auto-saved registration draft is CACHE, not storage: wipe it on sign
+    // out so nothing typed for one applicant lingers on a shared workstation.
+    // Submitted stages live on the backend and are re-fetched on resume.
+    clearRegistration();
     clearPeople();
     router.push("/login");
   }

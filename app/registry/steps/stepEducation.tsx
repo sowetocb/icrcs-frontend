@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import { useEmploymentStatusOptions, useOccupationTypeOptions, MigrantStageGate } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { localizeLookup } from "@/lib/i18n/lookupLabels";
 import { RULES } from "@/lib/validation/rules";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getEducationLevels, toOptions, type LookupItem } from "@/lib/api/lookup";
@@ -15,6 +16,18 @@ const MIN_SCHOOLS = 1;
 const SCHOOL_SUFFIXES = ["Level", "School", "Year", "District", "IndexNo", "Completed"];
 
 const OCCUPATION_OTHER_ID = "19"; // triggers free-text field
+
+/** One titled card. Education and Employment each get their own so the two
+ * concerns read as visually distinct panels rather than one long form. The
+ * tinted surface separates them from the white stage card they sit inside. */
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-line bg-surface/50 p-5">
+      <h3 className="font-display text-base font-bold text-navy-700">{title}</h3>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
 
 // Employed AND Self-employed both pick from this narrowed occupation set
 // (matched by name against the live lookup, so the backend id is kept). "Other"
@@ -121,7 +134,7 @@ function SchoolBlock({
 }
 
 export default function StepEducation() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
   const occupations = useOccupationTypeOptions();
   const jobStatuses = useEmploymentStatusOptions();
@@ -134,7 +147,8 @@ export default function StepEducation() {
   // Both Employed and Self-employed render the same occupation set: the curated
   // short list PLUS every newer occupation (lookup id >= 22).
   const occupationOptions = occupations.filter((o) => {
-    const n = normOcc(o.label);
+    // Match on the untranslated backend name — the label is localized.
+    const n = normOcc(o.en);
     // Two lookup rows can resolve to the label "Other": the genuine Lookup
     // "Other" (id OCCUPATION_OTHER_ID, which reveals the free-text field) and a
     // stale static-mapping artifact on another id. Keep only the genuine one.
@@ -143,7 +157,12 @@ export default function StepEducation() {
     return ALLOWED_OCCUPATION_SET.has(n) || (Number.isFinite(id) && id >= 22);
   });
   const { options: eduLevels } = useLookup(getEducationLevels, []);
-  const levelOptions = toOptions(eduLevels as LookupItem[], "id");
+  // Education levels arrive as English names — localize the visible label only
+  // (the option value stays the backend level id).
+  const levelOptions = toOptions(eduLevels as LookupItem[], "id").map((o) => ({
+    ...o,
+    label: localizeLookup(o.label, "education", locale),
+  }));
 
   const neverAttendedSchool = data.neverAttendedSchool === true;
   const schoolCount = Math.max(MIN_SCHOOLS, Number(data.eduCount) || MIN_SCHOOLS);
@@ -174,6 +193,19 @@ export default function StepEducation() {
     if (data.neverAttendedSchool === undefined) setQuiet("neverAttendedSchool", true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Migrant flow: the stage gate ("Do you have education information to
+  // provide?") already answers "have you attended school?", so that second
+  // question isn't shown — answering the gate Yes drops straight into the school
+  // fields. Keep `neverAttendedSchool` in step with the gate so validation and
+  // the payload stay correct.
+  useEffect(() => {
+    if (!isMigrant) return;
+    if (data.mHasEducation === true && data.neverAttendedSchool !== false) {
+      setQuiet("neverAttendedSchool", false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMigrant, data.mHasEducation]);
 
   function clearSchool(n: number) {
     for (const s of SCHOOL_SUFFIXES) set(`edu${n}${s}`, "");
@@ -207,6 +239,10 @@ export default function StepEducation() {
 
   const educationSection = (
       <div className="space-y-5">
+        {/* On the migrant track this question is redundant — the stage gate above
+            already asked whether there's education information, so answering it
+            Yes renders the school fields directly. */}
+        {!isMigrant && (
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("registry.haveAttendedSchool")}</p>
           <div className="flex gap-6">
@@ -232,6 +268,7 @@ export default function StepEducation() {
             </label>
           </div>
         </div>
+        )}
 
         {!neverAttendedSchool && (
           <div className="space-y-5">
@@ -287,11 +324,7 @@ export default function StepEducation() {
   // Employment status is shown in ALL flows and for EVERY subject (minors
   // included) — it is never hidden.
   const employmentSection = (
-        <>
-          <hr className="border-line" />
-
           <div className="space-y-5">
-            <h3 className="font-display text-base font-bold text-navy-700">{t("fields.employment")}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label={t("fields.employmentStatus")} required>
                 <Select
@@ -328,7 +361,6 @@ export default function StepEducation() {
               )}
             </div>
           </div>
-        </>
   );
 
   // Migrant flow: gate ONLY the education section behind the "do you have
@@ -336,18 +368,20 @@ export default function StepEducation() {
   // hidden by the gate (a migrant may be employed with no formal schooling).
   if (isMigrant) {
     return (
-      <div className="space-y-8">
-        <MigrantStageGate field="mHasEducation" question={t("registry.gateEducation")}>
-          {educationSection}
-        </MigrantStageGate>
-        {employmentSection}
+      <div className="space-y-6">
+        <SectionCard title={t("fields.education")}>
+          <MigrantStageGate field="mHasEducation" question={t("registry.gateEducation")}>
+            {educationSection}
+          </MigrantStageGate>
+        </SectionCard>
+        <SectionCard title={t("fields.employment")}>{employmentSection}</SectionCard>
       </div>
     );
   }
   return (
-    <div className="space-y-8">
-      {educationSection}
-      {employmentSection}
+    <div className="space-y-6">
+      <SectionCard title={t("fields.education")}>{educationSection}</SectionCard>
+      <SectionCard title={t("fields.employment")}>{employmentSection}</SectionCard>
     </div>
   );
 }

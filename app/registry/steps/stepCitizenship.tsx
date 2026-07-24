@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { Field, TextInput, useWizard } from "@/components/registry/field";
+import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
 import WardCascade from "@/components/registry/wardCascade";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { useCampNameOptions } from "@/components/registry/blocks";
 import { RULES } from "@/lib/validation/rules";
 
 const ADDR_SUFFIXES = [
@@ -24,6 +25,7 @@ const ADDR_SUFFIXES = [
 export default function StepAddress() {
   const { t } = useI18n();
   const { data, set, isMigrant } = useWizard();
+  const campNames = useCampNameOptions();
   const sameAsPerm = data.sameAsPerm === true;
 
   // Address fields: the Tanzania cascade + house/postal fields only render when
@@ -142,8 +144,14 @@ export default function StepAddress() {
             <p className="mt-0.5 text-xs text-muted">{t("fields.campHint")}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Camps come from /v1/lookup/camp-names. The option value is the
+                camp NAME, which is what the Stage 2 payload already sends. */}
             <Field label={t("fields.campName")} optional>
-              <TextInput name="campName" placeholder={t("fields.phCampName")} maxLength={RULES.CAMP_NAME_MAX} />
+              <Select
+                name="campName"
+                placeholder={t("fields.phSelectCamp")}
+                options={campNames}
+              />
             </Field>
             <Field label={t("fields.properties")} optional>
               <TextInput name="properties" placeholder={t("fields.phProperties")} maxLength={RULES.PROPERTIES_MAX} />

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { loadSession, subscribeSession } from "@/lib/auth/session";
+import { loadSession, subscribeSession, setSignoutNotice } from "@/lib/auth/session";
 import { isOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
+import { verifySession } from "@/lib/auth/verifySession";
 
 // Remembers, for the lifetime of the tab, that we've already confirmed a live
 // session. Because /dashboard, /registry, /registry/people, … are separate
@@ -24,6 +25,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(sessionVerified);
 
   useEffect(() => {
+    let alive = true;
     // A citizen session OR an officer session (government user) both grant access.
     const loggedIn = !!loadSession() || isOfficer();
     if (!loggedIn) {
@@ -31,10 +33,33 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       sessionVerified = false;
       setAuthorized(false);
       router.replace("/login");
-    } else {
-      sessionVerified = true;
-      setAuthorized(true);
+      return;
     }
+    // Already confirmed against the server earlier in this page load — in-app
+    // navigation doesn't need to re-check.
+    if (sessionVerified) {
+      setAuthorized(true);
+      return;
+    }
+    // FRESH PAGE LOAD (including a browser restart that restored the tabs).
+    // The localStorage flag survives a browser restart but the HttpOnly session
+    // cookie does NOT, so the flag alone can't be trusted here — ask the server.
+    // Protected content stays hidden behind the spinner until it answers.
+    verifySession().then((ok) => {
+      if (!alive) return;
+      if (ok) {
+        sessionVerified = true;
+        setAuthorized(true);
+      } else {
+        sessionVerified = false;
+        setAuthorized(false);
+        setSignoutNotice("expired");
+        router.replace("/login");
+      }
+    });
+    return () => {
+      alive = false;
+    };
   }, [pathname, router]);
 
   // React to a sign-out (or idle/expiry) that happened in ANOTHER tab: the
