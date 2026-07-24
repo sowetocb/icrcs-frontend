@@ -1995,8 +1995,8 @@ export default function RegistryWizard({
         return;
       }
 
-      // Each parent must be an adult (≥ 18) and at least 16 years older than the
-      // applicant — raise the error at that parent's date-of-birth field.
+      // Each parent must be an adult (≥ 18) and at least PARENT_MIN_AGE_GAP_YEARS
+      // older than the applicant — raise the error at that parent's DOB field.
       const subjectDob = typeof data.dob === "string" ? data.dob : "";
       for (const p of ["father", "mother"] as const) {
         const pDob = typeof data[`${p}Dob`] === "string" ? (data[`${p}Dob`] as string) : "";
@@ -2009,7 +2009,11 @@ export default function RegistryWizard({
           setFormError("");
           return;
         }
-        if (subjectDob && pDob && !atLeastYearsOlder(pDob, subjectDob, 16)) {
+        if (
+          subjectDob &&
+          pDob &&
+          !atLeastYearsOlder(pDob, subjectDob, RULES.PARENT_MIN_AGE_GAP_YEARS)
+        ) {
           setErrors([field]);
           setFieldErrors({ [field]: t(`registry.${p}TooYoung`) });
           setFormError("");

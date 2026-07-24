@@ -146,6 +146,13 @@ export default function StepEducation() {
   const { t, locale } = useI18n();
   const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
   const currentYear = new Date().getFullYear();
+  // Match wizard blur/save validation: completion year cannot precede birth year.
+  const dobStr = typeof data.dob === "string" ? data.dob : "";
+  const birthYear = dobStr ? new Date(dobStr).getFullYear() : RULES.EDU_YEAR_MIN;
+  const eduMinYear =
+    Number.isFinite(birthYear) && birthYear > RULES.EDU_YEAR_MIN
+      ? birthYear
+      : RULES.EDU_YEAR_MIN;
   const { options: occupations, loading: occupationsLoading } = useOccupationTypeOptions();
   const { options: jobStatuses, loading: jobStatusLoading } = useEmploymentStatusOptions();
 
@@ -312,7 +319,7 @@ export default function StepEducation() {
                   n={n}
                   levelOptions={blockLevelOptions}
                   levelLoading={eduLevelsLoading}
-                  minYear={RULES.EDU_YEAR_MIN}
+                  minYear={eduMinYear}
                   maxYear={currentYear}
                   onRemove={
                     schoolCount > MIN_SCHOOLS ? () => removeSchool(n) : undefined

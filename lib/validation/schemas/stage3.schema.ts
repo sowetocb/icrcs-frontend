@@ -1,7 +1,7 @@
 /**
  * lib/validation/schemas/stage3.schema.ts
  * Registration Stage 3 - Parents (Father + Mother). Middle name is optional.
- * Factory takes the applicant DOB for the >=16y age-gap check.
+ * Factory takes the applicant DOB for the parent age-gap check.
  */
 import { z } from 'zod';
 import { ageInYears, optionalNameField } from '../common';

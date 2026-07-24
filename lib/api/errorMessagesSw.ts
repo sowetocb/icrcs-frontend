@@ -246,8 +246,12 @@ export const ERROR_MESSAGES_SW: Record<string, string> = {
     "Jiji la makazi ya mzazi linahitajika kwa makazi ya nje",
   "Invalid parent phone number format":
     "Muundo wa namba ya simu ya mzazi si sahihi",
-  "Parent must be at least 16 years older than the applicant":
-    "Mzazi lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji",
+  "Parent must be at least 12 years older than the applicant":
+    "Mzazi lazima awe mkubwa kwa angalau miaka 12 kuliko mwombaji",
+  "Father must be at least 12 years older than the applicant":
+    "Baba lazima awe mkubwa kwa angalau miaka 12 kuliko mwombaji",
+  "Mother must be at least 12 years older than the applicant":
+    "Mama lazima awe mkubwa kwa angalau miaka 12 kuliko mwombaji",
   "Father must be at least 18 years old.":
     "Baba lazima awe na umri wa angalau miaka 18.",
   "Mother must be at least 18 years old.":
