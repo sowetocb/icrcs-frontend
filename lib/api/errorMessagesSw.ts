@@ -47,6 +47,8 @@ export const ERROR_MESSAGES_SW: Record<string, string> = {
   // ── RATE LIMITING ─────────────────────────────────────────────────────────
   "Too many requests. Please slow down and try again later.":
     "Maombi mengi mno. Tafadhali punguza kasi na ujaribu tena baadaye.",
+  "Too many attempts. Please try again later.":
+    "Umejaribu mara nyingi mno. Tafadhali jaribu tena baadaye.",
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────────
   "File is empty or missing": "Faili ni tupu au halipo",
@@ -246,6 +248,10 @@ export const ERROR_MESSAGES_SW: Record<string, string> = {
     "Muundo wa namba ya simu ya mzazi si sahihi",
   "Parent must be at least 16 years older than the applicant":
     "Mzazi lazima awe mkubwa kwa angalau miaka 16 kuliko mwombaji",
+  "Father must be at least 18 years old.":
+    "Baba lazima awe na umri wa angalau miaka 18.",
+  "Mother must be at least 18 years old.":
+    "Mama lazima awe na umri wa angalau miaka 18.",
 
   // ── REGISTRATION — Stage 4: Education & Employment ─────────────────────────
   "Education level is required": "Kiwango cha elimu kinahitajika",

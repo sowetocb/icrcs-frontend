@@ -33,7 +33,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
   const idDocCount = Math.max(1, Number(data[idDocCountKey]) || 1);
 
   // Options come from the lookup for this parent; the value is the documentTypeId.
-  const idDocTypeOptions = usePersonDocumentTypeOptions(prefix);
+  const { options: idDocTypeOptions, loading: idDocLoading } = usePersonDocumentTypeOptions(prefix);
 
   function addIdDoc() {
     set(idDocCountKey, String(idDocCount + 1));
@@ -117,6 +117,7 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
                     name={`${prefix}IdDoc${n}Type`}
                     placeholder={t("fields.phSelect")}
                     options={availableOptions}
+                    loading={idDocLoading}
                     onValueChange={() => set(`${prefix}IdDoc${n}Number`, "")}
                   />
                 </Field>

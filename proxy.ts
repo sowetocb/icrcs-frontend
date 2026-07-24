@@ -1,7 +1,8 @@
 // Next.js Proxy (the file convention formerly called `middleware`; renamed in
 // Next 16). Runs in the Node.js runtime BEFORE the matched route handlers, so it
-// guards the same-origin backend proxy (app/api/proxy/[...path]) and the auth
-// routes (app/api/auth/*). It is the single edge chokepoint that:
+// guards the same-origin backend proxy (app/api/proxy/[...path]), the citizen
+// auth routes (app/api/auth/*), and the officer auth routes (app/api/officer/*).
+// It is the single edge chokepoint that:
 //
 //   0. Enforces same-origin (CORS/CSRF): rejects requests carrying a foreign
 //      Origin, since auth rides on an ambient cookie and CORS alone won't block
@@ -95,6 +96,7 @@ const hits = new Map<string, { count: number; resetAt: number }>();
 // Endpoints worth throttling: login + every OTP / password-reset step.
 const SENSITIVE = new Set([
   "/api/auth/login",
+  "/api/officer/login",
   "/api/proxy/v1/auth/register",
   "/api/proxy/v1/auth/verify-otp",
   "/api/proxy/v1/auth/resend-otp",
@@ -175,5 +177,5 @@ export function proxy(request: NextRequest): Response {
 }
 
 export const config = {
-  matcher: ["/api/proxy/:path*", "/api/auth/:path*"],
+  matcher: ["/api/proxy/:path*", "/api/auth/:path*", "/api/officer/:path*"],
 };

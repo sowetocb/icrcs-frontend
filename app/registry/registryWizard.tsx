@@ -168,21 +168,25 @@ const REQUIRED_FIELDS: string[][] = [
   [],
 ];
 
-// Migrant flow only: stages 4–6 open with a "do you have this info?" question.
-// Answering NO skips the whole stage (no fields, no validation, empty submit);
-// YES reveals the normal form. Keyed by step → the boolean gate field.
-// Stage 4 is NOT a whole-stage gate: employment is always required/submitted on
-// the migrant track, and only the EDUCATION section is gated (locally, inside
-// stepEducation via `mHasEducation`). Stages 5 & 6 are fully skippable.
+// Migrant flow only: stages 4–6 each open with a "do you have this info?" question.
+// Every gate MUST be answered Yes or No before Save. Answering No skips the gated
+// section (or whole stage for 5 & 6); Yes reveals the normal form.
+const MIGRANT_STEP_GATES: Record<number, string[]> = {
+  4: ["mHasEducation"],
+  5: ["mHasEmergency"],
+  6: ["mHasFamily"],
+};
+
+// Whole-stage skip when the migrant answers "No" — clears hidden fields before submit.
 const MIGRANT_STAGE_GATE: Record<number, string> = {
-  // Stage 5 (Emergency Contacts) is NOT gated — at least one contact is always
-  // required (backend minimum is 1), so the form is shown directly for migrants.
+  5: "mHasEmergency",
   6: "mHasFamily",
 };
 
 // Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
 // (now hidden) stage submits empty even if fields were filled before toggling.
 const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
+  5: /^ec\d|ec2Added/,
   6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
 };
 
@@ -519,10 +523,9 @@ export default function RegistryWizard({
       return;
     }
     let cancelled = false;
-    // Show the skeleton only the first time this stage is hydrated; on later
-    // visits the data is already present, so refresh without blocking the form.
-    const firstLoad = !hydratedStages.current.has(step);
-    if (firstLoad) setStageLoading(true);
+    // Show the skeleton on every backend fetch for this stage (not only the first
+    // visit) so the user never sees empty fields flash while data loads.
+    setStageLoading(true);
     (async () => {
       try {
         const raw = await getStageData(subjectId, step);
@@ -598,9 +601,15 @@ export default function RegistryWizard({
   // preview is reached, pull EVERY submitted form stage from the backend and
   // merge it into `data` — the summary then reflects all the server has stored.
   useEffect(() => {
-    if (step !== TOTAL || !subjectId) return;
+    if (step !== TOTAL) return;
+    if (!subjectId) {
+      setStageLoading(false);
+      return;
+    }
     let cancelled = false;
+    setStageLoading(true);
     (async () => {
+      try {
       // Stages 1–6 carry form data; 7 (referees), 8 (uploads) and 9 (preview)
       // have none. Hydrate any submitted stage not already loaded this session
       // (so freshly-edited, already-hydrated stages aren't clobbered).
@@ -652,6 +661,21 @@ export default function RegistryWizard({
             });
           }
         }
+      }
+      // Server-compiled preview — same source Stage 9 displays; fetch here so
+      // the skeleton stays up until the summary data is ready.
+      try {
+        const preview = await getStage9Preview(subjectId);
+        if (cancelled) return;
+        if (preview) {
+          const mapped = await reviewToForm(preview);
+          if (!cancelled) setData((d) => ({ ...d, ...mapped }));
+        }
+      } catch {
+        // Non-fatal — StepPreviewDeclaration surfaces a banner if compilation fails.
+      }
+      } finally {
+        if (!cancelled) setStageLoading(false);
       }
     })();
     return () => {
@@ -843,6 +867,17 @@ export default function RegistryWizard({
 
     // ── Empty: required check ────────────────────────────────────────────────
     if (empty) {
+      // Middle name is optional everywhere — an empty value is always valid.
+      if (name.endsWith("Middle")) {
+        setErrors((e) => e.filter((n) => n !== name));
+        setFieldErrors((fe) => {
+          if (!(name in fe)) return fe;
+          const next = { ...fe };
+          delete next[name];
+          return next;
+        });
+        return;
+      }
       // "Required" errors for an EMPTY field are shown on Save, not from an
       // incidental blur — e.g. clicking a dropdown/date picker moves focus off
       // the field and would otherwise flag it "required" before the user is
@@ -900,9 +935,9 @@ export default function RegistryWizard({
       if (step === 6) {
         const live = typeof data[name] === "string" ? (data[name] as string).trim() : "";
         if (!live) {
-          if (data.isMarried === true && /^sp\d+(First|Middle|Last|Dob|Gender|Phone|NatCountry|ResCountry)$/.test(name))
+          if (data.isMarried === true && /^sp\d+(First|Last|Dob|Gender|Phone|NatCountry|ResCountry)$/.test(name))
             setErrors((e) => (e.includes(name) ? e : [...e, name]));
-          if (data.hasChildren === true && /^ch\d+(First|Middle|Last|Dob|Gender|NatCountry|ResCountry)$/.test(name))
+          if (data.hasChildren === true && /^ch\d+(First|Last|Dob|Gender|NatCountry|ResCountry)$/.test(name))
             setErrors((e) => (e.includes(name) ? e : [...e, name]));
         }
       }
@@ -942,8 +977,11 @@ export default function RegistryWizard({
       if (/^ec\d+Dob$/.test(name) && !isAtLeast18(trimmed)) {
         flag(t("registry.ecAgeError"));
       }
-      if ((name === "fatherDob" || name === "motherDob") && !isAtLeast18(trimmed)) {
-        flag(t("registry.parentAgeError"));
+      if (name === "fatherDob" && !isAtLeast18(trimmed)) {
+        flag(t("registry.fatherAgeError"));
+      }
+      if (name === "motherDob" && !isAtLeast18(trimmed)) {
+        flag(t("registry.motherAgeError"));
       }
       if (/^sp\d+Dob$/.test(name) && !isAtLeast16(trimmed)) {
         flag(t("registry.spouseAgeError"));
@@ -1758,16 +1796,19 @@ export default function RegistryWizard({
       return;
     }
 
-    // Migrant flow: stages 4–6 are gated by a "do you have this info?" question.
-    // Unanswered → require it. "No" → skip the whole stage (clear its fields so
-    // the submit is empty) and bypass all field validation below.
-    const migrantGateField = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
-    if (migrantGateField && data[migrantGateField] !== true && data[migrantGateField] !== false) {
-      setErrors([migrantGateField]);
-      setFieldErrors({ [migrantGateField]: t("registry.pleaseAnswer") });
-      setFormError("");
-      return;
+    // Migrant flow: stages 4–6 require an explicit Yes/No on each gate question.
+    // Unanswered → block Save. "No" on a whole-stage gate (5 & 6) skips that stage.
+    if (isMigrant) {
+      for (const field of MIGRANT_STEP_GATES[step] ?? []) {
+        if (data[field] !== true && data[field] !== false) {
+          setErrors([field]);
+          setFieldErrors({ [field]: t("registry.pleaseAnswer") });
+          setFormError("");
+          return;
+        }
+      }
     }
+    const migrantGateField = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
     const gateSkip = !!migrantGateField && data[migrantGateField] === false;
     // When skipping, submit an EMPTY stage: clear the stage's fields for both the
     // payload and the saved draft (they're hidden anyway). A cleared COPY is used
@@ -1778,7 +1819,9 @@ export default function RegistryWizard({
             MIGRANT_STAGE_CLEAR[step]?.test(k) ? [k, ""] : [k, v],
           ),
         )
-      : data;
+      : isMigrant && step === 4 && data.mHasEducation === false
+        ? { ...data, neverAttendedSchool: true }
+        : data;
     if (gateSkip) setData(stageData);
 
     if (!gateSkip) {
@@ -1960,7 +2003,9 @@ export default function RegistryWizard({
         const field = `${p}Dob`;
         if (pDob && !isAtLeast18(pDob)) {
           setErrors([field]);
-          setFieldErrors({ [field]: t("registry.parentAgeError") });
+          setFieldErrors({
+            [field]: t(p === "father" ? "registry.fatherAgeError" : "registry.motherAgeError"),
+          });
           setFormError("");
           return;
         }
@@ -2649,7 +2694,9 @@ export default function RegistryWizard({
                   onGoToStep={goTo}
                   onSessionExpired={signOutToLogin}
                 >
-                  {stageLoading ? <StageSkeleton /> : <StepComponent />}
+                  {(stageLoading || (step === 1 && profileLoading && isFirstPerson && !isOfficer()))
+                    ? <StageSkeleton />
+                    : <StepComponent />}
                 </WizardProvider>
 
                 {/* Field-level errors render inline at each field. Only a

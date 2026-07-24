@@ -30,16 +30,19 @@ type Props = {
 
 /** Multi-column year grid picker — replaces the native `<select>` that produced
  * an impossibly long single-column dropdown for ~120 years. */
-function YearGrid({
+export function YearGrid({
   years,
   selected,
   onPick,
   onClose,
+  inline = false,
 }: {
   years: number[];
   selected: number;
   onPick: (y: number) => void;
   onClose: () => void;
+  /** When true, render as a normal block (for year-only pickers). Default overlays a calendar. */
+  inline?: boolean;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +65,7 @@ function YearGrid({
   return (
     <div
       ref={gridRef}
-      className="absolute inset-0 z-10 overflow-y-auto rounded-lg bg-card p-2"
+      className={`${inline ? "relative max-h-48" : "absolute inset-0 z-10"} overflow-y-auto rounded-lg bg-card p-2`}
     >
       <div className="grid grid-cols-4 gap-1">
         {years.map((y) => {

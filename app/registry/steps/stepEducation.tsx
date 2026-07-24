@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Field, Select, TextInput, useWizard } from "@/components/registry/field";
+import { Field, Select, TextInput, YearInput, useWizard } from "@/components/registry/field";
 import { useEmploymentStatusOptions, useOccupationTypeOptions, MigrantStageGate } from "@/components/registry/blocks";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { localizeLookup } from "@/lib/i18n/lookupLabels";
@@ -48,10 +48,16 @@ const ALLOWED_OCCUPATION_SET = new Set(ALLOWED_OCCUPATIONS.map(normOcc));
 function SchoolBlock({
   n,
   levelOptions,
+  levelLoading = false,
+  minYear,
+  maxYear,
   onRemove,
 }: {
   n: number;
   levelOptions: { value: string; label: string }[];
+  levelLoading?: boolean;
+  minYear: number;
+  maxYear: number;
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
@@ -106,13 +112,16 @@ function SchoolBlock({
       {/* Education Level and Completion Year share a row (horizontally level). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t("fields.eduLevel")} required>
-          <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} />
+          <Select name={`${p}Level`} placeholder={t("fields.phSelectLevel")} options={levelOptions} loading={levelLoading} />
         </Field>
         {completed && (
           <Field label={t("fields.completionYear")} required>
-            {/* No min/max clamp — an out-of-range year is flagged as an error on
-                submit (see the Stage 4 validation) rather than snapped to 1900. */}
-            <TextInput name={`${p}Year`} placeholder="2014" numeric maxLength={4} />
+            <YearInput
+              name={`${p}Year`}
+              minYear={minYear}
+              maxYear={maxYear}
+              placeholder="2014"
+            />
           </Field>
         )}
       </div>
@@ -136,8 +145,9 @@ function SchoolBlock({
 export default function StepEducation() {
   const { t, locale } = useI18n();
   const { data, set, setQuiet, isFirstPerson, isMigrant } = useWizard();
-  const occupations = useOccupationTypeOptions();
-  const jobStatuses = useEmploymentStatusOptions();
+  const currentYear = new Date().getFullYear();
+  const { options: occupations, loading: occupationsLoading } = useOccupationTypeOptions();
+  const { options: jobStatuses, loading: jobStatusLoading } = useEmploymentStatusOptions();
 
   // The stored value is the backend status name (e.g. "Self Employed"), so
   // compare on a normalized form (no spaces/hyphens) rather than a literal.
@@ -156,7 +166,7 @@ export default function StepEducation() {
     const id = Number(o.value);
     return ALLOWED_OCCUPATION_SET.has(n) || (Number.isFinite(id) && id >= 22);
   });
-  const { options: eduLevels } = useLookup(getEducationLevels, []);
+  const { options: eduLevels, loading: eduLevelsLoading } = useLookup(getEducationLevels, []);
   // Education levels arrive as English names — localize the visible label only
   // (the option value stays the backend level id).
   const levelOptions = toOptions(eduLevels as LookupItem[], "id").map((o) => ({
@@ -301,6 +311,9 @@ export default function StepEducation() {
                   key={n}
                   n={n}
                   levelOptions={blockLevelOptions}
+                  levelLoading={eduLevelsLoading}
+                  minYear={RULES.EDU_YEAR_MIN}
+                  maxYear={currentYear}
                   onRemove={
                     schoolCount > MIN_SCHOOLS ? () => removeSchool(n) : undefined
                   }
@@ -331,6 +344,7 @@ export default function StepEducation() {
                   name="jobStatus"
                   placeholder={t("fields.phSelectStatus")}
                   options={jobStatuses}
+                  loading={jobStatusLoading}
                   onValueChange={() => {
                     // Changing the employment status invalidates the previous
                     // choice's dependent fields — clear them for a clean slate.
@@ -343,7 +357,7 @@ export default function StepEducation() {
               {/* Occupation dropdown — Employed AND Self-Employed pick from the same narrowed list */}
               {(isEmployed || isSelfEmployed) && (
                 <Field label={t("fields.occupation")} required>
-                  <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupationOptions} />
+                  <Select name="occupation" placeholder={t("fields.phSelectOccupation")} options={occupationOptions} loading={occupationsLoading} />
                 </Field>
               )}
               {/* When "Other" (ID 19) is chosen, require a free-text description */}

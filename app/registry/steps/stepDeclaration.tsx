@@ -3,20 +3,10 @@
 import { useWizard } from "@/components/registry/field";
 import { useI18n } from "@/app/i18n/localeProvider";
 
-import { loadProfile } from "@/lib/auth/profile";
-
 export default function StepDeclaration() {
   const { t } = useI18n();
   const { data, set } = useWizard();
   const agreed = data.agree === true;
-
-  const s = (key: string) => {
-    const v = data[key];
-    return typeof v === "string" && v.trim() ? v.trim() : "";
-  };
-  const prof = typeof window !== "undefined" ? loadProfile() : null;
-  const profileName = prof ? [prof.firstName, prof.middleName, prof.lastName].filter(Boolean).join(" ") : "";
-  const applicantName = [s("applicantFirst"), s("applicantMiddle"), s("applicantLast")].filter(Boolean).join(" ") || profileName || "—";
 
   return (
     <div className="space-y-5">
@@ -25,7 +15,7 @@ export default function StepDeclaration() {
           {t("registry.clauseTitle")}
         </h3>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          {t("registry.clauseText").replace("{name}", applicantName)}
+          {t("registry.clauseText")}
         </p>
       </div>
 

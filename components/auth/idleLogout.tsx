@@ -7,11 +7,12 @@ import { clearSession, loadSession, setSignoutNotice } from "@/lib/auth/session"
 import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { clearRegistration } from "@/app/registry/registrationStore";
+import { isOfficer, clearOfficer } from "@/lib/auth/officerSession";
 
-// Sign the user out after 15 minutes of inactivity (no mouse/keyboard/scroll/
-// touch). There is no warning dialog — when the session lapses the user is
-// signed out and sent to /login immediately.
-const IDLE_LIMIT_MS = 15 * 60 * 1000;
+// Sign the user out after inactivity (no mouse/keyboard/scroll/touch). Officers
+// use a shorter limit because they often work on shared workstations.
+const CITIZEN_IDLE_LIMIT_MS = 15 * 60 * 1000;
+const OFFICER_IDLE_LIMIT_MS = 5 * 60 * 1000;
 const ACTIVITY_KEY = "icrcs-last-activity";
 const ACTIVITY_EVENTS = [
   "mousedown",
@@ -24,6 +25,10 @@ const ACTIVITY_EVENTS = [
 
 // Public routes that don't need idle tracking
 const PUBLIC_ROUTES = ["/login", "/create-profile", "/forgot"];
+
+function idleLimitMs(): number {
+  return isOfficer() ? OFFICER_IDLE_LIMIT_MS : CITIZEN_IDLE_LIMIT_MS;
+}
 
 export default function IdleLogout() {
   const router = useRouter();
@@ -39,6 +44,22 @@ export default function IdleLogout() {
   const performSignOut = useCallback(async () => {
     if (signedOutRef.current) return;
     signedOutRef.current = true;
+
+    if (isOfficer()) {
+      try {
+        await fetch("/api/officer/logout", { method: "POST", credentials: "include" });
+      } catch {
+        // ignore — clear the local officer session regardless
+      }
+      clearOfficer();
+      clearRegistration();
+      clearPeople();
+      window.localStorage.removeItem(ACTIVITY_KEY);
+      setSignoutNotice("idle");
+      router.push("/login");
+      return;
+    }
+
     const session = loadSession();
     if (!session) return;
     if (session.refreshToken) {
@@ -75,10 +96,10 @@ export default function IdleLogout() {
     // Schedule the auto-logout for whatever idle time remains since last activity.
     function arm() {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      if (!loadSession()) return; // only guard a live session
+      if (!loadSession() && !isOfficer()) return;
 
       const elapsed = Date.now() - readLastActivity();
-      const remaining = IDLE_LIMIT_MS - elapsed;
+      const remaining = idleLimitMs() - elapsed;
 
       if (remaining <= 0) {
         void performSignOut();

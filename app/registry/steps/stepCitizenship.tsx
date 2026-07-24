@@ -25,7 +25,7 @@ const ADDR_SUFFIXES = [
 export default function StepAddress() {
   const { t } = useI18n();
   const { data, set, isMigrant } = useWizard();
-  const campNames = useCampNameOptions();
+  const { options: campNames, loading: campLoading } = useCampNameOptions();
   const sameAsPerm = data.sameAsPerm === true;
 
   // Address fields: the Tanzania cascade + house/postal fields only render when
@@ -151,6 +151,7 @@ export default function StepAddress() {
                 name="campName"
                 placeholder={t("fields.phSelectCamp")}
                 options={campNames}
+                loading={campLoading}
               />
             </Field>
             <Field label={t("fields.properties")} optional>

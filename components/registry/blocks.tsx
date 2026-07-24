@@ -28,6 +28,8 @@ type Opt = { value: string; label: string };
 /** An occupation option plus its untranslated backend name (`en`), so callers
  * can match on English regardless of the active locale. */
 export type OccupationOpt = Opt & { en: string };
+export type LookupSelectState = { options: Opt[]; loading: boolean };
+export type OccupationSelectState = { options: OccupationOpt[]; loading: boolean };
 type Translate = (path: string) => string;
 
 /** Option builders take the translator so dropdown labels follow the locale.
@@ -105,11 +107,12 @@ function useLocalizedOptions(
   fetcher: () => Promise<LookupItem[]>,
   staticBuilder: (t: Translate) => Opt[],
   valueKey: "id" | "code",
-): Opt[] {
+): LookupSelectState {
   const { t } = useI18n();
-  const { options: items } = useLookup(fetcher, []);
+  const { options: items, loading } = useLookup(fetcher, []);
   const staticOpts = staticBuilder(t);
-  if (!items.length) return staticOpts;
+  if (loading) return { options: staticOpts, loading: true };
+  if (!items.length) return { options: staticOpts, loading: false };
   // Match the static (translatable) label to the backend value ignoring case,
   // spaces and punctuation — so a code like "Self Employed" still resolves to
   // the "Self-employed" option's localized label instead of falling back to the
@@ -117,18 +120,22 @@ function useLocalizedOptions(
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const labelFor = (value: string) =>
     staticOpts.find((o) => norm(o.value) === norm(value))?.label;
-  return items.map((i) => {
-    const value = valueKey === "id" ? String(i.id) : i.code ?? String(i.id);
-    return { value, label: labelFor(value) ?? i.name };
-  });
+  return {
+    loading: false,
+    options: items.map((i) => {
+      const value = valueKey === "id" ? String(i.id) : i.code ?? String(i.id);
+      return { value, label: labelFor(value) ?? i.name };
+    }),
+  };
 }
 
 // Gender renders the exact label returned by the lookup API (e.g. "Ke (Female)",
 // "Me (Male)"); the option value stays the M/F/O code the backend payload uses.
-export const useGenderOptions = (): Opt[] => {
+export const useGenderOptions = (): LookupSelectState => {
   const { t, locale } = useI18n();
-  const { options: items } = useLookup(getGenders, []);
-  if (!items.length) return genderOptions(t);
+  const { options: items, loading } = useLookup(getGenders, []);
+  if (loading) return { options: genderOptions(t), loading: true };
+  if (!items.length) return { options: genderOptions(t), loading: false };
   // Prefer the M/F/O code — the lookup name can be bilingual ("Ke (Female)").
   // Fall back to a name lookup for any gender outside those three codes.
   const byCode: Record<string, string> = {
@@ -136,61 +143,81 @@ export const useGenderOptions = (): Opt[] => {
     F: t("opt.female"),
     O: t("opt.other"),
   };
-  return items.map((i) => {
-    const value = i.code ?? String(i.id);
-    return {
-      value,
-      label: byCode[value.toUpperCase()] ?? localizeLookup(i.name, "gender", locale),
-    };
-  });
+  return {
+    loading: false,
+    options: items.map((i) => {
+      const value = i.code ?? String(i.id);
+      return {
+        value,
+        label: byCode[value.toUpperCase()] ?? localizeLookup(i.name, "gender", locale),
+      };
+    }),
+  };
 };
 // Marital status renders the exact label returned by the lookup API (e.g.
 // "Sijaoa / Sijaolewa (Single)"); the option value stays the enum code the
 // backend payload resolves to an id.
-export const useMarriageOptions = (): Opt[] => {
+export const useMarriageOptions = (): LookupSelectState => {
   const { t, locale } = useI18n();
-  const { options: items } = useLookup(getMaritalStatuses, []);
-  if (!items.length) return marriageOptions(t);
-  return items.map((i) => ({
-    value: i.code ?? String(i.id),
-    label: localizeLookup(i.name, "marital", locale),
-  }));
+  const { options: items, loading } = useLookup(getMaritalStatuses, []);
+  if (loading) return { options: marriageOptions(t), loading: true };
+  if (!items.length) return { options: marriageOptions(t), loading: false };
+  return {
+    loading: false,
+    options: items.map((i) => ({
+      value: i.code ?? String(i.id),
+      label: localizeLookup(i.name, "marital", locale),
+    })),
+  };
 };
 // Citizenship types and relationships come back as English names — localize by
 // name (the option VALUE stays the backend id, so submissions are unaffected).
-export const useCitizenshipTypeOptions = (): Opt[] => {
+export const useCitizenshipTypeOptions = (): LookupSelectState => {
   const { t, locale } = useI18n();
-  const { options: items } = useLookup(getCitizenshipTypes, []);
-  if (!items.length) return citizenshipTypeIdOptions(t);
-  return items.map((i) => ({
-    value: String(i.id),
-    label: localizeLookup(i.name, "citizenship", locale),
-  }));
+  const { options: items, loading } = useLookup(getCitizenshipTypes, []);
+  if (loading) return { options: citizenshipTypeIdOptions(t), loading: true };
+  if (!items.length) return { options: citizenshipTypeIdOptions(t), loading: false };
+  return {
+    loading: false,
+    options: items.map((i) => ({
+      value: String(i.id),
+      label: localizeLookup(i.name, "citizenship", locale),
+    })),
+  };
 };
-export const useRelationshipTypeOptions = (): Opt[] => {
+export const useRelationshipTypeOptions = (): LookupSelectState => {
   const { t, locale } = useI18n();
-  const { options: items } = useLookup(getRelationships, []);
-  if (!items.length) return relationshipTypeOptions(t);
-  return items.map((i) => ({
-    value: String(i.id),
-    label: localizeLookup(i.name, "relationship", locale),
-  }));
+  const { options: items, loading } = useLookup(getRelationships, []);
+  if (loading) return { options: relationshipTypeOptions(t), loading: true };
+  if (!items.length) return { options: relationshipTypeOptions(t), loading: false };
+  return {
+    loading: false,
+    options: items.map((i) => ({
+      value: String(i.id),
+      label: localizeLookup(i.name, "relationship", locale),
+    })),
+  };
 };
 // Occupations come from the backend as English names (no stable id→label map),
 // so we localize by name: the option value stays the backend occupation id and
 // the label is the Swahili term when the locale is `sw` (English name otherwise).
-export const useOccupationTypeOptions = (): OccupationOpt[] => {
+export const useOccupationTypeOptions = (): OccupationSelectState => {
   const { t, locale } = useI18n();
-  const { options: items } = useLookup(getOccupations, []);
+  const { options: items, loading } = useLookup(getOccupations, []);
+  const staticOpts = occupationTypeOptions(t).map((o) => ({ ...o, en: o.label }));
+  if (loading) return { options: staticOpts, loading: true };
   // `en` carries the untranslated backend name so callers can filter/match on it
   // (e.g. the narrowed occupation set in Stage 4) without depending on the
   // locale-dependent label.
-  if (!items.length) return occupationTypeOptions(t).map((o) => ({ ...o, en: o.label }));
-  return items.map((i) => ({
-    value: String(i.id),
-    label: localizeLookup(i.name, "occupation", locale),
-    en: i.name,
-  }));
+  if (!items.length) return { options: staticOpts, loading: false };
+  return {
+    loading: false,
+    options: items.map((i) => ({
+      value: String(i.id),
+      label: localizeLookup(i.name, "occupation", locale),
+      en: i.name,
+    })),
+  };
 };
 // Employment status: value is the status name (used to gate occupation/employer
 // and resolved to the lookup id in the Stage 4 payload).
@@ -200,24 +227,32 @@ export const useEmploymentStatusOptions = () =>
 // Foreign-national travel-document types (migrant travel history). The option
 // VALUE is the display name — sent straight through as the free-text
 // `documentType` in the travel-history payload.
-export const useTravelDocumentTypeOptions = (): Opt[] => {
+export const useTravelDocumentTypeOptions = (): LookupSelectState => {
   const { locale } = useI18n();
-  const { options: items } = useLookup(getForeignNationalTravelDocuments, []);
+  const { options: items, loading } = useLookup(getForeignNationalTravelDocuments, []);
+  if (loading) return { options: [], loading: true };
   // The VALUE stays the English name (it's submitted verbatim); only the visible
   // label is localized.
-  return items.map((i) => ({
-    value: i.name,
-    label: localizeLookup(i.name, "travelDoc", locale),
-  }));
+  return {
+    loading: false,
+    options: items.map((i) => ({
+      value: i.name,
+      label: localizeLookup(i.name, "travelDoc", locale),
+    })),
+  };
 };
 
 // Refugee / settlement camps from /v1/lookup/camp-names (migrant address block).
 // The option VALUE is the camp NAME — it is sent verbatim as the free-text
 // `campName` in the Stage 2 address payload, so the backend contract is
 // unchanged by moving from a text input to a dropdown.
-export const useCampNameOptions = (): Opt[] => {
-  const { options: items } = useLookup(getCampNames, []);
-  return items.map((i) => ({ value: i.name, label: i.name }));
+export const useCampNameOptions = (): LookupSelectState => {
+  const { options: items, loading } = useLookup(getCampNames, []);
+  if (loading) return { options: [], loading: true };
+  return {
+    loading: false,
+    options: items.map((i) => ({ value: i.name, label: i.name })),
+  };
 };
 
 // Sentinel select value for the "Others" border row — when picked, the border
@@ -250,11 +285,17 @@ export function PointOfEntryField() {
   const { t } = useI18n();
   const { data, set } = useWizard();
   const [borders, setBorders] = useState<BorderItem[]>([]);
+  const [bordersLoading, setBordersLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    getBorders().then((b) => {
-      if (alive) setBorders(b);
-    });
+    setBordersLoading(true);
+    getBorders()
+      .then((b) => {
+        if (alive) setBorders(b);
+      })
+      .finally(() => {
+        if (alive) setBordersLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -299,6 +340,7 @@ export function PointOfEntryField() {
         name="pointOfEntrySel"
         placeholder={t("fields.phSelectBorder")}
         options={options}
+        loading={bordersLoading}
         onValueChange={(v) => {
           // A specific border → store its name as pointOfEntry; "Others" or the
           // empty placeholder → clear it so the manual field (or nothing) drives
@@ -366,10 +408,12 @@ export function MigrantStageGate({
  * / mother), fetched from /lookup/person-document-types. The option VALUE is the
  * backend documentTypeId — so picking e.g. NIDA stores its exact id, which is
  * sent straight through in documents[].documentTypeId. */
-export function usePersonDocumentTypeOptions(group: PersonGroup | string): Opt[] {
+export function usePersonDocumentTypeOptions(group: PersonGroup | string): LookupSelectState {
   const [options, setOptions] = useState<Opt[]>([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
+    setLoading(true);
     getPersonDocumentTypes()
       .then((d) => {
         if (!active) return;
@@ -379,12 +423,15 @@ export function usePersonDocumentTypeOptions(group: PersonGroup | string): Opt[]
         const items = d[group as PersonGroup] ?? d.father ?? [];
         setOptions(items.map((i) => ({ value: String(i.id), label: i.name })));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
   }, [group]);
-  return options;
+  return { options, loading };
 }
 
 /** Three-column First / Middle / Last name row, bound by prefix. */

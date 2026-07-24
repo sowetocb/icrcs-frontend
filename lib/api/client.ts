@@ -32,6 +32,52 @@ export class ApiError extends Error {
   }
 }
 
+const GENERIC_BACKEND_MESSAGES = new Set([
+  "An unexpected error occurred",
+  "Internal Server Error",
+  "Internal server error",
+]);
+
+/** Pull user-facing messages out of whatever JSON shape the backend returned. */
+function collectMessagesFromBody(body: unknown, depth = 0, out: string[] = []): string[] {
+  if (!body || typeof body !== "object" || depth > 3) return out;
+  const d = body as Record<string, unknown>;
+  for (const key of ["message", "error", "detail", "title", "description"]) {
+    const v = d[key];
+    if (typeof v === "string" && v.trim()) out.push(v.trim());
+  }
+  if (Array.isArray(d.errors)) {
+    for (const item of d.errors) {
+      if (typeof item === "string" && item.trim()) out.push(item.trim());
+      else if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        for (const key of ["message", "defaultMessage", "error"]) {
+          const v = o[key];
+          if (typeof v === "string" && v.trim()) out.push(v.trim());
+        }
+      }
+    }
+  }
+  if (d.data) collectMessagesFromBody(d.data, depth + 1, out);
+  return out;
+}
+
+function readMessageFromBody(body: unknown): string | undefined {
+  const messages = collectMessagesFromBody(body);
+  const specific = messages.find((m) => !GENERIC_BACKEND_MESSAGES.has(m));
+  return specific ?? messages[0];
+}
+
+function extractBackendMessage(data: unknown, status: number): string {
+  const message = readMessageFromBody(data);
+  if (message) return message;
+  return `Request failed (${status})`;
+}
+
+function apiErrorMessage(data: unknown, status: number): string {
+  return extractBackendMessage(data, status);
+}
+
 export async function apiPost<T = unknown>(
   path: string,
   body: unknown,
@@ -55,11 +101,7 @@ export async function apiPost<T = unknown>(
   }
 
   if (!res.ok) {
-    const message =
-      (data as { message?: string; error?: string } | null)?.message ??
-      (data as { error?: string } | null)?.error ??
-      `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
   }
 
   return data as T;
@@ -88,11 +130,7 @@ export async function apiPut<T = unknown>(
   }
 
   if (!res.ok) {
-    const message =
-      (data as { message?: string; error?: string } | null)?.message ??
-      (data as { error?: string } | null)?.error ??
-      `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
   }
 
   return data as T;
@@ -119,11 +157,7 @@ export async function apiDelete<T = unknown>(
   }
 
   if (!res.ok) {
-    const message =
-      (data as { message?: string; error?: string } | null)?.message ??
-      (data as { error?: string } | null)?.error ??
-      `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
   }
 
   return data as T;
@@ -154,11 +188,7 @@ export async function apiUpload<T = unknown>(
   }
 
   if (!res.ok) {
-    const message =
-      (data as { message?: string; error?: string } | null)?.message ??
-      (data as { error?: string } | null)?.error ??
-      `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
   }
 
   return data as T;
@@ -181,11 +211,7 @@ export async function apiGet<T = unknown>(path: string, token?: string): Promise
   }
 
   if (!res.ok) {
-    const message =
-      (data as { message?: string; error?: string } | null)?.message ??
-      (data as { error?: string } | null)?.error ??
-      `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
   }
 
   return data as T;
@@ -214,8 +240,16 @@ export function getErrorMessage(err: unknown, fallback: string, locale?: string)
   const localize = (m: string) => localizeBackendMessage(m, locale ?? activeLocale());
   if (err instanceof ApiError) {
     const gateway = err.status === 502 || err.status === 503 || err.status === 504;
-    if (gateway || !err.message || TECHNICAL_ERROR.test(err.message)) return fallback;
-    return localize(err.message);
+    if (gateway) return fallback;
+
+    let message = err.message;
+    if (!message || TECHNICAL_ERROR.test(message) || GENERIC_BACKEND_MESSAGES.has(message)) {
+      const alt = readMessageFromBody(err.data);
+      if (alt && !TECHNICAL_ERROR.test(alt)) message = alt;
+    }
+    if (!message || TECHNICAL_ERROR.test(message)) return fallback;
+    if (GENERIC_BACKEND_MESSAGES.has(message)) return fallback;
+    return localize(message);
   }
   if (err instanceof Error && err.message && !TECHNICAL_ERROR.test(err.message)) {
     return localize(err.message);

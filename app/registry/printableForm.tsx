@@ -74,10 +74,10 @@ export default function PrintableForm({
   // Locale-aware lookup option lists, built once per render.
   // Relationship/occupation come from the lookup (the backend ids don't match
   // the static 1–8 lists).
-  const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
-  const OCCUPATION_TYPE_OPTIONS = useOccupationTypeOptions();
+  const { options: RELATIONSHIP_TYPE_OPTIONS } = useRelationshipTypeOptions();
+  const { options: OCCUPATION_TYPE_OPTIONS } = useOccupationTypeOptions();
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
-  const APPLICANT_DOC_OPTIONS = usePersonDocumentTypeOptions("applicant");
+  const { options: APPLICANT_DOC_OPTIONS } = usePersonDocumentTypeOptions("applicant");
 
   const s = (key: string) => {
     const v = data[key];
@@ -600,7 +600,7 @@ function ParentPrintBlock({
   data: Data;
 }) {
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
-  const PERSON_DOC_OPTIONS = usePersonDocumentTypeOptions(prefix as "applicant" | "father" | "mother");
+  const { options: PERSON_DOC_OPTIONS } = usePersonDocumentTypeOptions(prefix as "applicant" | "father" | "mother");
   const name = [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)]
     .filter(Boolean)
     .join(" ") || "—";
@@ -691,8 +691,8 @@ function EmergencyPrintBlock({
   s: (key: string) => string;
   val: (key: string) => string;
 }) {
-  const RELATIONSHIP_TYPE_OPTIONS = useRelationshipTypeOptions();
-  const OCCUPATION_TYPE_OPTIONS = useOccupationTypeOptions();
+  const { options: RELATIONSHIP_TYPE_OPTIONS } = useRelationshipTypeOptions();
+  const { options: OCCUPATION_TYPE_OPTIONS } = useOccupationTypeOptions();
   const DOCUMENT_TYPE_OPTIONS = documentTypeOptions(t);
   const name = [s(`${prefix}First`), s(`${prefix}Middle`), s(`${prefix}Last`)]
     .filter(Boolean)

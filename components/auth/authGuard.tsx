@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { loadSession, subscribeSession, setSignoutNotice } from "@/lib/auth/session";
 import { isOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
 import { verifySession } from "@/lib/auth/verifySession";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 // Remembers, for the lifetime of the tab, that we've already confirmed a live
 // session. Because /dashboard, /registry, /registry/people, … are separate
@@ -62,6 +63,31 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, router]);
 
+  // When the tab becomes visible again, re-check with the server. Cookies can
+  // expire or be revoked while the tab was backgrounded; sessionVerified would
+  // otherwise skip verification for the rest of the tab's lifetime.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      const loggedIn = !!loadSession() || isOfficer();
+      if (!loggedIn) return;
+
+      verifySession().then((ok) => {
+        if (ok) {
+          sessionVerified = true;
+          setAuthorized(true);
+          return;
+        }
+        sessionVerified = false;
+        setAuthorized(false);
+        setSignoutNotice("expired");
+        router.replace("/login");
+      });
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [router]);
+
   // React to a sign-out (or idle/expiry) that happened in ANOTHER tab: the
   // shared localStorage flag is cleared there, this fires here, and we drop the
   // user to /login so no tab keeps showing protected content after logout.
@@ -85,12 +111,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (!authorized) {
-    // Show a loading shimmer while we check auth / redirect
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-navy-700" />
-          <p className="text-sm text-muted">Verifying session…</p>
+      <div className="min-h-screen bg-surface px-4 py-12">
+        <div className="mx-auto max-w-3xl">
+          <PageSkeleton />
         </div>
       </div>
     );

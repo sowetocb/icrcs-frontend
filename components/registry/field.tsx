@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { fieldLabel } from "@/lib/registry/fieldLabels";
-import DatePickerCalendar from "./datePickerCalendar";
+import DatePickerCalendar, { YearGrid } from "./datePickerCalendar";
+import { SkeletonBar } from "@/components/ui/skeleton";
 import { displayToIso, isoToDisplay, todayIso } from "@/lib/dateFormat";
 import { Calendar, ChevronDown } from "lucide-react";
 
@@ -351,23 +352,125 @@ export function DateInput({
   );
 }
 
+/** Year-only picker for education completion year — opens a multi-column year
+ * grid (same UX as the date picker's year selector) instead of free typing. */
+export function YearInput({
+  name,
+  minYear,
+  maxYear,
+  placeholder = "2014",
+}: {
+  name: string;
+  minYear: number;
+  maxYear: number;
+  placeholder?: string;
+}) {
+  const { t } = useI18n();
+  const { data, set, blur, errors, locked } = useWizard();
+  const invalid = errors.includes(name);
+  const isLocked = locked.includes(name);
+  const value = (data[name] as string) ?? "";
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const years = useMemo(() => {
+    const list: number[] = [];
+    for (let y = maxYear; y >= minYear; y--) list.push(y);
+    return list;
+  }, [minYear, maxYear]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  function pickYear(y: number) {
+    set(name, String(y));
+    setOpen(false);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          data-field={name}
+          inputMode="numeric"
+          readOnly
+          placeholder={placeholder}
+          value={value}
+          onClick={() => !isLocked && setOpen((o) => !o)}
+          onBlur={() => blur(name, value)}
+          disabled={isLocked}
+          className={`${inputCls(invalid)} cursor-pointer pr-10 ${value ? "text-ink" : "text-muted/60"} ${isLocked ? lockedCls : ""}`}
+        />
+        <button
+          type="button"
+          onClick={() => !isLocked && setOpen((o) => !o)}
+          disabled={isLocked}
+          aria-label={t("fields.openCalendar")}
+          aria-expanded={open}
+          className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted transition hover:bg-surface hover:text-navy-700 ${
+            isLocked ? "cursor-not-allowed opacity-50" : ""
+          }`}
+        >
+          <Calendar size={18} aria-hidden="true" />
+        </button>
+      </div>
+      {open && !isLocked && (
+        <div
+          className="absolute left-0 top-full z-40 mt-1 w-[min(100%,14rem)] rounded-lg border border-line bg-card p-3 shadow-lg"
+          role="dialog"
+          aria-label={t("fields.completionYear")}
+        >
+          <YearGrid
+            years={years}
+            selected={Number(value) || maxYear}
+            onPick={pickYear}
+            onClose={() => setOpen(false)}
+            inline
+          />
+        </div>
+      )}
+      <FieldError name={name} />
+    </div>
+  );
+}
+
 export function Select({
   name,
   placeholder,
   options,
   disabled = false,
+  loading = false,
   onValueChange,
 }: {
   name: string;
   placeholder: string;
   options: { value: string; label: string }[];
   disabled?: boolean;
+  /** While lookup options are fetching, show a skeleton instead of an empty select. */
+  loading?: boolean;
   onValueChange?: (value: string) => void;
 }) {
   const { data, set, errors, locked } = useWizard();
   const invalid = errors.includes(name);
   const isLocked = locked.includes(name) || disabled;
   const value = (data[name] as string) ?? "";
+  if (loading) {
+    return (
+      <>
+        <SkeletonBar className="h-11 w-full" />
+        <FieldError name={name} />
+      </>
+    );
+  }
   return (
     <>
       <div className="relative">

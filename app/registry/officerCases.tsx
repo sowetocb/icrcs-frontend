@@ -7,6 +7,7 @@ import { getOfficerCases, type OfficerCase } from "@/lib/api/officer";
 import { toMigrantRegistrationType } from "@/lib/registry/registrationCategory";
 import type { RegistrationType } from "@/lib/api/registration";
 import Pagination from "@/components/ui/pagination";
+import { ListSkeleton, PageSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import {
   Plus,
   ArrowRight as ArrowRightIcon,
@@ -138,10 +139,9 @@ export default function OfficerCases({
   // If auto-resume will fire (exactly 1 active case), show a loading state
   if (!loading && !error && activeCases.length === 1) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-        <div className="flex flex-col items-center gap-4">
-          <LoaderCircle className="h-8 w-8 animate-spin text-navy-500" />
-          <p className="text-sm text-muted">{t("officer.resuming")}</p>
+      <main className="flex flex-1 flex-col px-4 py-12 lg:px-8">
+        <div className="mx-auto w-full max-w-3xl">
+          <PageSkeleton />
         </div>
       </main>
     );
@@ -203,12 +203,7 @@ export default function OfficerCases({
         )}
 
         {/* Loading */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <LoaderCircle className="h-8 w-8 animate-spin text-navy-500" />
-            <p className="mt-4 text-sm text-muted">{t("officer.casesLoading")}</p>
-          </div>
-        )}
+        {loading && <ListSkeleton rows={4} />}
 
         {/* Error */}
         {!loading && error && (

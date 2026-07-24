@@ -367,9 +367,9 @@ const ID_DOC_SUFFIXES = ["Type", "Number"];
 export default function StepPersonal() {
   const { data, set, setQuiet, isFirstPerson, isMigrant, isOfficerMode, foreignMinor } = useWizard();
   const { t } = useI18n();
-  const genders = useGenderOptions();
-  const maritalStatuses = useMarriageOptions();
-  const travelDocTypes = useTravelDocumentTypeOptions();
+  const { options: genders, loading: gendersLoading } = useGenderOptions();
+  const { options: maritalStatuses, loading: maritalLoading } = useMarriageOptions();
+  const { options: travelDocTypes, loading: travelDocLoading } = useTravelDocumentTypeOptions();
   const currentYear = new Date().getFullYear();
 
   // "Do you have a travel document?" defaults to No — most migrants have none,
@@ -383,7 +383,7 @@ export default function StepPersonal() {
   // Identification documents repeater (one or more): idDoc1Type/Number, …
   // Options come from the lookup; the option value is the backend documentTypeId.
   const idDocCount = Math.max(1, Number(data.idDocCount) || 1);
-  const idDocTypeOptions = usePersonDocumentTypeOptions("applicant");
+  const { options: idDocTypeOptions, loading: idDocLoading } = usePersonDocumentTypeOptions("applicant");
 
   // Nationality is bound (and locked) from the profile captured at registration.
   // For the account holder's OWN registration it is their profile nationality
@@ -499,6 +499,7 @@ export default function StepPersonal() {
             name="gender"
             placeholder={t("fields.phSelectGender")}
             options={genders}
+            loading={gendersLoading}
           />
         </Field>
 
@@ -518,6 +519,7 @@ export default function StepPersonal() {
               name="marriage"
               placeholder={t("fields.phSelectStatus")}
               options={maritalStatuses}
+              loading={maritalLoading}
             />
           </Field>
         )}
@@ -624,6 +626,7 @@ export default function StepPersonal() {
                     name={`idDoc${n}Type`}
                     placeholder={t("fields.phSelect")}
                     options={availableOptions}
+                    loading={idDocLoading}
                     onValueChange={() => set(`idDoc${n}Number`, "")}
                   />
                 </Field>
@@ -735,7 +738,7 @@ export default function StepPersonal() {
                 <Field label={t("fields.travelDocType")} required>
                   {/* Foreign National Travel Document lookup — the selected name
                       is sent as the free-text `documentType`. */}
-                  <Select name="travelDocType" placeholder={t("fields.phTravelDocType")} options={travelDocTypes} />
+                  <Select name="travelDocType" placeholder={t("fields.phTravelDocType")} options={travelDocTypes} loading={travelDocLoading} />
                 </Field>
                 <Field label={t("fields.travelDocNo")} optional>
                   <TextInput name="travelDocNo" placeholder={t("fields.phDocNumber")} allowChars="A-Za-z0-9" maxLength={RULES.TRAVEL_DOC_NO_MAX} />

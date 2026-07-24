@@ -20,7 +20,7 @@ export const nameField = (label: string) =>
       'Only letters, spaces, hyphens and apostrophes are allowed',
     );
 
-// Middle name is optional for the applicant (Stage 1) but REQUIRED for parents.
+// Middle name is optional for every person (applicant, parents, family members).
 export const optionalNameField = (label: string) =>
   z
     .string()

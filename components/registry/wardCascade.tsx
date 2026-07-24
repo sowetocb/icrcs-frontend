@@ -16,6 +16,7 @@ import { COUNTRIES, flagEmoji, type Country } from "@/lib/countries";
 import CountryMenu from "./countryMenu";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { ChevronDown } from "lucide-react";
+import { SkeletonBar } from "@/components/ui/skeleton";
 
 const selectCls =
   "w-full appearance-none rounded-lg border border-input-line bg-card px-3.5 py-2.5 pr-9 text-base outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-500/15 disabled:cursor-not-allowed disabled:bg-line/30 disabled:text-muted";
@@ -37,6 +38,7 @@ function CascadeSelect({
   disabled,
   invalid,
   errorName,
+  loading = false,
   onChange,
 }: {
   value: string;
@@ -46,8 +48,17 @@ function CascadeSelect({
   invalid: boolean;
   /** Wizard field name used to show the inline error message at this field. */
   errorName?: string;
+  loading?: boolean;
   onChange: (item: LookupItem | null) => void;
 }) {
+  if (loading) {
+    return (
+      <div>
+        {label && <SkeletonBar className="mb-1.5 h-4 w-20" />}
+        <SkeletonBar className="h-11 w-full" />
+      </div>
+    );
+  }
   return (
     <div>
       {label && (
@@ -216,13 +227,13 @@ export default function WardCascade({
   const wardIdNum = Number(wardIdVal) || 0;
   const streetIdVal = String(data[`${prefix}StreetId`] ?? "");
 
-  const { options: countries } = useLookup(() => getCountries(), []);
-  const { options: territories } = useLookup(() => getTerritories(), []);
-  const { options: regions } = useLookup(
+  const { options: countries, loading: countriesLoading } = useLookup(() => getCountries(), []);
+  const { options: territories, loading: territoriesLoading } = useLookup(() => getTerritories(), []);
+  const { options: regions, loading: regionsLoading } = useLookup(
     () => (territoryId ? getRegions(territoryId) : Promise.resolve([])),
     [territoryId],
   );
-  const { options: districts } = useLookup(
+  const { options: districts, loading: districtsLoading } = useLookup(
     () => (regionId ? getDistricts(regionId) : Promise.resolve([])),
     [regionId],
   );
@@ -234,22 +245,6 @@ export default function WardCascade({
     () => (showStreet && wardIdNum ? getStreets(wardIdNum) : Promise.resolve([])),
     [showStreet, wardIdNum],
   );
-
-  const wardPlaceholder = !districtId
-    ? t("fields.phSelectDistrictFirst")
-    : wardsLoading
-      ? t("fields.phLoadingWards")
-      : wards.length === 0
-        ? t("fields.phNoWards")
-        : t("fields.phWard");
-
-  const streetPlaceholder = !wardIdNum
-    ? t("fields.phSelectWardFirst")
-    : streetsLoading
-      ? t("fields.phLoadingStreets")
-      : streets.length === 0
-        ? t("fields.phNoStreets")
-        : t("fields.phMtaa");
 
   const clear = (...keys: string[]) => keys.forEach((k) => set(`${prefix}${k}`, ""));
 
@@ -278,6 +273,9 @@ export default function WardCascade({
           <span className="mb-1.5 block text-base font-medium text-ink">
             {t("fields.country")}
           </span>
+          {countriesLoading ? (
+            <SkeletonBar className="h-11 w-full" />
+          ) : (
           <CountryPicker
             countryName={countryName}
             placeholder={t("fields.phCountry")}
@@ -291,6 +289,7 @@ export default function WardCascade({
               clear("TerritoryId", "Territory", "RegionId", "Region", "DistrictId", "District", "WardId", "Ward", "StreetId", "Street");
             }}
           />
+          )}
           <FieldError name={`${prefix}Country`} />
         </div>
       )}
@@ -301,6 +300,7 @@ export default function WardCascade({
           value={String(territoryId || "")}
           label={t("fields.phTerritory")}
           options={territories}
+          loading={territoriesLoading}
           disabled={territoryDisabled}
           invalid={errors.includes(`${prefix}Territory`)}
           errorName={`${prefix}Territory`}
@@ -314,6 +314,7 @@ export default function WardCascade({
           value={String(regionId || "")}
           label={t("fields.phRegion")}
           options={regions}
+          loading={regionsLoading}
           disabled={disabled || !territoryId}
           invalid={errors.includes(`${prefix}Region`)}
           errorName={`${prefix}Region`}
@@ -327,6 +328,7 @@ export default function WardCascade({
         value={String(districtId || "")}
         label={t("fields.phDistrict")}
         options={districts}
+        loading={districtsLoading}
         disabled={disabled || !regionId}
         invalid={errors.includes(`${prefix}District`)}
         errorName={`${prefix}District`}
@@ -341,6 +343,7 @@ export default function WardCascade({
           value={wardIdVal}
           label={t("fields.phWard")}
           options={wards}
+          loading={wardsLoading}
           disabled={disabled || !districtId}
           invalid={errors.includes(`${prefix}Ward`)}
           errorName={`${prefix}Ward`}
@@ -360,6 +363,7 @@ export default function WardCascade({
           value={streetIdVal}
           label={t("fields.phMtaa")}
           options={streets}
+          loading={streetsLoading}
           disabled={disabled || !wardIdNum}
           invalid={errors.includes(`${prefix}Street`)}
           errorName={`${prefix}Street`}

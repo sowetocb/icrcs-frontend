@@ -8,6 +8,7 @@ import AuthGuard from "@/components/auth/authGuard";
 import { useI18n } from "../../i18n/localeProvider";
 import { useToast } from "@/components/ui/toast";
 import Pagination from "@/components/ui/pagination";
+import { CardGridSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Download, User, Search } from "lucide-react";
 import { loadPeople, type Person } from "../peopleStore";
 import { getRegisteredPeople, type RegisteredPerson } from "../../../lib/api/registry";
@@ -353,8 +354,9 @@ export default function PeopleList() {
                   {fetchError}
                 </div>
               ) : loading ? (
-                <div className="mt-8 rounded-2xl border border-line bg-card p-10 text-center text-muted">
-                  Loading registered people…
+                <div className="mt-8 space-y-8">
+                  <CardGridSkeleton count={6} />
+                  <TableSkeleton rows={6} />
                 </div>
               ) : displayPeople.length === 0 ? (
                 <div className="mt-8 rounded-2xl border border-dashed border-line bg-card p-10 text-center">

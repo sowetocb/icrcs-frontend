@@ -6,6 +6,7 @@ import { useI18n } from "../i18n/localeProvider";
 import { getErrorMessage } from "@/lib/api/client";
 import { useLookup } from "@/components/lookup/useLookup";
 import { getGenders, type LookupItem } from "@/lib/api/lookup";
+import { SkeletonBar } from "@/components/ui/skeleton";
 import { COUNTRIES, TANZANIA, flagEmoji } from "@/lib/countries";
 import CountryMenu from "@/components/registry/countryMenu";
 import ProfilePhoneInput from "./profilePhoneInput";
@@ -105,7 +106,7 @@ export default function StepDetails({
   // Gender options come from the lookup API; fall back to the static list when
   // it's unavailable. The value is the M/F/O code used across the app, but the
   // label renders exactly what the API returns (e.g. "Ke (Female)", "Me (Male)").
-  const { options: genderItems } = useLookup(getGenders, []);
+  const { options: genderItems, loading: genderLoading } = useLookup(getGenders, []);
   const genderOptions = (genderItems.length ? genderItems : FALLBACK_GENDERS).map(
     (item) => ({ value: genderCode(item), label: item.name }),
   );
@@ -248,7 +249,6 @@ export default function StepDetails({
               maxLength={RULES.UI_NAME_MAX}
               value={form.middleName}
               onChange={(e) => update("middleName", e.target.value)}
-              onBlur={() => { if (!form.middleName.trim()) setErrors((e) => ({ ...e, middleName: true })); }}
               placeholder="Test"
               aria-invalid={middleNameInvalid}
               aria-describedby={errors.middleName ? "middleName-error" : undefined}
@@ -285,6 +285,9 @@ export default function StepDetails({
             <label htmlFor="gender" className={labelClass}>
               {t("register.gender")}
             </label>
+            {genderLoading ? (
+              <SkeletonBar className="h-11 w-full" />
+            ) : (
             <select
               id="gender"
               value={form.gender}
@@ -303,6 +306,7 @@ export default function StepDetails({
                 </option>
               ))}
             </select>
+            )}
             {errors.gender && (
               <FieldError id="gender-error" message={req(t("register.gender"))} />
             )}

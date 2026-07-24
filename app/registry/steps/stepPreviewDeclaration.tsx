@@ -120,7 +120,7 @@ function PreviewSubTitle({ children }: { children: React.ReactNode }) {
 
 export default function StepPreviewDeclaration() {
   const { t, locale } = useI18n();
-  const { data, set, isMigrant, onGoToStep, onSessionExpired } = useWizard();
+  const { data, set, isMigrant, isFirstPerson, onGoToStep, onSessionExpired } = useWizard();
 
   const s = (key: string) => {
     const v = data[key];
@@ -132,18 +132,18 @@ export default function StepPreviewDeclaration() {
   // Identification-document type names come from the same per-person lookup that
   // populated the Stage 1/3 dropdowns (option value = documentTypeId). Used to
   // show the document NAME in the preview instead of the raw type id.
-  const applicantDocOptions = usePersonDocumentTypeOptions("applicant");
-  const fatherDocOptions = usePersonDocumentTypeOptions("father");
-  const motherDocOptions = usePersonDocumentTypeOptions("mother");
+  const { options: applicantDocOptions, loading: applicantDocLoading } = usePersonDocumentTypeOptions("applicant");
+  const { options: fatherDocOptions, loading: fatherDocLoading } = usePersonDocumentTypeOptions("father");
+  const { options: motherDocOptions, loading: motherDocLoading } = usePersonDocumentTypeOptions("mother");
 
   // Translate id/enum-coded values (fetched by id) to readable labels.
-  const { options: eduLevels } = useLookup(getEducationLevels, []);
+  const { options: eduLevels, loading: eduLevelsLoading } = useLookup(getEducationLevels, []);
   const eduLevelName = (id: string) => {
     if (!id) return "";
     const name = eduLevels.find((o) => String(o.id) === id)?.name ?? id;
     return titleCase(localizeLookup(name, "education", locale));
   };
-  const { options: maritalOptions } = useLookup(getMaritalStatuses, []);
+  const { options: maritalOptions, loading: maritalLoading } = useLookup(getMaritalStatuses, []);
   const MARITAL_LABELS: Record<string, string> = {
     SINGLE: t("opt.single"),
     MARRIED: t("opt.married"),
@@ -161,8 +161,8 @@ export default function StepPreviewDeclaration() {
 
   // Lookup-driven relationship/occupation options (the backend ids don't match
   // the static 1–8 lists, so resolve via the lookup), title-cased.
-  const relationshipOpts = useRelationshipTypeOptions();
-  const occupationOpts = useOccupationTypeOptions();
+  const { options: relationshipOpts, loading: relationshipLoading } = useRelationshipTypeOptions();
+  const { options: occupationOpts, loading: occupationLoading } = useOccupationTypeOptions();
   const optLabel = (opts: { value: string; label: string }[], v: string) =>
     v ? titleCase(opts.find((o) => o.value === v)?.label ?? v) : "";
 
@@ -185,6 +185,19 @@ export default function StepPreviewDeclaration() {
   const applicantName = fullName("applicant") || profileName || "—";
   const gender = s("gender") ? genderLabel(s("gender")) : "—";
   const agreed = data.agree === true;
+
+  const isMinor = (() => {
+    if (!isFirstPerson) return true;
+    const dob = s("dob");
+    if (!dob) return false;
+    const birth = new Date(dob);
+    if (Number.isNaN(birth.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age < 18;
+  })();
 
   // Family data
   const hasChildren = data.hasChildren === true;
@@ -254,11 +267,19 @@ export default function StepPreviewDeclaration() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const lookupsLoading =
+    applicantDocLoading ||
+    fatherDocLoading ||
+    motherDocLoading ||
+    eduLevelsLoading ||
+    maritalLoading ||
+    relationshipLoading ||
+    occupationLoading;
+
   // Hold the whole stage behind the skeleton until the server-compiled preview
-  // has arrived — same lazy-load behaviour as navigating back to a wizard stage.
-  // Rendering the sections early showed a page of "—" placeholders that filled
-  // in field-by-field as the fetch resolved.
-  if (previewState === "loading") return <StageSkeleton />;
+  // has arrived and lookup labels are ready — same lazy-load behaviour as
+  // navigating back to any other wizard stage.
+  if (previewState === "loading" || lookupsLoading) return <StageSkeleton />;
 
   return (
     <div className="space-y-5">
@@ -548,10 +569,14 @@ export default function StepPreviewDeclaration() {
 
       {/* ─── Step 6: Family ─── */}
       <PreviewSection title={t("registry.s6Title")} step={6} onEdit={edit} active={activeStage === 6}>
-        <PreviewRow label={t("preview.hasChildren")} value={hasChildren ? t("registry.yes") : t("registry.no")} />
-        <PreviewRow label={t("preview.currentlyMarried")} value={isMarried ? t("registry.yes") : t("registry.no")} />
+        {!isMinor && (
+          <>
+            <PreviewRow label={t("preview.hasChildren")} value={hasChildren ? t("registry.yes") : t("registry.no")} />
+            <PreviewRow label={t("preview.currentlyMarried")} value={isMarried ? t("registry.yes") : t("registry.no")} />
+          </>
+        )}
 
-        {isMarried &&
+        {!isMinor && isMarried &&
           Array.from({ length: spouseCount }, (_, i) => i + 1)
             .filter((n) => s(`sp${n}First`))
             .map((n) => {
@@ -575,7 +600,7 @@ export default function StepPreviewDeclaration() {
               );
             })}
 
-        {hasChildren &&
+        {!isMinor && hasChildren &&
           Array.from({ length: childCount }, (_, i) => i + 1)
             .filter((n) => s(`ch${n}First`))
             .map((n) => (
@@ -645,7 +670,7 @@ export default function StepPreviewDeclaration() {
           {t("registry.clauseTitle")}
         </h3>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          {t("registry.clauseText").replace("{name}", applicantName)}
+          {t("registry.clauseText")}
         </p>
       </div>
 

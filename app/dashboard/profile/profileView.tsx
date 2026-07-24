@@ -14,6 +14,7 @@ import { getErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/ui/toast";
 import { RULES } from "@/lib/validation/rules";
 import { LoaderCircle, X } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useGenderOptions } from "@/components/registry/blocks";
 import {
   loadProfile,
@@ -155,9 +156,7 @@ function OfficerProfileView({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <LoaderCircle className="h-6 w-6 animate-spin text-navy-500" aria-hidden="true" />
-        </div>
+        <ListSkeleton rows={5} />
       ) : (
         <dl className="divide-y divide-line rounded-xl border border-line">
           {rows
@@ -186,7 +185,7 @@ function CitizenProfileView({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
   const { notify } = useToast();
   // Gender options come from the lookup, rendered with the exact API label.
-  const genders = useGenderOptions();
+  const { options: genders, loading: gendersLoading } = useGenderOptions();
   const fileRef = useRef<HTMLInputElement>(null);
   // Once the user edits a field, don't let a late background refresh clobber it.
   const dirtyRef = useRef(false);

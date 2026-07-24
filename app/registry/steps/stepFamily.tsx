@@ -67,7 +67,7 @@ function PersonFields({
 }) {
   const { t } = useI18n();
   const { data, setQuiet } = useWizard();
-  const genders = useGenderOptions();
+  const { options: genders, loading: gendersLoading } = useGenderOptions();
 
   // Spouse gender is the opposite of the account holder's (Stage 1) and locked.
   // Resolve to an actual option value so it matches whatever the lookup returns.
@@ -112,6 +112,7 @@ function PersonFields({
             name={`${prefix}Gender`}
             placeholder={t("fields.phSelect")}
             options={genders}
+            loading={gendersLoading}
             disabled={!!forcedGender}
           />
         </Field>
@@ -169,8 +170,8 @@ function PersonBlock({
   onRemove?: () => void;
 }) {
   const { t } = useI18n();
-  const relationships = useRelationshipTypeOptions();
-  const occupations = useOccupationTypeOptions();
+  const { options: relationships, loading: relationshipsLoading } = useRelationshipTypeOptions();
+  const { options: occupations, loading: occupationsLoading } = useOccupationTypeOptions();
   // Phone is shown for spouses and relatives (withOccupation=true) but not for children.
   // Phone is required for spouses (not a relative) but optional for relatives.
   const showPhone = withOccupation;
@@ -195,12 +196,12 @@ function PersonBlock({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {withRelationship && (
             <Field label={t("fields.relationship")} required>
-              <Select name={`${prefix}RelType`} placeholder={t("fields.phSelect")} options={relationships} />
+              <Select name={`${prefix}RelType`} placeholder={t("fields.phSelect")} options={relationships} loading={relationshipsLoading} />
             </Field>
           )}
           {withOccupation && (
             <Field label={t("fields.occupation")} optional>
-              <Select name={`${prefix}OccType`} placeholder={t("fields.phSelect")} options={occupations} />
+              <Select name={`${prefix}OccType`} placeholder={t("fields.phSelect")} options={occupations} loading={occupationsLoading} />
             </Field>
           )}
         </div>
@@ -217,13 +218,14 @@ function PersonBlock({
 }
 
 export default function StepFamily() {
-  const { data, set, setQuiet, isMigrant } = useWizard();
+  const { data, set, setQuiet, isMigrant, isFirstPerson } = useWizard();
   const { t } = useI18n();
   const hasChildren = data.hasChildren === true;
 
-  // A minor (subject under 18) cannot have children: "Do you have children?" is
-  // forced to "No" and the "Yes" option is locked (mirrors the married lock).
+  // A minor (under 18, or any dependent registration) is not asked about
+  // children or marriage — those sections are hidden and forced to "No".
   const isMinor = (() => {
+    if (!isFirstPerson) return true;
     const dob = typeof data.dob === "string" ? data.dob : "";
     if (!dob) return false;
     const birth = new Date(dob);
@@ -234,17 +236,12 @@ export default function StepFamily() {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age < 18;
   })();
-  const [minorChildrenConflict, setMinorChildrenConflict] = useState(false);
-  useEffect(() => {
-    if (isMinor && data.hasChildren !== false) setQuiet("hasChildren", false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMinor]);
 
   // "Are you married?" is DERIVED from the Stage 1 marital status and locked:
   // a "Married" or "Widowed" status forces Yes (widowed persons must still
   // provide their late spouse's details), anything else forces No. The user
   // can't change it here — attempting to does nothing and surfaces the notice.
-  const maritalOptions = useMarriageOptions();
+  const { options: maritalOptions } = useMarriageOptions();
   const maritalCode = typeof data.marriage === "string" ? data.marriage : "";
   const isWidowed = maritalCode.toUpperCase() === "WIDOWED";
   const marriedAtStage1 = maritalCode.toUpperCase().includes("MARRIED") || isWidowed;
@@ -252,12 +249,16 @@ export default function StepFamily() {
   const isMarried = marriedAtStage1;
   const [maritalConflict, setMaritalConflict] = useState(false);
 
-  // Keep the stored flag in sync with the locked, derived answer so the payload
-  // and the spouse validation see the right value.
   useEffect(() => {
+    if (isMinor) {
+      if (data.hasChildren !== false) setQuiet("hasChildren", false);
+      if (data.isMarried !== false) setQuiet("isMarried", false);
+      return;
+    }
     if (data.isMarried !== marriedAtStage1) setQuiet("isMarried", marriedAtStage1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marriedAtStage1]);
+  }, [isMinor, marriedAtStage1]);
+
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
   const childCount = Math.max(MIN_CHILDREN, Number(data.childCount) || MIN_CHILDREN);
@@ -291,18 +292,17 @@ export default function StepFamily() {
 
   const content = (
     <div className="space-y-8">
-      {/* Children */}
+      {/* Children — not applicable to minors */}
+      {!isMinor && (
       <div className="space-y-4">
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("fields.haveChildren")}</p>
-          {/* For a minor the "Yes" option is locked; clicking it explains why. */}
-          <div className="flex gap-6" onClick={() => isMinor && setMinorChildrenConflict(true)}>
-            <label className={`flex items-center gap-2 ${isMinor ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
+          <div className="flex gap-6">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 name="hasChildren"
                 checked={hasChildren}
-                disabled={isMinor}
                 onChange={() => set("hasChildren", true)}
                 className="h-4 w-4 border-line accent-navy-700"
               />
@@ -319,15 +319,6 @@ export default function StepFamily() {
               <span className="text-sm font-medium text-ink">{t("registry.radioNo")}</span>
             </label>
           </div>
-          {isMinor && (
-            <p
-              className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium ${
-                minorChildrenConflict ? "bg-warning/10 text-warning" : "bg-navy-50 text-navy-700"
-              }`}
-            >
-              {t("registry.childrenMinorLocked")}
-            </p>
-          )}
         </div>
         {hasChildren && (
           <div className="space-y-5">
@@ -364,10 +355,12 @@ export default function StepFamily() {
           </div>
         )}
       </div>
+      )}
 
-      <hr className="border-line" />
+      {!isMinor && <hr className="border-line" />}
 
-      {/* Marital status — locked, derived from Stage 1. */}
+      {/* Marital status — locked, derived from Stage 1; hidden for minors. */}
+      {!isMinor && (
       <div className="space-y-4">
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-3 text-sm font-medium text-ink">{t("fields.married")}</p>
@@ -450,6 +443,7 @@ export default function StepFamily() {
           </div>
         )}
       </div>
+      )}
 
       <hr className="border-line" />
 

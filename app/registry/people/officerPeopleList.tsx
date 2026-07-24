@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/officer";
 import { getErrorMessage } from "@/lib/api/client";
 import Pagination from "@/components/ui/pagination";
+import { FormSkeleton, ListSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import {
   Search,
   RotateCcw,
@@ -571,11 +572,7 @@ function DetailView({
         )}
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center py-16">
-          <LoaderCircle className="h-8 w-8 animate-spin text-navy-500" />
-        </div>
-      )}
+      {loading && <FormSkeleton rows={4} />}
 
       {!loading && error && (
         <div className="rounded-xl border border-danger/20 bg-danger/5 p-6 text-center">
@@ -918,12 +915,7 @@ export default function OfficerPeopleList() {
               </div>
             )}
 
-            {loading && (
-              <div className="flex flex-col items-center justify-center py-20">
-                <LoaderCircle className="h-8 w-8 animate-spin text-navy-500" />
-                <p className="mt-4 text-sm text-muted">{t("officer.declaredLoading")}</p>
-              </div>
-            )}
+            {loading && <TableSkeleton rows={6} />}
 
             {!loading && error && (
               <div className="flex flex-col items-center justify-center rounded-xl border border-danger/20 bg-danger/5 py-16">
