@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useI18n } from "../i18n/localeProvider";
 import {
   User,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/registry/registrationCategory";
 
 type IconType = typeof User;
+type MinorRelationship = "guardian" | "parent";
 
 // Citizen / Foreign run the existing citizen flow; the remaining five are the
 // backend's migrant registration types and all run the migrant flow.
@@ -43,6 +45,9 @@ const CATEGORIES: {
  * Citizen / Foreign route into the existing citizen flow; Migrant / Refugee /
  * Asylum Seeker route into the migrant track. The parent (registryClient) maps
  * the chosen category to a track + registrationType.
+ *
+ * When registering a DEPENDENT (minor), after the category is chosen the account
+ * holder must state whether they are the Parent or Guardian before Stage 1.
  */
 export default function CategoryGate({
   track,
@@ -63,10 +68,12 @@ export default function CategoryGate({
   /** A government officer is registering an immigrant — only the migrant
    * categories are offered (never Citizen / Foreign National). */
   officerMode?: boolean;
-  onSelect: (category: RegistrationCategory) => void;
+  onSelect: (category: RegistrationCategory, relationship?: MinorRelationship) => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
+  const [pendingCategory, setPendingCategory] = useState<RegistrationCategory | null>(null);
+  const [relationship, setRelationship] = useState<MinorRelationship | "">("");
 
   // Category availability:
   //  • OFFICER — only the migrant categories (registering an immigrant).
@@ -86,6 +93,22 @@ export default function CategoryGate({
     categories = CATEGORIES.filter(({ key }) =>
       isTanzanian ? key === "CITIZEN" : key !== "CITIZEN",
     );
+  }
+
+  function pickCategory(key: RegistrationCategory) {
+    if (isDependent) {
+      setPendingCategory(key);
+      setRelationship("");
+      return;
+    }
+    onSelect(key);
+  }
+
+  function confirmRelationship() {
+    if (!pendingCategory || !relationship) return;
+    onSelect(pendingCategory, relationship);
+    setPendingCategory(null);
+    setRelationship("");
   }
 
   return (
@@ -113,7 +136,7 @@ export default function CategoryGate({
               <button
                 key={key}
                 type="button"
-                onClick={() => onSelect(key)}
+                onClick={() => pickCategory(key)}
                 className="group flex flex-col rounded-xl border border-line bg-card p-5 text-left transition hover:border-gold/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
@@ -139,6 +162,78 @@ export default function CategoryGate({
           {t("category.back")}
         </button>
       </div>
+
+      {/* Parent / Guardian dialog — asked before entering a dependent's Stage 1. */}
+      {pendingCategory && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("gate.relationshipQuestion")}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <button
+            type="button"
+            aria-label={t("gate.back")}
+            onClick={() => {
+              setPendingCategory(null);
+              setRelationship("");
+            }}
+            className="absolute inset-0 cursor-default bg-navy-900/60 backdrop-blur-sm"
+          />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-line bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-lg font-bold text-navy-700">
+              {t("gate.relationshipQuestion")}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              {t("gate.relationshipHint")}
+            </p>
+            <div className="mt-4 space-y-3">
+              {([
+                ["parent", t("gate.relationshipParent")],
+                ["guardian", t("gate.relationshipGuardian")],
+              ] as const).map(([value, label]) => (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm font-medium transition ${
+                    relationship === value
+                      ? "border-navy-700 bg-navy-50 text-navy-700"
+                      : "border-line text-ink hover:border-navy-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="minorRelationship"
+                    checked={relationship === value}
+                    onChange={() => setRelationship(value)}
+                    className="h-4 w-4 shrink-0 accent-navy-700"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingCategory(null);
+                  setRelationship("");
+                }}
+                className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-line hover:text-navy-700"
+              >
+                {t("gate.back")}
+              </button>
+              <button
+                type="button"
+                disabled={!relationship}
+                onClick={confirmRelationship}
+                className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("gate.relationshipContinue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -405,7 +405,8 @@ const en = {
     sameAsPerm: "My current address is the same as my permanent address",
     neverAttendedSchool: "I have never attended school",
     haveAttendedSchool: "Have you attended school?",
-    knowsParentsQuestion: "Do you know parents information of this minor?",
+    knowsParentsQuestion:
+      "Do you have the parents' information for this minor, even if they are deceased?",
     primaryEducationMandatory: "Primary education is mandatory. Please provide at least your primary school details below.",
     radioYes: "Yes",
     radioNo: "No",
@@ -957,7 +958,9 @@ const en = {
     canRegisterMinor: "You can register a minor with a Tanzanian origin.",
     noMinorBtn: "I do not have a minor",
     continueRegistration: "Continue Registration",
-    relationshipQuestion: "What is your relationship to the minor?",
+    relationshipQuestion: "Are you the parent or guardian of this minor?",
+    relationshipHint:
+      "Choose Parent if you are the biological or legal parent. Choose Guardian if you care for the minor but are not their parent — you will then be asked whether you have the minor's parents' details.",
     relationshipGuardian: "Guardian",
     relationshipParent: "Parent",
     relationshipContinue: "Continue",
@@ -1512,7 +1515,8 @@ const sw: typeof en = {
     sameAsPerm: "Anwani yangu ya sasa ni sawa na anwani yangu ya kudumu",
     neverAttendedSchool: "Sijawahi kwenda shule",
     haveAttendedSchool: "Je, umewahi kwenda shule?",
-    knowsParentsQuestion: "Je, unazifahamu taarifa za wazazi wa mtoto huyu?",
+    knowsParentsQuestion:
+      "Je, unazo taarifa za wazazi wa mtoto huyu, hata kama wamefariki?",
     primaryEducationMandatory: "Elimu ya msingi ni lazima. Tafadhali toa angalau taarifa za shule yako ya msingi hapa chini.",
     radioYes: "Ndiyo",
     radioNo: "Hapana",
@@ -2060,7 +2064,9 @@ const sw: typeof en = {
     canRegisterMinor: "Unaweza kusajili mtoto mwenye asili ya Kitanzania.",
     noMinorBtn: "Sina mtoto",
     continueRegistration: "Endelea na Usajili",
-    relationshipQuestion: "Uhusiano wako na mtoto ni upi?",
+    relationshipQuestion: "Je, wewe ni mzazi au mlezi wa mtoto huyu?",
+    relationshipHint:
+      "Chagua Mzazi ikiwa wewe ni mzazi wa kibiolojia au wa kisheria. Chagua Mlezi ikiwa unamlea mtoto lakini si mzazi wake — utaulizwa kama unazo taarifa za wazazi wake.",
     relationshipGuardian: "Mlezi",
     relationshipParent: "Mzazi",
     relationshipContinue: "Endelea",

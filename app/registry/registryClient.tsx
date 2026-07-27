@@ -372,6 +372,7 @@ export default function RegistryClient() {
     clearRegistration();
     setRegisteringMinor(false);
     setForeignMinor(false);
+    setMinorRelationship("");
     setRegistrationType(null);
     // Every fresh registration now starts at the category picker, which routes
     // Citizen/Foreign into the existing flow and Migrant/Refugee/Asylum into the
@@ -382,7 +383,19 @@ export default function RegistryClient() {
   // Map the chosen category to a flow. Citizen → Stage 1 directly; Foreign →
   // the travel-document gate (+ minor registration); the migrant-track
   // categories carry their registrationType into the wizard.
-  function chooseCategory(category: RegistrationCategory) {
+  // When the account holder registers a DEPENDENT, CategoryGate also passes
+  // parent/guardian relationship so Stage 3 can branch correctly.
+  function chooseCategory(
+    category: RegistrationCategory,
+    relationship?: "guardian" | "parent",
+  ) {
+    // Dependent (minor) registration after the holder's own approval — always
+    // mark as registering a minor and carry the Parent/Guardian choice.
+    if (selfDone && !officerMode) {
+      setRegisteringMinor(true);
+      setMinorRelationship(relationship ?? "");
+    }
+
     if (category === "FOREIGN") {
       const nat = (loadProfile()?.nationality ?? "").trim();
       const isTanzanian = nat === "" || nat === "Tanzania";
@@ -393,7 +406,7 @@ export default function RegistryClient() {
         setRegistrationType(null);
         setRegisteringMinor(true);
         setForeignMinor(true);
-        setMinorRelationship("");
+        if (relationship) setMinorRelationship(relationship);
         setMode("wizard");
         return;
       }

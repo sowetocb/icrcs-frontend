@@ -168,25 +168,23 @@ const REQUIRED_FIELDS: string[][] = [
   [],
 ];
 
-// Migrant flow only: stages 4–6 each open with a "do you have this info?" question.
+// Migrant flow only: stages 4 & 6 open with a "do you have this info?" question.
 // Every gate MUST be answered Yes or No before Save. Answering No skips the gated
-// section (or whole stage for 5 & 6); Yes reveals the normal form.
+// section (education) or whole stage (family); Yes reveals the normal form.
+// Stage 5 (Emergency Contacts) is always mandatory — no skip gate.
 const MIGRANT_STEP_GATES: Record<number, string[]> = {
   4: ["mHasEducation"],
-  5: ["mHasEmergency"],
   6: ["mHasFamily"],
 };
 
 // Whole-stage skip when the migrant answers "No" — clears hidden fields before submit.
 const MIGRANT_STAGE_GATE: Record<number, string> = {
-  5: "mHasEmergency",
   6: "mHasFamily",
 };
 
 // Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
 // (now hidden) stage submits empty even if fields were filled before toggling.
 const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
-  5: /^ec\d|ec2Added/,
   6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
 };
 
@@ -545,10 +543,10 @@ export default function RegistryWizard({
         }
         if (cancelled) return;
         const hasData = Object.keys(mapped).length > 0;
-        // The gate on a migrant's stages 4/5/6 must reflect the server on resume:
-        // data present → open on "Yes" (so it's shown); a submitted-but-empty
-        // stage (answered "No") → "No". So even an empty response is applied when
-        // there's a gate to settle. Nothing to do only when neither applies.
+        // The gate on a migrant's skippable stages (family, etc.) must reflect
+        // the server on resume: data present → open on "Yes"; a submitted-but-
+        // empty stage (answered "No") → "No". Even an empty response is applied
+        // when there's a gate to settle. Nothing to do only when neither applies.
         const gate = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
         if (!hasData && !gate) return;
         setData((d) => {
@@ -1324,25 +1322,33 @@ export default function RegistryWizard({
     // When a GUARDIAN says they don't know the parents, only a single guardian's
     // details are collected instead of father + mother.
     if (step === 3) {
-      const guardianOnly = data.minorRelationship === "guardian" && data.knowsParents === "no";
-      const persons = guardianOnly ? ["guardian"] : ["father", "mother"];
-      if (guardianOnly) {
-        required = [
-          "guardianFirst",
-          "guardianLast",
-          "guardianDob",
-          "guardianNatCountry",
-          "guardianResCountry",
-        ];
-      }
-      for (const p of persons) {
-        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
-        if (resCountry === "Tanzania") {
-          required = [...required, ...cascadeRequired(`${p}Res`, true)];
-        } else if (resCountry) {
-          required = [...required, `${p}ResCity`];
-        } else {
-          required = [...required, `${p}ResCountry`];
+      const isGuardian = data.minorRelationship === "guardian";
+      const knowsParents =
+        typeof data.knowsParents === "string" ? data.knowsParents : "";
+      // Guardian must answer the parents-info question before the forms apply.
+      if (isGuardian && knowsParents !== "yes" && knowsParents !== "no") {
+        required = ["knowsParents"];
+      } else {
+        const guardianOnly = isGuardian && knowsParents === "no";
+        const persons = guardianOnly ? ["guardian"] : ["father", "mother"];
+        if (guardianOnly) {
+          required = [
+            "guardianFirst",
+            "guardianLast",
+            "guardianDob",
+            "guardianNatCountry",
+            "guardianResCountry",
+          ];
+        }
+        for (const p of persons) {
+          const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+          if (resCountry === "Tanzania") {
+            required = [...required, ...cascadeRequired(`${p}Res`, true)];
+          } else if (resCountry) {
+            required = [...required, `${p}ResCity`];
+          } else {
+            required = [...required, `${p}ResCountry`];
+          }
         }
       }
     }
@@ -1796,8 +1802,8 @@ export default function RegistryWizard({
       return;
     }
 
-    // Migrant flow: stages 4–6 require an explicit Yes/No on each gate question.
-    // Unanswered → block Save. "No" on a whole-stage gate (5 & 6) skips that stage.
+    // Migrant flow: stages 4 & 6 require an explicit Yes/No on each gate question.
+    // Unanswered → block Save. "No" on a whole-stage gate (family) skips that stage.
     if (isMigrant) {
       for (const field of MIGRANT_STEP_GATES[step] ?? []) {
         if (data[field] !== true && data[field] !== false) {
@@ -1828,7 +1834,13 @@ export default function RegistryWizard({
     const missing = missingFields();
     if (missing.length > 0) {
       setErrors(missing);
-      setFieldErrors({});
+      // Guardian parents-info question is a radio, not a labeled Field — pin a
+      // clear "please answer" message so Save doesn't look like a no-op.
+      setFieldErrors(
+        missing.includes("knowsParents")
+          ? { knowsParents: t("registry.pleaseAnswer") }
+          : {},
+      );
       setFormError("");
       return;
     }

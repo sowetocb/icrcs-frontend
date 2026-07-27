@@ -242,7 +242,7 @@ export const useTravelDocumentTypeOptions = (): LookupSelectState => {
   };
 };
 
-// Refugee / settlement camps from /v1/lookup/camp-names (migrant address block).
+// Refugee / settlement camps from /v1/lookup/camps (migrant address block).
 // The option VALUE is the camp NAME — it is sent verbatim as the free-text
 // `campName` in the Stage 2 address payload, so the backend contract is
 // unchanged by moving from a text input to a dropdown.
@@ -359,9 +359,9 @@ export function PointOfEntryField() {
   );
 }
 
-/** Migrant-flow gate for stages 4–6: a Yes/No question shown before the stage
- * form. The stage's fields (children) render only when the user answers "Yes";
- * "No" leaves them hidden and the wizard skips the stage on Save. `field` is the
+/** Migrant-flow gate for skippable stages (e.g. education / family): a Yes/No
+ * question shown before the form. Fields render only when the user answers
+ * "Yes"; "No" leaves them hidden and the wizard skips on Save. `field` is the
  * boolean gate key (stored in wizard data), validated in the wizard's Save. */
 export function MigrantStageGate({
   field,
