@@ -16,6 +16,12 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 // protected content immediately (no flash).
 let sessionVerified = false;
 
+/** Call after a successful login so AuthGuard does not immediately refresh
+ * (and risk rotating) a brand-new session. */
+export function markSessionVerified() {
+  sessionVerified = true;
+}
+
 /**
  * Client-side route guard. Wraps protected page content and redirects
  * unauthenticated users to /login. Renders nothing (null) while checking

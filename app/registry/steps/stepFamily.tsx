@@ -14,6 +14,8 @@ import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
 import PhoneInput from "@/components/registry/phoneInput";
 import { useI18n } from "@/app/i18n/localeProvider";
+import { useLookup } from "@/components/lookup/useLookup";
+import { getMaritalStatuses } from "@/lib/api/lookup";
 import { RULES } from "@/lib/validation/rules";
 import { X, Plus } from "lucide-react";
 
@@ -21,6 +23,31 @@ import { X, Plus } from "lucide-react";
  * Stage 6 — Family: hasChildren, children[], isMarried, spouses[], relatives[].
  * At least two relatives are required; if married, at least one spouse.
  */
+
+/** True when Stage 1 marital status requires spouse details (married or widowed).
+ * Uses English lookup name/code — localized labels alone are not reliable. */
+function spouseRequiredFromMarriage(
+  marriage: unknown,
+  statuses: { id: number; name: string; code?: string | null }[],
+): { required: boolean; widowed: boolean; label: string } {
+  const raw = typeof marriage === "string" ? marriage.trim() : "";
+  if (!raw) return { required: false, widowed: false, label: "" };
+  const item =
+    statuses.find(
+      (s) =>
+        (s.code ?? "").toUpperCase() === raw.toUpperCase() ||
+        String(s.id) === raw ||
+        s.name.toUpperCase() === raw.toUpperCase(),
+    ) ?? null;
+  const haystack = `${raw} ${item?.code ?? ""} ${item?.name ?? ""}`.toUpperCase();
+  const widowed = /WIDOW|MJANE/.test(haystack);
+  const married = /MARRIED|NIMEOA|NIMEOLEWA|AMEOA|AMEOLEWA/.test(haystack);
+  return {
+    required: married || widowed,
+    widowed,
+    label: item?.name ?? raw,
+  };
+}
 
 const MIN_RELATIVES = RULES.RELATIVES_MIN;
 const MIN_SPOUSES = 1;
@@ -242,10 +269,13 @@ export default function StepFamily() {
   // provide their late spouse's details), anything else forces No. The user
   // can't change it here — attempting to does nothing and surfaces the notice.
   const { options: maritalOptions } = useMarriageOptions();
+  const { options: maritalStatuses } = useLookup(getMaritalStatuses, []);
   const maritalCode = typeof data.marriage === "string" ? data.marriage : "";
-  const isWidowed = maritalCode.toUpperCase() === "WIDOWED";
-  const marriedAtStage1 = maritalCode.toUpperCase().includes("MARRIED") || isWidowed;
-  const maritalLabel = maritalOptions.find((o) => o.value === maritalCode)?.label || maritalCode;
+  const spouseReq = spouseRequiredFromMarriage(maritalCode, maritalStatuses);
+  const isWidowed = spouseReq.widowed;
+  const marriedAtStage1 = spouseReq.required;
+  const maritalLabel =
+    maritalOptions.find((o) => o.value === maritalCode)?.label || spouseReq.label || maritalCode;
   const isMarried = marriedAtStage1;
   const [maritalConflict, setMaritalConflict] = useState(false);
 
@@ -258,6 +288,14 @@ export default function StepFamily() {
     if (data.isMarried !== marriedAtStage1) setQuiet("isMarried", marriedAtStage1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMinor, marriedAtStage1]);
+
+  // Migrant gate "Do you have family information…?" — when Stage 1 is
+  // married/widowed this MUST be Yes so spouse fields are reachable. Locked.
+  useEffect(() => {
+    if (!isMigrant || isMinor || !marriedAtStage1) return;
+    if (data.mHasFamily !== true) setQuiet("mHasFamily", true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMigrant, isMinor, marriedAtStage1]);
 
   const relativeCount = Math.max(MIN_RELATIVES, Number(data.relativeCount) || MIN_RELATIVES);
   const spouseCount = Math.max(MIN_SPOUSES, Number(data.spouseCount) || MIN_SPOUSES);
@@ -484,9 +522,22 @@ export default function StepFamily() {
     </div>
   );
   // Migrant flow: gate the whole stage behind a "do you have this?" question.
+  // Married/widowed migrants cannot skip — spouse details are mandatory.
   if (isMigrant) {
     return (
-      <MigrantStageGate field="mHasFamily" question={t("registry.gateFamily")}>
+      <MigrantStageGate
+        field="mHasFamily"
+        question={t("registry.gateFamily")}
+        forcedYes={marriedAtStage1 && !isMinor}
+        forcedNotice={
+          marriedAtStage1 && !isMinor
+            ? (isWidowed
+                ? t("registry.familyGateWidowedLocked")
+                : t("registry.familyGateMarriedLocked")
+              ).replace("{status}", maritalLabel)
+            : undefined
+        }
+      >
         {content}
       </MigrantStageGate>
     );

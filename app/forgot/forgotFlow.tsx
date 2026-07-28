@@ -229,11 +229,11 @@ export default function ForgotFlow() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h2 className="font-display text-2xl font-bold text-navy-700">
+      <div className="mb-3">
+        <h2 className="font-display text-3xl font-bold leading-tight text-navy-700">
           {t("forgot.title")}
         </h2>
-        {step < 4 && <p className="mt-1 text-sm text-muted">{t("forgot.subtitle")}</p>}
+        {step < 4 && <p className="mt-0.5 text-sm text-muted">{t("forgot.subtitle")}</p>}
       </div>
 
       {error && (

@@ -5,7 +5,11 @@
 
 import { cookies } from "next/headers";
 
-const USER_MGT = process.env.USER_MGT_API_BASE_URL ?? "";
+const BACKEND =
+  process.env.BACKEND_API_BASE_URL ||
+  process.env.AUTH_API_BASE_URL ||
+  process.env.USER_MGT_API_BASE_URL ||
+  "";
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 
 export async function POST(request: Request) {
@@ -15,13 +19,16 @@ export async function POST(request: Request) {
 
   if (!BYPASS && refreshToken) {
     try {
-      await fetch(`${USER_MGT}/v1/auth/logout`, {
+      await fetch(`${BACKEND}/v1/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify({
+          refreshToken,
+          refresh_token: refreshToken,
+        }),
       });
     } catch {
       // ignore — local cookies are cleared regardless

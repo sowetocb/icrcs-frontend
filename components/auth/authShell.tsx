@@ -243,20 +243,20 @@ export default function AuthShell({
   const renderStatusCheck = (dark: boolean) => (
     <div className="w-full">
       <div
-        className={`rounded-xl border p-3 ${
+        className={`rounded-xl border p-2.5 ${
           dark ? "border-white/15 bg-white/10 backdrop-blur-sm" : "border-line bg-surface"
         }`}
       >
         <div className="flex items-center gap-2">
           <ShieldCheck className={dark ? "text-green-300" : "text-success"} size={14} aria-hidden="true" />
-          <span className={`text-[12px] font-bold uppercase tracking-wider ${dark ? "text-white/90" : "text-navy-700"}`}>
+          <span className={`text-[11px] font-bold uppercase tracking-wide ${dark ? "text-white/90" : "text-navy-700"}`}>
             {t("status.heading")}
           </span>
         </div>
-        <p className={`mt-1.5 text-[11px] ${dark ? "text-white" : "text-muted"}`}>
+        <p className={`mt-1 text-[10px] ${dark ? "text-white/90" : "text-muted"}`}>
           {t("status.label")}
         </p>
-        <form onSubmit={checkStatus} className="mt-2 flex items-center gap-1.5">
+        <form onSubmit={checkStatus} className="mt-1.5 flex items-center gap-1.5">
           <input
             type="text"
             value={statusId}
@@ -265,7 +265,7 @@ export default function AuthShell({
             aria-label="Authorization ID"
             spellCheck={false}
             autoComplete="off"
-            className={`min-w-0 flex-1 rounded-lg border px-2.5 py-2 font-mono text-xs tracking-wide outline-none transition ${
+            className={`min-w-0 flex-1 rounded-lg border px-2 py-1.5 font-mono text-[11px] tracking-normal outline-none transition ${
               dark
                 ? "border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                 : "border-line bg-card text-ink placeholder:text-muted/50 focus:border-navy-500"
@@ -275,7 +275,7 @@ export default function AuthShell({
             type="submit"
             disabled={statusLoading}
             aria-label={t("status.verify")}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition disabled:opacity-50 ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition disabled:opacity-50 ${
               dark ? "bg-white/20 hover:bg-white/30" : "bg-navy-700 hover:bg-navy-500"
             }`}
           >
@@ -348,13 +348,13 @@ export default function AuthShell({
     <button
       type="button"
       onClick={() => setAboutOpen(true)}
-      className={`flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[12px] font-semibold transition ${
+      className={`flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
         dark
           ? "border-white/15 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
           : "border-line bg-surface text-navy-700 hover:bg-line/40"
       }`}
     >
-      <Info size={15} aria-hidden="true" />
+      <Info size={16} aria-hidden="true" />
       {t("about.trigger")}
     </button>
   );
@@ -369,95 +369,86 @@ export default function AuthShell({
       <div className="tz-flag-bg fixed inset-0 opacity-30" />
       <div className="fixed inset-0 bg-gradient-to-br from-white/60 via-white/40 to-white/60 backdrop-blur-[2px]" />
 
-      {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
+      {/* Top bar — logos sit next to the titles (not pinned to the page edges). */}
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the CRCS portal masthead). */}
         <div className="h-1.5 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5">
-          {/* Left — national coat of arms */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={LOGO_COAT_OF_ARMS}
-            alt={t("brand.country")}
-            width={96}
-            height={96}
-            className="h-12 w-12 shrink-0 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
-          />
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-4 py-2.5 sm:px-5 sm:py-3">
+          <div className="flex items-center gap-5 sm:gap-6">
+            {/* Left — national coat of arms */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={LOGO_COAT_OF_ARMS}
+              alt={t("brand.country")}
+              width={128}
+              height={128}
+              className="h-16 w-16 shrink-0 object-contain sm:h-[5.25rem] sm:w-[5.25rem]"
+            />
 
-          {/* Center — three titles + national flag strip */}
-          <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
-              {t("brand.country")}
-            </p>
-            <p className="font-display text-sm font-bold text-white sm:text-base">
-              {t("brand.ministry")}
-            </p>
-            <p className="font-display text-xs font-black uppercase tracking-tight text-white sm:text-sm">
-              {t("brand.servicesDepartment")}
-            </p>
-            <span className="mt-1.5 flex h-1.5 w-44 max-w-full overflow-hidden rounded-full sm:mt-2 sm:w-64">
-              <span className="flex-1 bg-[#1eb53a]" />
-              <span className="flex-1 bg-[#fcd116]" />
-              <span className="flex-1 bg-black" />
-              <span className="flex-1 bg-[#fcd116]" />
-              <span className="flex-1 bg-[#00a3dd]" />
-            </span>
+            {/* Center — three titles + national flag strip */}
+            <div className="flex min-w-0 flex-col items-center gap-0.5 text-center">
+              <p className="text-sm font-bold uppercase tracking-wide text-white/85 sm:text-base">
+                {t("brand.country")}
+              </p>
+              <p className="font-display text-base font-bold text-white sm:text-lg">
+                {t("brand.ministry")}
+              </p>
+              <p className="font-display text-sm font-black uppercase tracking-tight text-white sm:text-base">
+                {t("brand.servicesDepartment")}
+              </p>
+              <span className="mt-1 flex h-1.5 w-44 max-w-full overflow-hidden rounded-full sm:w-64">
+                <span className="flex-1 bg-[#1eb53a]" />
+                <span className="flex-1 bg-[#fcd116]" />
+                <span className="flex-1 bg-black" />
+                <span className="flex-1 bg-[#fcd116]" />
+                <span className="flex-1 bg-[#00a3dd]" />
+              </span>
+            </div>
+
+            {/* Right — immigration emblem */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={LOGO_EMBLEM}
+              alt={t("brand.servicesDepartment")}
+              width={128}
+              height={128}
+              className="h-16 w-16 shrink-0 object-contain sm:h-[5.25rem] sm:w-[5.25rem]"
+            />
           </div>
-
-          {/* Right — immigration emblem */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={LOGO_EMBLEM}
-            alt={t("brand.servicesDepartment")}
-            width={96}
-            height={96}
-            className="h-12 w-12 shrink-0 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
-          />
         </div>
       </header>
 
       {/* Language switcher — floats below the header, right-aligned, with no
           visible background bar. */}
-      <div className="relative z-20 flex items-center justify-end px-6 py-0.5 sm:py-1">
+      <div className="relative z-20 flex items-center justify-end px-6 py-0">
         <LanguageSwitcher variant="onLight" />
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6 sm:py-5 ${wide ? "sm:py-6" : ""}`}>
-        {/* The split card. On mobile the left panel is hidden and its status
-            check + "About CRCS" are rendered below the form instead. */}
-        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : showStatusCheck ? "max-w-5xl" : "max-w-4xl"}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-2 sm:px-6 sm:py-3 ${wide ? "sm:py-4" : ""}`}>
+        {/* Narrower auth card — login/forgot stay compact; create-profile a bit wider. */}
+        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-4xl" : "max-w-3xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only).
               Login gives this column more width so long subject IDs (ICRCS-…) fit. */}
-          <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 py-6 md:flex ${
+          <div className={`hidden flex-col items-center justify-start gap-3 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 py-4 md:flex ${
             wide
               ? "md:w-[34%] px-5"
               : showStatusCheck
-                ? "w-[46%] px-4"
-                : "w-[38%] px-5"
+                ? "w-[46%] px-3"
+                : "w-[38%] px-4"
           }`}>
-            {/* Immigration emblem + branding — on top. The emblem sits on a light
-                pad so its blue ribbons and gold lettering stay legible against
-                the deep-blue panel. */}
+            {/* Immigration emblem — compact so it sits close above the status block. */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-white/95 p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+              <div className="rounded-full bg-white/95 p-2 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={LOGO_EMBLEM}
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-32 object-contain sm:w-36"
+                  className="h-auto w-28 object-contain sm:w-32"
                 />
               </div>
-              {/* <div className="mt-5 text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-icrcs-gold-light/80">
-                  {t("brand.country")}
-                </p>
-                <p className="mt-1 font-display text-base font-bold text-white">
-                  {t("brand.servicesDepartment")}
-                </p>
-              </div> */}
             </div>
 
             {/* Status check (login only) + About CRCS — dark theme for the
@@ -466,28 +457,29 @@ export default function AuthShell({
             {renderAbout(true)}
           </div>
 
-          {/* Right panel — form only */}
-          <div className={`flex w-full flex-col justify-center px-5 sm:px-7 ${
+          {/* Right panel — form only; constrain field width so inputs don't stretch. */}
+          <div className={`flex w-full flex-col justify-center px-5 sm:px-6 ${
             wide
-              ? "py-5 md:w-[66%]"
+              ? "py-4 md:w-[66%]"
               : showStatusCheck
-                ? "py-5 sm:py-6 md:w-[54%]"
-                : "py-5 sm:py-6 md:w-[62%]"
+                ? "py-3.5 sm:py-4 md:w-[54%]"
+                : "py-3.5 sm:py-4 md:w-[62%]"
           }`}>
-            {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
-            {children}
+            <div className={wide ? "w-full" : "mx-auto w-full max-w-sm"}>
+              {children}
+            </div>
 
             {/* Mobile-only: the left panel is hidden below md, so the status
                 check (login only) + About CRCS live here, below the form and
                 above the footer. Wrapped in the same deep-blue panel so they
                 keep their bluish look on the white card. */}
-            <div className="mt-3 space-y-2.5 rounded-2xl bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 p-3 md:hidden">
+            <div className="mt-2 space-y-2 rounded-2xl bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 p-2.5 md:hidden">
               {showStatusCheck && renderStatusCheck(true)}
               {renderAbout(true)}
             </div>
 
             {/* Footer — text and version kept together on a single line */}
-            <p className="mt-2 flex items-baseline justify-center gap-2 whitespace-nowrap text-center text-[12px] text-muted">
+            <p className="mt-1.5 flex items-baseline justify-center gap-2 whitespace-nowrap text-center text-[12px] text-muted">
               {t("footer")}
               {APP_VERSION && <span className="text-xs text-muted/70">v{APP_VERSION}</span>}
             </p>

@@ -1,12 +1,20 @@
 // Officer refresh — reads the officer refresh token from its HttpOnly cookie,
-// rotates it against the User Management API, and writes the new tokens back.
-// The User Management API ROTATES the refresh token on every refresh, so both
-// cookies are always replaced with the values it returns.
+// rotates it against the SAME auth backend that issued it at login, and writes
+// the new tokens back. The auth API ROTATES the refresh token on every refresh,
+// so both cookies are always replaced with the values it returns.
+//
+// IMPORTANT: base URL resolution MUST match /api/officer/login. Hitting a
+// different host (e.g. USER_MGT alone while login used BACKEND_API) rejects a
+// brand-new login's refresh token and wipes the session immediately.
 
 import { cookies } from "next/headers";
 import { authCookieOptions } from "@/lib/auth/cookieOptions";
 
-const USER_MGT = process.env.USER_MGT_API_BASE_URL ?? "";
+const BACKEND =
+  process.env.BACKEND_API_BASE_URL ||
+  process.env.AUTH_API_BASE_URL ||
+  process.env.USER_MGT_API_BASE_URL ||
+  "";
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 
 export async function POST(request: Request) {
@@ -26,10 +34,14 @@ export async function POST(request: Request) {
 
   let res: Response;
   try {
-    res = await fetch(`${USER_MGT}/v1/auth/refresh`, {
+    // Send both camelCase and snake_case — portal and UM APIs differ on the key.
+    res = await fetch(`${BACKEND}/v1/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({
+        refreshToken,
+        refresh_token: refreshToken,
+      }),
     });
   } catch {
     return Response.json(
@@ -38,30 +50,26 @@ export async function POST(request: Request) {
     );
   }
   const data = await res.json().catch(() => null);
+  const tokens = extractTokens(data, refreshToken);
+  const codeOk = Number((data as { code?: number } | null)?.code ?? 0) === 1;
+  // Success if HTTP ok AND (UM-style code===1 OR we got a fresh access token).
+  const ok = res.ok && (codeOk || !!tokens.accessToken);
 
-  const ok = res.ok && Number((data as { code?: number } | null)?.code ?? 0) === 1;
   if (!ok) {
-    // Definitive auth rejection from UM (HTTP 401/403).
+    // Only clear cookies on a definitive auth rejection (401/403). A 5xx / odd
+    // payload must not wipe a live session (e.g. flaky UM during refresh, or
+    // right after login when AuthGuard warm-refreshes).
     if (res.status === 401 || res.status === 403) {
       jar.delete("icrcs-officer-access");
       jar.delete("icrcs-officer-refresh");
       return Response.json({ error: "Session expired" }, { status: 401 });
     }
-    // HTTP 2xx but missing/non-1 `code` — refresh did NOT succeed. Never echo
-    // 200 to the client (that would look like success with stale tokens).
-    if (res.ok) {
-      jar.delete("icrcs-officer-access");
-      jar.delete("icrcs-officer-refresh");
-      return Response.json({ error: "Session expired" }, { status: 401 });
-    }
-    // Upstream 5xx / other errors — keep cookies; client will retry.
     return Response.json(
       { error: "Unable to refresh session" },
-      { status: res.status >= 500 ? 503 : 502 },
+      { status: res.status >= 500 ? 503 : res.status || 502 },
     );
   }
 
-  const tokens = extractTokens(data, refreshToken);
   jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS });
   if (tokens.refreshToken) {
     jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS });

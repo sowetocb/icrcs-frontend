@@ -210,11 +210,11 @@ export default function StepDetails({
 
   return (
     <>
-      <div className="mb-4">
-        <h2 className="font-display text-2xl font-bold text-navy-700">
+      <div className="mb-3">
+        <h2 className="font-display text-3xl font-bold leading-tight text-navy-700">
           {t("register.title")}
         </h2>
-        <p className="mt-1 text-sm text-muted">{t("register.subtitle")}</p>
+        <p className="mt-0.5 text-sm text-muted">{t("register.subtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3" noValidate>

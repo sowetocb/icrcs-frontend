@@ -10,6 +10,7 @@ import { saveSession, clearSession, takeSignoutNotice } from "@/lib/auth/session
 import { saveOfficer, clearOfficer, officerCanRegisterIcrcs } from "@/lib/auth/officerSession";
 import { saveProfile, clearProfile } from "@/lib/auth/profile";
 import { purgeSensitiveLocalStorage } from "@/lib/auth/clientCookies";
+import { markSessionVerified } from "@/components/auth/authGuard";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { RULES } from "@/lib/validation/rules";
@@ -122,6 +123,9 @@ export default function LoginForm() {
         setLoginError(t("form.officerNoIcrcs"));
         return;
       }
+      // Cookies were just set by /api/officer/login — skip AuthGuard's immediate
+      // verify/refresh which can race token rotation and bounce back to login.
+      markSessionVerified();
       notify(t("toast.loginSuccess"));
       router.push("/dashboard");
       return;
@@ -180,30 +184,31 @@ export default function LoginForm() {
       // ignore — profile can be re-fetched later
     }
     notify(t("toast.loginSuccess"));
+    markSessionVerified();
     router.push("/dashboard");
   }
 
   return (
     <div className="w-full">
       {/* Heading */}
-      <div className="mb-3 sm:mb-4">
-        <h2 className="font-display text-2xl font-bold text-navy-700 sm:text-3xl">
+      <div className="mb-2">
+        <h2 className="font-display text-3xl font-bold leading-tight text-navy-700 sm:text-4xl">
           {t("brand.system")}
         </h2>
-        <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>
+        <p className="mt-0.5 text-sm text-muted">{t("form.subtitle")}</p>
       </div>
 
       {signoutNotice && (
         <p
           role="status"
-          className="mb-4 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning"
+          className="mb-3 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning"
         >
           {signoutNotice}
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate autoComplete="off">
-        <div className="space-y-1.5">
+      <form onSubmit={handleSubmit} className="space-y-2.5" noValidate autoComplete="off">
+        <div className="space-y-1">
           <label htmlFor="email" className="block text-sm font-medium text-navy-700">
             {t("form.email")}
           </label>
@@ -229,7 +234,7 @@ export default function LoginForm() {
             placeholder={t("form.emailPlaceholder")}
             aria-invalid={emailInvalid}
             aria-describedby={errors.email ? "email-error" : undefined}
-            className={`w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
+            className={`w-full rounded-lg border bg-surface px-3.5 py-2 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
               errors.email
                 ? "border-danger focus:border-danger focus:ring-danger/15"
                 : "border-input-line focus:border-navy-700 focus:ring-navy-700/15"
@@ -242,7 +247,7 @@ export default function LoginForm() {
           )}
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label htmlFor="password" className="block text-sm font-medium text-navy-700">
             {t("form.password")}
           </label>
@@ -266,7 +271,7 @@ export default function LoginForm() {
               placeholder="••••••••"
               aria-invalid={passwordInvalid}
               aria-describedby={errors.password ? "password-error" : undefined}
-              className={`w-full rounded-lg border bg-surface px-3.5 py-2.5 pr-11 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
+              className={`w-full rounded-lg border bg-surface px-3.5 py-2 pr-11 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:bg-card focus:ring-2 ${
                 errors.password
                   ? "border-danger focus:border-danger focus:ring-danger/15"
                   : "border-input-line focus:border-navy-700 focus:ring-navy-700/15"
@@ -299,7 +304,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70 sm:py-3"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy-700 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:opacity-70"
         >
           {submitting && <Spinner />}
           {submitting ? t("form.signingIn") : t("form.signIn")}
@@ -313,7 +318,7 @@ export default function LoginForm() {
         </Link>
       </form>
 
-      <p className="mt-3 text-center text-sm text-muted">
+      <p className="mt-2 text-center text-sm text-muted">
         {t("form.noAccount")}{" "}
         <Link href="/create-profile" className="font-semibold text-navy-700 hover:text-gold-700">
           {t("form.register")}

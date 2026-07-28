@@ -362,42 +362,75 @@ export function PointOfEntryField() {
 /** Migrant-flow gate for skippable stages (e.g. education / family): a Yes/No
  * question shown before the form. Fields render only when the user answers
  * "Yes"; "No" leaves them hidden and the wizard skips on Save. `field` is the
- * boolean gate key (stored in wizard data), validated in the wizard's Save. */
+ * boolean gate key (stored in wizard data), validated in the wizard's Save.
+ *
+ * When `forcedYes` is set (e.g. married/widowed migrants who must declare a
+ * spouse), Yes is applied automatically and the radios are locked. */
 export function MigrantStageGate({
   field,
   question,
   children,
+  forcedYes = false,
+  forcedNotice,
 }: {
   field: string;
   question: string;
   children: ReactNode;
+  /** Lock the gate to Yes — used when Stage 1 marital status requires spouse info. */
+  forcedYes?: boolean;
+  /** Optional explanation shown under the locked radios. */
+  forcedNotice?: string;
 }) {
-  const { data, set, errors } = useWizard();
+  const { data, set, setQuiet, errors } = useWizard();
   const { t } = useI18n();
-  const val = data[field];
-  const invalid = errors.includes(field);
+  const val = forcedYes ? true : data[field];
+  const invalid = !forcedYes && errors.includes(field);
+
+  useEffect(() => {
+    if (forcedYes && data[field] !== true) setQuiet(field, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forcedYes, field]);
+
   return (
     <div className="space-y-6">
       <div>
         <span className="block text-base font-medium text-ink">{question}</span>
-        <div className="mt-2 flex flex-wrap gap-6" data-field={field}>
+        <div
+          className={`mt-2 flex flex-wrap gap-6 ${forcedYes ? "opacity-70" : ""}`}
+          data-field={field}
+        >
           {[
             { v: true, label: t("registry.yes") },
             { v: false, label: t("registry.no") },
           ].map(({ v, label }) => (
-            <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+            <label
+              key={String(v)}
+              className={`flex items-center gap-2 text-sm font-medium text-ink ${
+                forcedYes ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+            >
               <input
                 type="radio"
                 name={field}
                 checked={val === v}
-                onChange={() => set(field, v)}
+                disabled={forcedYes}
+                readOnly={forcedYes}
+                onChange={() => {
+                  if (!forcedYes) set(field, v);
+                }}
                 className={`h-4 w-4 accent-navy-700 ${invalid ? "outline outline-2 outline-danger" : ""}`}
               />
               {label}
             </label>
           ))}
         </div>
-        <FieldError name={field} />
+        {forcedYes && forcedNotice ? (
+          <p className="mt-3 rounded-lg bg-navy-50 px-3 py-2 text-sm font-medium text-navy-700">
+            {forcedNotice}
+          </p>
+        ) : (
+          <FieldError name={field} />
+        )}
       </div>
       {val === true && children}
     </div>

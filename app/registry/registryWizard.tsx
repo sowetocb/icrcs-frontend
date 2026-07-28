@@ -1906,7 +1906,20 @@ export default function RegistryWizard({
       }
     }
     const migrantGateField = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
-    const gateSkip = !!migrantGateField && data[migrantGateField] === false;
+    // Married/widowed migrants cannot skip the family stage — spouse info is mandatory.
+    // Match Stage 1 marriage value (code or localized fragments) so the family
+    // gate "Do you have family information…?" cannot stay on No.
+    const marriageVal = String(data.marriage ?? "").toUpperCase();
+    const spouseRequiredByMarriage =
+      step === 6 &&
+      /MARRIED|WIDOW|NIMEOA|NIMEOLEWA|AMEOA|AMEOLEWA|MJANE/.test(marriageVal);
+    if (spouseRequiredByMarriage && (data.mHasFamily !== true || data.isMarried !== true)) {
+      setData((d) => ({ ...d, mHasFamily: true, isMarried: true }));
+    }
+    const gateSkip =
+      !!migrantGateField &&
+      data[migrantGateField] === false &&
+      !spouseRequiredByMarriage;
     // When skipping, submit an EMPTY stage: clear the stage's fields for both the
     // payload and the saved draft (they're hidden anyway). A cleared COPY is used
     // for this submit because setData below only applies on the next render.
@@ -1918,7 +1931,9 @@ export default function RegistryWizard({
         )
       : isMigrant && step === 4 && data.mHasEducation === false
         ? { ...data, neverAttendedSchool: true }
-        : data;
+        : spouseRequiredByMarriage
+          ? { ...data, mHasFamily: true, isMarried: true }
+          : data;
     if (gateSkip) setData(stageData);
 
     if (!gateSkip) {
