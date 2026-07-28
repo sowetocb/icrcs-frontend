@@ -255,24 +255,24 @@ export default function DashboardTopbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">
-      <div className="flex h-20 items-center justify-between px-6">
+      <div className="flex h-12 items-center justify-between px-3 sm:px-4 lg:px-5">
         {/* Left — Brand (emblem stays pinned to the left of the bar) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
               logo replacement works without images.localPatterns config. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={LOGO_EMBLEM}
             alt={t("brand.country")}
-            width={88}
-            height={88}
-            className="h-16 w-16 object-contain"
+            width={56}
+            height={56}
+            className="h-9 w-9 object-contain"
           />
           <div className="hidden leading-tight sm:block">
-            <p className="text-lg font-medium uppercase tracking-wider text-icrcs-gold-light/80 sm:text-xl">
+            <p className="text-sm font-medium uppercase tracking-wider text-icrcs-gold-light/80">
               {t("brand.country")}
             </p>
-            <p className="font-display text-md font-bold text-white">
+            <p className="font-display text-sm font-bold text-white">
               {t("brand.department")}
             </p>
           </div>

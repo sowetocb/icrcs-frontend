@@ -371,26 +371,26 @@ export default function AuthShell({
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the CRCS portal masthead). */}
         <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-6 sm:px-6 sm:py-3">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-4 sm:px-5">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={LOGO_COAT_OF_ARMS}
             alt={t("brand.country")}
-            width={124}
-            height={124}
-            className="h-14 w-14 shrink-0 object-contain sm:h-24 sm:w-24"
+            width={96}
+            height={96}
+            className="h-11 w-11 shrink-0 object-contain sm:h-16 sm:w-16"
           />
 
           {/* Center — three titles + national flag strip */}
           <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <p className="text-sm font-bold uppercase tracking-wide text-white/80 sm:text-xl">
+            <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
               {t("brand.country")}
             </p>
-            <p className="font-display text-sm font-bold text-white sm:text-lg">
+            <p className="font-display text-xs font-bold text-white sm:text-sm">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-xs font-black uppercase tracking-tight text-white sm:text-base">
+            <p className="font-display text-[11px] font-black uppercase tracking-tight text-white sm:text-sm">
               {t("brand.servicesDepartment")}
             </p>
             <span className="mt-1 flex h-1 w-44 max-w-full overflow-hidden rounded-full sm:mt-1.5 sm:w-64">
@@ -407,9 +407,9 @@ export default function AuthShell({
           <img
             src={LOGO_EMBLEM}
             alt={t("brand.servicesDepartment")}
-            width={124}
-            height={124}
-            className="h-14 w-14 shrink-0 object-contain sm:h-24 sm:w-24"
+            width={96}
+            height={96}
+            className="h-11 w-11 shrink-0 object-contain sm:h-16 sm:w-16"
           />
         </div>
       </header>
@@ -438,7 +438,7 @@ export default function AuthShell({
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-36 object-contain"
+                  className="h-auto w-28 object-contain"
                 />
               </div>
               {/* <div className="mt-5 text-center">
