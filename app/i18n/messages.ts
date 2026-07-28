@@ -24,7 +24,7 @@ const en = {
   status: {
     heading: "Application Status Check",
     label: " Check your application status without login",
-    placeholder: "TZN-000-000",
+    placeholder: "ICRCS-20260611-000003-77D162",
     verify: "Verify status",
     hint: "For more information visit a nearest immigration office.",
     incomplete: "Your registration is not yet complete.",
@@ -1145,7 +1145,7 @@ const sw: typeof en = {
   status: {
     heading: "Usalama: Ukaguzi wa Hali",
     label: "Thibitisha shughuli za kitambulisho bila kuingia",
-    placeholder: "TZN-000-000",
+    placeholder: "ICRCS-20260611-000003-77D162",
     verify: "Thibitisha hali",
     hint: "Kwa maelezo zaidi tembelea ofisi ya uhamiaji iliyo karibu nawe.",
     incomplete: "Usajili wako haujakamilika bado.",
