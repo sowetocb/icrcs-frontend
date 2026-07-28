@@ -4,6 +4,9 @@ This document covers what the **ICRCS frontends** must provide so they work on a
 local Docker LAN without internet, and still behave well when uplink connectivity
 to central is intermittent.
 
+**Backend team:** see **`docs/OFFLINE-BACKEND-GUIDE.md`** for idempotency, local
+DB seed, central sync, and API contracts required to support this deployment.
+
 ## Stack service names (Docker `icrcs-net`)
 
 | Service | Host:port | Notes |
@@ -68,5 +71,6 @@ docker compose -f docker-compose.edge.yml --env-file .env.edge --profile full-st
 ## Next steps
 
 1. **Backend team**: confirm portal API Docker service name → set `PORTAL_BACKEND_URL`
+   (full spec: `docs/OFFLINE-BACKEND-GUIDE.md`)
 2. **Backend**: honour `Idempotency-Key` on registration stage POST/PUT
 3. **Backend**: sync job to central when uplink is available

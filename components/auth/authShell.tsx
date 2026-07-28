@@ -265,7 +265,7 @@ export default function AuthShell({
             aria-label="Authorization ID"
             spellCheck={false}
             autoComplete="off"
-            className={`min-w-0 flex-1 rounded-lg border px-2.5 py-2 font-mono text-[11px] tracking-wide outline-none transition sm:text-xs ${
+            className={`min-w-0 flex-1 rounded-lg border px-2.5 py-2 font-mono text-xs tracking-wide outline-none transition ${
               dark
                 ? "border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                 : "border-line bg-card text-ink placeholder:text-muted/50 focus:border-navy-500"
@@ -426,14 +426,14 @@ export default function AuthShell({
       <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6 sm:py-5 ${wide ? "sm:py-6" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About CRCS" are rendered below the form instead. */}
-        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-4xl" : showStatusCheck ? "max-w-4xl" : "max-w-3xl"}`}>
+        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : showStatusCheck ? "max-w-5xl" : "max-w-4xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only).
               Login gives this column more width so long subject IDs (ICRCS-…) fit. */}
           <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 py-6 md:flex ${
             wide
               ? "md:w-[34%] px-5"
               : showStatusCheck
-                ? "w-[46%] px-3.5"
+                ? "w-[46%] px-4"
                 : "w-[38%] px-5"
           }`}>
             {/* Immigration emblem + branding — on top. The emblem sits on a light

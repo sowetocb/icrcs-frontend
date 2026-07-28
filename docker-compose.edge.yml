@@ -7,7 +7,7 @@
 #
 # Prerequisites (one-time, while online):
 #   docker network create icrcs-net
-#   docker pull 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+#   docker pull 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.7.0}
 #   # Attach backend + DB containers to icrcs-net
 #
 # Configure:
@@ -24,7 +24,7 @@
 services:
   web:
     container_name: icrcs-fe-portal
-    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.7.0}
     ports:
       - "6060:6060"
     env_file:

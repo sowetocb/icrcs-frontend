@@ -59,14 +59,10 @@ const nextConfig: NextConfig = {
   // original (un-minified) source. The build stays minified-only client-side.
   productionBrowserSourceMaps: false,
 
-  // Extra belt-and-braces: ensure webpack never emits client source maps in
-  // production (covers edge cases beyond productionBrowserSourceMaps).
-  webpack: (config, { dev, isServer }) => {
-    if (!dev && !isServer) {
-      config.devtool = false;
-    }
-    return config;
-  },
+  // Next.js 16 builds with Turbopack by default. Keep an explicit (empty)
+  // turbopack block so the config is intentional; no custom webpack loaders
+  // are required — source-map hardening is handled above.
+  turbopack: {},
 
   compiler: {
     // Strip client console.* in production (keep errors) so debug logs and any

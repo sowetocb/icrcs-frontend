@@ -7,7 +7,7 @@
 services:
   web:
     container_name: icrcs-fe-portal
-    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.7.0}
     pull_policy: always
     ports:
       - "6060:6060"

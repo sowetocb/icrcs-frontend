@@ -169,14 +169,19 @@ html {
   scroll-behavior: smooth;
   color-scheme: light;
   background: var(--background);
-  /* Density-first root size. Windows laptop DPI (125%/150%) already enlarges
-     CSS pixels; a high rem floor made the whole app feel oversized. Keep a
-     modest 14–15.5px base on typical screens; only nudge up on wide desktops. */
-  font-size: clamp(14px, 0.55vw + 12.5px, 15.5px);
+  /* App-wide rem scale — slightly larger so login, dashboard, and lists read
+     comfortably on typical laptops without relying on browser zoom. */
+  font-size: clamp(16px, 0.7vw + 13.5px, 17.5px);
 }
 
 html.dark {
   color-scheme: dark;
+}
+
+/* Registration multi-step wizard keeps the previous denser scale so stage
+   forms / steppers don't balloon. Toggled by RegistryWizard on mount. */
+html.registry-stages-active {
+  font-size: clamp(14px, 0.55vw + 12.5px, 15.5px);
 }
 
 body {
@@ -223,6 +228,9 @@ button {
 /* Large monitors only — capped so Windows high-DPI desktops do not balloon. */
 @media (min-width: 1920px) {
   html {
+    font-size: clamp(17.5px, calc(17.5px + (100vw - 1920px) * 0.005), 20px);
+  }
+  html.registry-stages-active {
     font-size: clamp(15.5px, calc(15.5px + (100vw - 1920px) * 0.004), 18px);
   }
 }

@@ -301,6 +301,13 @@ export default function RegistryWizard({
   const { notify } = useToast();
   const router = useRouter();
 
+  // Keep registration stages at the denser rem scale while the rest of the app
+  // uses the enlarged root font-size (see globals.css).
+  useEffect(() => {
+    document.documentElement.classList.add("registry-stages-active");
+    return () => document.documentElement.classList.remove("registry-stages-active");
+  }, []);
+
   // The first registration under a profile is the account holder themselves —
   // EXCEPT when a foreign profile is registering a minor, where the subject is a
   // dependent, not the account holder. Derived (not state) so it reacts when

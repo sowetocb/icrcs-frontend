@@ -14,7 +14,7 @@ export default function DashboardLayout({
         <div className="flex flex-1">
           <CitizenSidebar />
           <main className="min-w-0 flex-1 p-3 sm:p-4 lg:p-5">
-            <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
+            <div className="mx-auto w-full min-w-0 max-w-7xl">{children}</div>
           </main>
         </div>
       </div>
