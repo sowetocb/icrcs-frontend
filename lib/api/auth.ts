@@ -175,23 +175,24 @@ export async function refresh(_refreshToken?: string): Promise<Tokens> {
     await delay(200);
     return { ...MOCK_TOKENS };
   }
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = (async () => {
-    const res = await fetch("/api/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      throw new ApiError(res.status, "Session expired");
-    }
-    // Tokens are in HttpOnly cookies; return stubs.
-    return { accessToken: "__httponly__", refreshToken: "__httponly__" } as Tokens;
-  })();
-  try {
-    return await refreshInFlight;
-  } finally {
-    refreshInFlight = null;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new ApiError(res.status, "Session expired");
+        }
+        // Tokens are in HttpOnly cookies; return stubs.
+        return { accessToken: "__httponly__", refreshToken: "__httponly__" } as Tokens;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
   }
+  return refreshInFlight;
 }
 
 /** POST /api/auth/logout — clears HttpOnly cookies and invalidates the backend
@@ -422,17 +423,40 @@ export async function withFreshAuth<T>(
 
 /** Officer-specific refresh — hits the /api/officer/refresh server-side route
  * which reads the icrcs-officer-refresh cookie, exchanges it with the User
- * Management API, and writes fresh cookies. */
-async function refreshOfficer(): Promise<Tokens> {
-  const res = await fetch("/api/officer/refresh", {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, "Officer session expired");
+ * Management API, and writes fresh cookies.
+ *
+ * MUST be single-flight: the UM API rotates the refresh token on every call.
+ * Parallel refreshes (AuthGuard + keep-alive + withFreshAuth) would invalidate
+ * a live session and force a logout. */
+let officerRefreshInFlight: Promise<Tokens> | null = null;
+
+export async function refreshOfficerSession(): Promise<Tokens> {
+  if (BYPASS) {
+    await delay(100);
+    return { accessToken: "__httponly__", refreshToken: "__httponly__" };
   }
-  // Tokens are in HttpOnly cookies; return stubs.
-  return { accessToken: "__httponly__", refreshToken: "__httponly__" };
+  if (!officerRefreshInFlight) {
+    officerRefreshInFlight = (async () => {
+      try {
+        const res = await fetch("/api/officer/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new ApiError(res.status, "Officer session expired");
+        }
+        return { accessToken: "__httponly__", refreshToken: "__httponly__" };
+      } finally {
+        officerRefreshInFlight = null;
+      }
+    })();
+  }
+  return officerRefreshInFlight;
+}
+
+/** @deprecated Prefer refreshOfficerSession — kept for internal callers. */
+async function refreshOfficer(): Promise<Tokens> {
+  return refreshOfficerSession();
 }
 
 /** GET /v1/profile/me — the full profile for the signed-in account. Call once

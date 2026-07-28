@@ -14,17 +14,22 @@ import {
   setClientCookie,
 } from "@/lib/auth/clientCookies";
 
-// Sign the user out after inactivity (no mouse/keyboard/scroll/touch). Officers
-// use a shorter limit because they often work on shared workstations.
+// Sign the user out after true inactivity. Officers use a shorter limit on
+// shared workstations, but activity detection must cover form work (nested
+// scroll panels, wheel, typing) or active users get false idle timeouts.
 const CITIZEN_IDLE_LIMIT_MS = 15 * 60 * 1000;
-const OFFICER_IDLE_LIMIT_MS = 5 * 60 * 1000;
+const OFFICER_IDLE_LIMIT_MS = 10 * 60 * 1000;
 const ACTIVITY_KEY = "icrcs-last-activity";
+const ACTIVITY_COOKIE_THROTTLE_MS = 5000;
 const ACTIVITY_EVENTS = [
   "mousedown",
   "mousemove",
   "keydown",
   "scroll",
+  "wheel",
   "touchstart",
+  "touchmove",
+  "pointerdown",
   "click",
 ] as const;
 
@@ -39,7 +44,9 @@ export default function IdleLogout() {
   const router = useRouter();
   const pathname = usePathname();
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const lastWriteRef = useRef(0);
+  const lastCookieWriteRef = useRef(0);
+  /** In-memory last activity — always fresh; cookie is only for cross-tab sync. */
+  const lastActivityRef = useRef(Date.now());
   const signedOutRef = useRef(false);
 
   const isPublicRoute = PUBLIC_ROUTES.some(
@@ -60,7 +67,6 @@ export default function IdleLogout() {
       clearRegistration();
       clearPeople();
       deleteClientCookie(ACTIVITY_KEY);
-      window.localStorage.removeItem(ACTIVITY_KEY);
       setSignoutNotice("idle");
       router.push("/login");
       return;
@@ -83,7 +89,6 @@ export default function IdleLogout() {
     clearRegistration();
     clearPeople();
     deleteClientCookie(ACTIVITY_KEY);
-    window.localStorage.removeItem(ACTIVITY_KEY);
     // Inform the user WHY they were signed out — the login screen shows a notice.
     setSignoutNotice("idle");
     router.push("/login");
@@ -95,9 +100,11 @@ export default function IdleLogout() {
     signedOutRef.current = false;
 
     function readLastActivity(): number {
-      const raw = getClientCookie(ACTIVITY_KEY);
-      const n = raw ? Number(raw) : NaN;
-      return Number.isFinite(n) ? n : Date.now();
+      const cookieRaw = getClientCookie(ACTIVITY_KEY);
+      const cookieTs = cookieRaw ? Number(cookieRaw) : NaN;
+      const cookieVal = Number.isFinite(cookieTs) ? cookieTs : 0;
+      // Prefer the newest of in-memory (this tab) and cookie (other tab).
+      return Math.max(lastActivityRef.current, cookieVal);
     }
 
     // Schedule the auto-logout for whatever idle time remains since last activity.
@@ -117,11 +124,11 @@ export default function IdleLogout() {
 
     function onActivity() {
       const now = Date.now();
-      // Throttle cookie writes (activity events fire very frequently).
-      if (now - lastWriteRef.current > 5000) {
-        lastWriteRef.current = now;
+      lastActivityRef.current = now;
+      // Throttle cookie writes (mousemove fires very frequently).
+      if (now - lastCookieWriteRef.current > ACTIVITY_COOKIE_THROTTLE_MS) {
+        lastCookieWriteRef.current = now;
         setClientCookie(ACTIVITY_KEY, String(now));
-        window.localStorage.removeItem(ACTIVITY_KEY);
       }
       arm();
     }
@@ -131,23 +138,31 @@ export default function IdleLogout() {
       if (document.visibilityState === "visible") arm();
     }
 
-    setClientCookie(ACTIVITY_KEY, String(Date.now()));
-    window.localStorage.removeItem(ACTIVITY_KEY);
-    lastWriteRef.current = Date.now();
+    const now = Date.now();
+    lastActivityRef.current = now;
+    lastCookieWriteRef.current = now;
+    setClientCookie(ACTIVITY_KEY, String(now));
+
+    // Capture phase so nested overflow panels (wizard / tables) still count as
+    // activity — window 'scroll' alone never sees those.
+    // Use the same capture option shape on add/remove so listeners detach reliably
+    // (boolean `true` does not match an options-object registration in all browsers).
+    const activityOpts: AddEventListenerOptions = { passive: true, capture: true };
+    const removeOpts: EventListenerOptions = { capture: true };
     ACTIVITY_EVENTS.forEach((e) =>
-      window.addEventListener(e, onActivity, { passive: true }),
+      document.addEventListener(e, onActivity, activityOpts),
     );
     document.addEventListener("visibilitychange", onVisible);
     arm();
-    // Re-arm periodically so the timer also covers a session that becomes
-    // active (e.g. just after login) with no further input.
-    const poll = setInterval(arm, 60 * 1000);
+    // Re-arm periodically so a session that becomes active with no further
+    // input (e.g. just after login) is still covered.
+    const poll = setInterval(arm, 30 * 1000);
 
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       clearInterval(poll);
       ACTIVITY_EVENTS.forEach((e) =>
-        window.removeEventListener(e, onActivity),
+        document.removeEventListener(e, onActivity, removeOpts),
       );
       document.removeEventListener("visibilitychange", onVisible);
     };

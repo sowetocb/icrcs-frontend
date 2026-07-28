@@ -41,9 +41,24 @@ export async function POST(request: Request) {
 
   const ok = res.ok && Number((data as { code?: number } | null)?.code ?? 0) === 1;
   if (!ok) {
-    jar.delete("icrcs-officer-access");
-    jar.delete("icrcs-officer-refresh");
-    return Response.json({ error: "Session expired" }, { status: 401 });
+    // Definitive auth rejection from UM (HTTP 401/403).
+    if (res.status === 401 || res.status === 403) {
+      jar.delete("icrcs-officer-access");
+      jar.delete("icrcs-officer-refresh");
+      return Response.json({ error: "Session expired" }, { status: 401 });
+    }
+    // HTTP 2xx but missing/non-1 `code` — refresh did NOT succeed. Never echo
+    // 200 to the client (that would look like success with stale tokens).
+    if (res.ok) {
+      jar.delete("icrcs-officer-access");
+      jar.delete("icrcs-officer-refresh");
+      return Response.json({ error: "Session expired" }, { status: 401 });
+    }
+    // Upstream 5xx / other errors — keep cookies; client will retry.
+    return Response.json(
+      { error: "Unable to refresh session" },
+      { status: res.status >= 500 ? 503 : 502 },
+    );
   }
 
   const tokens = extractTokens(data, refreshToken);

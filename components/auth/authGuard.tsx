@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { loadSession, subscribeSession, setSignoutNotice } from "@/lib/auth/session";
 import { isOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
-import {
-  clearBrowserStorage,
-  deleteClientCookie,
-} from "@/lib/auth/clientCookies";
+import { clearBrowserStorage } from "@/lib/auth/clientCookies";
 import { verifySession } from "@/lib/auth/verifySession";
 import { PageSkeleton } from "@/components/ui/skeleton";
 
@@ -31,13 +28,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    // CRITICAL: wipe Local Storage / Session Storage — session lives in cookies only.
+    // Wipe leftover Local/Session Storage — session lives in cookies only.
     clearBrowserStorage();
-    deleteClientCookie("icrcs-officer-gate");
     // A citizen session OR an officer session (government user) both grant access.
     const loggedIn = !!loadSession() || isOfficer();
     if (!loggedIn) {
-      // Not logged in — redirect to login
       sessionVerified = false;
       setAuthorized(false);
       router.replace("/login");
@@ -69,38 +64,41 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, router]);
 
-  // When the tab becomes visible again, re-check with the server. Cookies can
-  // expire or be revoked while the tab was backgrounded; sessionVerified would
-  // otherwise skip verification for the rest of the tab's lifetime.
+  // When the tab becomes visible again, re-check with the server — but debounce
+  // so a quick alt-tab doesn't race keep-alive / API refreshes (refresh-token
+  // rotation would otherwise kill a live session).
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     function onVisible() {
       if (document.visibilityState !== "visible") return;
       const loggedIn = !!loadSession() || isOfficer();
       if (!loggedIn) return;
 
-      verifySession().then((ok) => {
-        if (ok) {
-          sessionVerified = true;
-          setAuthorized(true);
-          return;
-        }
-        sessionVerified = false;
-        setAuthorized(false);
-        setSignoutNotice("expired");
-        router.replace("/login");
-      });
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        verifySession().then((ok) => {
+          if (ok) {
+            sessionVerified = true;
+            setAuthorized(true);
+            return;
+          }
+          // verifySession only returns false on definitive 401/403.
+          sessionVerified = false;
+          setAuthorized(false);
+          setSignoutNotice("expired");
+          router.replace("/login");
+        });
+      }, 1500);
     }
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
 
-  // React to a sign-out (or idle/expiry) that happened in ANOTHER tab: the
-  // shared localStorage flag is cleared there, this fires here, and we drop the
-  // user to /login so no tab keeps showing protected content after logout.
+  // React to a sign-out that happened in ANOTHER tab.
   useEffect(() => {
-    // Redirect to /login only when BOTH the citizen and officer sessions are
-    // gone (a sign-out in another tab), so an officer isn't dropped by a citizen
-    // flag change (and vice-versa).
     const check = () => {
       if (!loadSession() && !isOfficer()) {
         sessionVerified = false;
