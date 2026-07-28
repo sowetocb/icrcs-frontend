@@ -424,9 +424,9 @@ export default function AuthShell({
       <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6 sm:py-5 ${wide ? "sm:py-6" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About CRCS" are rendered below the form instead. */}
-        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-6xl" : "max-w-5xl"}`}>
+        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-4xl" : "max-w-3xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
-          <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-5 py-6 md:flex ${wide ? "md:w-[32%]" : "w-[40%]"}`}>
+          <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-5 py-6 md:flex ${wide ? "md:w-[34%]" : "w-[38%]"}`}>
             {/* Immigration emblem + branding — on top. The emblem sits on a light
                 pad so its blue ribbons and gold lettering stay legible against
                 the deep-blue panel. */}
@@ -458,7 +458,7 @@ export default function AuthShell({
           </div>
 
           {/* Right panel — form only */}
-          <div className={`flex w-full flex-col justify-center px-6 sm:px-8 ${wide ? "py-5 md:w-[68%]" : "py-5 sm:py-6 md:w-[60%]"}`}>
+          <div className={`flex w-full flex-col justify-center px-5 sm:px-7 ${wide ? "py-5 md:w-[66%]" : "py-5 sm:py-6 md:w-[62%]"}`}>
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 
