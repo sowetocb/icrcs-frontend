@@ -465,17 +465,16 @@ export function getBorders(): Promise<BorderItem[]> {
     .catch(() => []);
 }
 
-/** GET /v1/lookup/camp-names — refugee / settlement camps, for the migrant
- * address block. Public (no auth), like every other lookup. Data comes ONLY from
- * the endpoint — no mock fallback; an error yields an empty list.
+/** GET /v1/lookup/camps — refugee / settlement camps, for the migrant address
+ * block. Public (no auth), like every other lookup. Data comes ONLY from the
+ * endpoint — no mock fallback; an error yields an empty list.
  *
- * NOTE: unlike every other lookup this one returns `data` as a plain array of
+ * NOTE: unlike every other lookup this one may return `data` as a plain array of
  * NAME STRINGS (["KABANGA", "KAKONKO", …]) rather than objects, so it can't use
- * getList(). Object rows are still handled in case the shape is normalised
- * later. The index is used as a synthetic id — the camp NAME is what's stored
- * and submitted, so no real id is needed. */
+ * getList(). Object rows are still handled. The index is used as a synthetic id
+ * — the camp NAME is what's stored and submitted, so no real id is needed. */
 export function getCampNames(): Promise<LookupItem[]> {
-  return apiGet("/v1/lookup/camp-names")
+  return apiGet("/v1/lookup/camps")
     .then((raw) => {
       const data = (raw as { data?: unknown })?.data;
       if (!Array.isArray(data)) return [];

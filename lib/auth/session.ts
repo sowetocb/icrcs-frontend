@@ -5,15 +5,19 @@
 // conditionally render without inspecting the actual token. The proxy route
 // reads the cookie automatically on every fetch.
 //
-// The flag lives in localStorage (NOT sessionStorage) on purpose: the HttpOnly
-// auth cookie is shared by every tab, so the flag must be too. localStorage is
-// shared across all same-origin tabs AND emits a cross-tab `storage` event on
-// change — which lets a newly-opened tab detect the existing session and lets
-// every open tab react instantly when the user logs in or out in another tab
-// (see subscribeSession). sessionStorage is per-tab and fires no cross-tab
-// event, so a new tab could never see a session opened elsewhere.
+// The flag is a SESSION cookie (not localStorage): cleared when the browser
+// closes, and explicitly removed on logout / session expiry. Cross-tab sync
+// uses BroadcastChannel (see clientCookies).
 
 import type { Tokens } from "@/lib/api/auth";
+import {
+  broadcastAuthChange,
+  deleteClientCookie,
+  getClientCookie,
+  purgeSensitiveLocalStorage,
+  setClientCookie,
+  subscribeAuthBroadcast,
+} from "./clientCookies";
 
 export type Session = Tokens;
 
@@ -24,10 +28,7 @@ const FLAG = "icrcs-logged-in";
 export function loadSession(): Session | null {
   if (typeof window === "undefined") return null;
   try {
-    // The logged-in flag is set after a successful login call. The real tokens
-    // are in HttpOnly cookies that the browser sends automatically.
-    const flag = window.localStorage.getItem(FLAG);
-    if (flag === "1") {
+    if (getClientCookie(FLAG) === "1") {
       return { accessToken: "__httponly__", refreshToken: "__httponly__" };
     }
     return null;
@@ -41,7 +42,9 @@ export function loadSession(): Session | null {
 export function saveSession(_session: Session): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(FLAG, "1");
+    purgeSensitiveLocalStorage();
+    setClientCookie(FLAG, "1");
+    broadcastAuthChange({ kind: "citizen", loggedIn: true });
   } catch {
     // ignore
   }
@@ -50,31 +53,22 @@ export function saveSession(_session: Session): void {
 export function clearSession(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(FLAG);
+    deleteClientCookie(FLAG);
+    purgeSensitiveLocalStorage();
+    broadcastAuthChange({ kind: "citizen", loggedIn: false });
   } catch {
     // ignore
   }
 }
 
 /**
- * Subscribe to cross-tab session changes. `onChange` fires whenever the
- * logged-in flag is set or cleared in ANOTHER tab (localStorage `storage`
- * events only fire in other tabs, never the one that made the change), with the
- * new logged-in state. Returns an unsubscribe function. No-op on the server.
- *
- * Used by AuthGuard (log out here when another tab signs out) and the guest
- * shell (leave the login page when another tab signs in).
+ * Subscribe to cross-tab session changes. Fires when another tab signs in/out.
+ * Returns an unsubscribe function. No-op on the server.
  */
 export function subscribeSession(onChange: (loggedIn: boolean) => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const handler = (e: StorageEvent) => {
-    // key === null means localStorage.clear(); FLAG means our flag changed.
-    if (e.key === null || e.key === FLAG) {
-      onChange(loadSession() !== null);
-    }
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+  return subscribeAuthBroadcast((d) => {
+    if (d.kind === "citizen") onChange(d.loggedIn);
+  });
 }
 
 // A one-shot notice explaining an automatic sign-out, so the login screen can
@@ -87,7 +81,8 @@ export type SignoutReason = "idle" | "expired";
 export function setSignoutNotice(reason: SignoutReason): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(SIGNOUT_NOTICE, reason);
+    // Short-lived session cookie (cleared when read, or when the browser closes).
+    setClientCookie(SIGNOUT_NOTICE, reason);
   } catch {
     // ignore
   }
@@ -97,11 +92,9 @@ export function setSignoutNotice(reason: SignoutReason): void {
 export function takeSignoutNotice(): SignoutReason | null {
   if (typeof window === "undefined") return null;
   try {
-    const v = window.sessionStorage.getItem(SIGNOUT_NOTICE);
-    if (v === "idle" || v === "expired") {
-      window.sessionStorage.removeItem(SIGNOUT_NOTICE);
-      return v;
-    }
+    const v = getClientCookie(SIGNOUT_NOTICE);
+    deleteClientCookie(SIGNOUT_NOTICE);
+    if (v === "idle" || v === "expired") return v;
     return null;
   } catch {
     return null;

@@ -6,7 +6,7 @@ import { useI18n } from "@/app/i18n/localeProvider";
 import { loadRegistrationFor } from "@/app/registry/registrationStore";
 import { Check } from "lucide-react";
 import { loadProfile } from "@/lib/auth/profile";
-import { uploadAttachment, ATTACHMENT_ACCEPT } from "@/lib/api/files";
+import { uploadAttachment, DOCUMENT_ACCEPT } from "@/lib/api/files";
 import { getErrorMessage } from "@/lib/api/client";
 
 // Parent / contact / spouse / relative identification documents use this type.
@@ -71,7 +71,7 @@ export default function DocumentUpload({ prefix }: { prefix: string }) {
           </span>
           <input
             type="file"
-            accept={ATTACHMENT_ACCEPT}
+            accept={DOCUMENT_ACCEPT}
             disabled={status === "uploading"}
             className="sr-only"
             onChange={handle}

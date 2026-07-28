@@ -6,6 +6,11 @@ import StepDetails, { RegistrationDetails } from "./stepDetails";
 import StepOtp from "./stepOtp";
 import { register, verifyOtp, resendOtp } from "@/lib/api/auth";
 import { saveProfile } from "@/lib/auth/profile";
+import {
+  deleteClientCookie,
+  getClientCookie,
+  setClientCookie,
+} from "@/lib/auth/clientCookies";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
 
@@ -22,16 +27,20 @@ const emptyDetails: RegistrationDetails = {
   password: "",
 };
 
-// Persist just enough of the create-profile flow (per-tab) so a page refresh
-// returns to the OTP step instead of the details step. The PASSWORD is never
-// persisted; only the OTP step needs the pre-auth token + non-secret details.
+// Persist just enough of the create-profile flow in a SESSION cookie so a refresh
+// returns to the OTP step. The PASSWORD is never persisted. Never localStorage /
+// sessionStorage.
 const CREATE_PROFILE_STATE_KEY = "icrcs-create-profile-state";
 let createProfileMountedInSession = false;
 
 function readRestorableCreateProfile(): { details: RegistrationDetails; preAuthToken: string } | null {
   if (typeof window === "undefined" || createProfileMountedInSession) return null;
   try {
-    const raw = sessionStorage.getItem(CREATE_PROFILE_STATE_KEY);
+    let raw = getClientCookie(CREATE_PROFILE_STATE_KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(CREATE_PROFILE_STATE_KEY);
+      sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
+    }
     if (!raw) return null;
     const s = JSON.parse(raw) as { step?: number; details?: Partial<RegistrationDetails>; preAuthToken?: string };
     // Only step 2 (OTP) is resumable, and it needs the pre-auth token.
@@ -52,9 +61,7 @@ export default function CreateProfileFlow() {
   const { t } = useI18n();
   const { notify } = useToast();
   // Initialise to the SSR-safe defaults (step 1) so the first client render
-  // matches the server. Reading sessionStorage in the useState initialiser would
-  // make the client jump to step 2 while the server rendered step 1 — a
-  // hydration mismatch. The resumable OTP step is restored in the effect below.
+  // matches the server. The resumable OTP step is restored in the effect below.
   const [step, setStep] = useState<Step>(1);
   const [details, setDetails] = useState<RegistrationDetails>(emptyDetails);
   const [preAuthToken, setPreAuthToken] = useState("");
@@ -77,18 +84,19 @@ export default function CreateProfileFlow() {
   // stripped; step 1 clears the saved state.
   useEffect(() => {
     try {
-      if (step === 2) {
-        const { password: _password, ...safeDetails } = details;
-        void _password;
-        sessionStorage.setItem(
-          CREATE_PROFILE_STATE_KEY,
-          JSON.stringify({ step, details: safeDetails, preAuthToken }),
-        );
-      } else {
-        sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
-      }
+      sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
     } catch {
-      // ignore — sessionStorage unavailable
+      // ignore
+    }
+    if (step === 2) {
+      const { password: _password, ...safeDetails } = details;
+      void _password;
+      setClientCookie(
+        CREATE_PROFILE_STATE_KEY,
+        JSON.stringify({ step, details: safeDetails, preAuthToken }),
+      );
+    } else {
+      deleteClientCookie(CREATE_PROFILE_STATE_KEY);
     }
   }, [step, details, preAuthToken]);
 
@@ -116,6 +124,7 @@ export default function CreateProfileFlow() {
   async function handleVerify(otpCode: string) {
     await verifyOtp(otpCode, preAuthToken);
     // Flow complete — drop the resumable state before leaving.
+    deleteClientCookie(CREATE_PROFILE_STATE_KEY);
     try {
       sessionStorage.removeItem(CREATE_PROFILE_STATE_KEY);
     } catch {

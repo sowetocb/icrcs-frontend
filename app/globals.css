@@ -72,22 +72,20 @@
   --font-sans: var(--font-montserrat), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
 
-  /* Type scale (shared ICRCS) — sized for cross-platform consistency.
-     Windows/Mac render text larger than Ubuntu at the same px size; the
-     root clamp caps the upper bound to prevent overflow on those OSes
-     while these rem values keep readable proportions everywhere. */
+  /* Type scale (shared ICRCS) — rem-based so text-* utilities scale with the
+     root font-size clamp below (mirrors icrcs-theme.js in the management app). */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.25rem;
-  --text-sm: 0.9rem;
-  --text-sm--line-height: 1.4rem;
-  --text-base: 1.0625rem;
-  --text-base--line-height: 1.7rem;
-  --text-lg: 1.25rem;
-  --text-lg--line-height: 1.875rem;
-  --text-xl: 1.5rem;
-  --text-xl--line-height: 2.125rem;
-  --text-2xl: 1.875rem;
-  --text-2xl--line-height: 2.375rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: 2rem;
 
   /* Elevation (shared ICRCS) */
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -168,26 +166,13 @@
 }
 
 html {
+  scroll-behavior: smooth;
   color-scheme: light;
   background: var(--background);
-  /* Cross-platform base: clamp keeps everything proportional from compact
-     laptops up to wide desktops. The upper cap of 18px prevents content
-     overflow on Windows/Mac (heavier font rendering) while the 16px floor
-     keeps text comfortably readable on Ubuntu's lighter hinting.
-     The type scale tokens above are rem-based so they scale with this. */
-  font-size: clamp(16px, 0.9vw + 12px, 18px);
-}
-
-/* Larger monitors: scale the whole (rem-based) UI up proportionally so it fills
-   the screen instead of sitting as a small island in a sea of whitespace.
-   Standard laptops/desktops (<1920px) stay at the 18px base — the sweet spot for
-   cross-OS consistency; only genuinely large screens scale, smoothly from 18px up
-   to a 28px cap. The type scale, max-widths, padding and gaps are all rem-based,
-   so they grow together — no per-component changes needed. */
-@media (min-width: 1920px) {
-  html {
-    font-size: clamp(18px, calc(18px + (100vw - 1920px) * 0.0075), 32px);
-  }
+  /* Density-first root size. Windows laptop DPI (125%/150%) already enlarges
+     CSS pixels; a high rem floor made the whole app feel oversized. Keep a
+     modest 14–15.5px base on typical screens; only nudge up on wide desktops. */
+  font-size: clamp(14px, 0.55vw + 12.5px, 15.5px);
 }
 
 html.dark {
@@ -195,11 +180,51 @@ html.dark {
 }
 
 body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  /* Heavier default weight so normal body copy reads bolder app-wide. */
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Slightly heavier default weight so normal body copy reads bolder app-wide. */
   font-weight: 500;
+}
+
+h1 {
+  font-size: 1.375rem;
+}
+h2 {
+  font-size: 1.1875rem;
+}
+h3 {
+  font-size: 1.0625rem;
+}
+h4 {
+  font-size: 1rem;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+table {
+  font-size: 0.8125rem;
+}
+
+button {
+  font-size: 0.8125rem;
+}
+
+/* Large monitors only — capped so Windows high-DPI desktops do not balloon. */
+@media (min-width: 1920px) {
+  html {
+    font-size: clamp(15.5px, calc(15.5px + (100vw - 1920px) * 0.004), 18px);
+  }
 }
 
 /* ─── Native <select> dropdown options ───────────────────────────────────
@@ -242,10 +267,9 @@ option:disabled {
   }
 }
 @media print {
-  /* Keep the printable form at a fixed scale regardless of the viewport-
-     clamped screen value. */
+  /* Screen rem-scaling must not leak into print (e.g. jsPDF/browser print). */
   html {
-    font-size: 14px;
+    font-size: 16px;
   }
   body * {
     visibility: hidden;

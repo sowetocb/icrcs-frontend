@@ -290,11 +290,11 @@ export default function StepPreviewDeclaration() {
       )}
 
       {/* Horizontal stage tabs (left → right). A tick appears once a stage has
-          been reviewed; every stage must be viewed to enable submission. On all
-          screens the row scrolls horizontally (so labels aren't cramped) and stays
-          sticky just BELOW the fixed 5rem masthead (top-20) — at every breakpoint,
-          so the tabs never scroll away or slide under the topbar while reviewing. */}
-      <div className="sticky top-20 z-20 -mx-5 flex overflow-x-auto border-y border-line bg-card px-5 sm:-mx-6 sm:px-6">
+          been reviewed; every stage must be viewed to enable submission.
+          Narrow screens scroll horizontally; laptop+ (lg) distributes tabs evenly
+          so every title is fully visible without scrolling. Sticky below the
+          masthead (gold strip + bar ≈ 4.25rem) so tabs stay put while reviewing. */}
+      <div className="sticky top-[4.25rem] z-20 -mx-5 flex overflow-x-auto border-y border-line bg-card px-5 sm:-mx-6 sm:px-6 lg:overflow-x-visible">
         {STAGES.map((n) => {
           const isActive = activeStage === n;
           const done = reviewed.has(n);
@@ -303,7 +303,7 @@ export default function StepPreviewDeclaration() {
               key={n}
               type="button"
               onClick={() => selectStage(n)}
-              className={`flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-3 text-center text-sm font-semibold transition sm:flex-1 ${
+              className={`flex items-center justify-center gap-1.5 border-b-2 py-3 text-center font-semibold transition shrink-0 whitespace-nowrap px-4 text-sm lg:min-w-0 lg:flex-1 lg:shrink lg:whitespace-normal lg:px-1.5 lg:text-xs lg:leading-snug xl:gap-1.5 xl:px-2.5 xl:text-sm ${
                 isActive
                   ? "border-navy-700 text-navy-700"
                   : "border-transparent text-muted hover:text-navy-700"
@@ -320,7 +320,7 @@ export default function StepPreviewDeclaration() {
               >
                 {done ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : n}
               </span>
-              {t(`registry.s${n}Title`)}
+              <span className="lg:min-w-0">{t(`registry.s${n}Title`)}</span>
             </button>
           );
         })}

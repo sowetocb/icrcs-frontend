@@ -144,8 +144,8 @@ export default function StepAddress() {
             <p className="mt-0.5 text-xs text-muted">{t("fields.campHint")}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Camps come from /v1/lookup/camp-names. The option value is the
-                camp NAME, which is what the Stage 2 payload already sends. */}
+            {/* Camps come from /v1/lookup/camps. The option value is the camp
+                NAME, which is what the Stage 2 payload already sends. */}
             <Field label={t("fields.campName")} optional>
               <Select
                 name="campName"

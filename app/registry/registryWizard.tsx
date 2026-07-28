@@ -51,7 +51,13 @@ import { isPhoneComplete } from "@/lib/phoneLengths";
 import { RULES, docNumberRuleFor, type DocNumberRule } from "@/lib/validation/rules";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { setSignoutNotice } from "@/lib/auth/session";
-import { getErrorMessage } from "@/lib/api/client";
+import { getErrorMessage, isConnectionError } from "@/lib/api/client";
+import { createIdempotencyKey } from "@/lib/connectivity/idempotencyKey";
+import {
+  beginIdempotentWrite,
+  endIdempotentWrite,
+} from "@/lib/connectivity/activeIdempotency";
+import { useConnectivity } from "@/lib/connectivity/useConnectivity";
 import ApplicationIdDialog from "./applicationIdDialog";
 import StepPersonal from "./steps/stepPersonal";
 import StepAddress from "./steps/stepCitizenship";
@@ -168,25 +174,23 @@ const REQUIRED_FIELDS: string[][] = [
   [],
 ];
 
-// Migrant flow only: stages 4–6 each open with a "do you have this info?" question.
+// Migrant flow only: stages 4 & 6 open with a "do you have this info?" question.
 // Every gate MUST be answered Yes or No before Save. Answering No skips the gated
-// section (or whole stage for 5 & 6); Yes reveals the normal form.
+// section (education) or whole stage (family); Yes reveals the normal form.
+// Stage 5 (Emergency Contacts) is always mandatory — no skip gate.
 const MIGRANT_STEP_GATES: Record<number, string[]> = {
   4: ["mHasEducation"],
-  5: ["mHasEmergency"],
   6: ["mHasFamily"],
 };
 
 // Whole-stage skip when the migrant answers "No" — clears hidden fields before submit.
 const MIGRANT_STAGE_GATE: Record<number, string> = {
-  5: "mHasEmergency",
   6: "mHasFamily",
 };
 
 // Data-key prefixes cleared when a migrant answers NO to a stage gate, so the
 // (now hidden) stage submits empty even if fields were filled before toggling.
 const MIGRANT_STAGE_CLEAR: Record<number, RegExp> = {
-  5: /^ec\d|ec2Added/,
   6: /^(rel\d|sp\d|ch\d|isMarried|hasChildren|relativeCount|spouseCount|childCount)/,
 };
 
@@ -367,6 +371,8 @@ export default function RegistryWizard({
   // without an entry here fall back to a generic "required" message at the field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
+  const [pendingSubmit, setPendingSubmit] = useState(() => resumable?.pendingSubmit);
+  const { justReconnected } = useConnectivity();
   // Bumped each time a SAVE is attempted (and only then). The error-focus effect
   // keys off this — not off `errors` directly — so that focus moves to the first
   // problem only on a save, never while the user is typing (which continuously
@@ -380,9 +386,12 @@ export default function RegistryWizard({
   // drives the "unsaved changes" reminder when leaving the page.
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty, t("registry.unsavedWarning"));
+
   // Stages already hydrated from the backend this session — the skeleton only
   // blocks the FIRST load; later visits already have the data, so it never
   // reappears (the refresh then happens silently behind the populated form).
+  const formRef = useRef<HTMLFormElement>(null);
+  const autoRetryScheduled = useRef(false);
   const hydratedStages = useRef<Set<number>>(new Set());
   // documentTypeId values for NIDA and TIN, cached so blur() can distinguish
   // them from other doc types synchronously without an async lookup.
@@ -545,10 +554,10 @@ export default function RegistryWizard({
         }
         if (cancelled) return;
         const hasData = Object.keys(mapped).length > 0;
-        // The gate on a migrant's stages 4/5/6 must reflect the server on resume:
-        // data present → open on "Yes" (so it's shown); a submitted-but-empty
-        // stage (answered "No") → "No". So even an empty response is applied when
-        // there's a gate to settle. Nothing to do only when neither applies.
+        // The gate on a migrant's skippable stages (family, etc.) must reflect
+        // the server on resume: data present → open on "Yes"; a submitted-but-
+        // empty stage (answered "No") → "No". Even an empty response is applied
+        // when there's a gate to settle. Nothing to do only when neither applies.
         const gate = isMigrant ? MIGRANT_STAGE_GATE[step] : undefined;
         if (!hasData && !gate) return;
         setData((d) => {
@@ -1225,6 +1234,36 @@ export default function RegistryWizard({
   const agreed = data.agree === true;
   const StepComponent = STEP_COMPONENTS[step - 1];
 
+  // When connectivity returns, automatically resubmit the pending stage (same
+  // idempotency key) instead of making the user tap Save again.
+  useEffect(() => {
+    if (!justReconnected || !pendingSubmit || pendingSubmit.step !== step) return;
+    if (submitting || autoRetryScheduled.current) return;
+    if (isLast && !agreed) return;
+
+    autoRetryScheduled.current = true;
+    notify(t("connectivity.autoRetry"), "info");
+
+    const timer = window.setTimeout(() => {
+      autoRetryScheduled.current = false;
+      formRef.current?.requestSubmit();
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timer);
+      autoRetryScheduled.current = false;
+    };
+  }, [
+    justReconnected,
+    pendingSubmit,
+    step,
+    submitting,
+    isLast,
+    agreed,
+    notify,
+    t,
+  ]);
+
   // Returns only the FIRST incomplete level of a Tanzania cascade so that
   // errors never appear on fields that are still disabled (Region can't be
   // picked before Territory, District before Region, etc.).
@@ -1324,25 +1363,33 @@ export default function RegistryWizard({
     // When a GUARDIAN says they don't know the parents, only a single guardian's
     // details are collected instead of father + mother.
     if (step === 3) {
-      const guardianOnly = data.minorRelationship === "guardian" && data.knowsParents === "no";
-      const persons = guardianOnly ? ["guardian"] : ["father", "mother"];
-      if (guardianOnly) {
-        required = [
-          "guardianFirst",
-          "guardianLast",
-          "guardianDob",
-          "guardianNatCountry",
-          "guardianResCountry",
-        ];
-      }
-      for (const p of persons) {
-        const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
-        if (resCountry === "Tanzania") {
-          required = [...required, ...cascadeRequired(`${p}Res`, true)];
-        } else if (resCountry) {
-          required = [...required, `${p}ResCity`];
-        } else {
-          required = [...required, `${p}ResCountry`];
+      const isGuardian = data.minorRelationship === "guardian";
+      const knowsParents =
+        typeof data.knowsParents === "string" ? data.knowsParents : "";
+      // Guardian must answer the parents-info question before the forms apply.
+      if (isGuardian && knowsParents !== "yes" && knowsParents !== "no") {
+        required = ["knowsParents"];
+      } else {
+        const guardianOnly = isGuardian && knowsParents === "no";
+        const persons = guardianOnly ? ["guardian"] : ["father", "mother"];
+        if (guardianOnly) {
+          required = [
+            "guardianFirst",
+            "guardianLast",
+            "guardianDob",
+            "guardianNatCountry",
+            "guardianResCountry",
+          ];
+        }
+        for (const p of persons) {
+          const resCountry = typeof data[`${p}ResCountry`] === "string" ? (data[`${p}ResCountry`] as string).trim() : "";
+          if (resCountry === "Tanzania") {
+            required = [...required, ...cascadeRequired(`${p}Res`, true)];
+          } else if (resCountry) {
+            required = [...required, `${p}ResCity`];
+          } else {
+            required = [...required, `${p}ResCountry`];
+          }
         }
       }
     }
@@ -1461,7 +1508,7 @@ export default function RegistryWizard({
   // stages, a reload or a crash never loses typed data — and the user is never
   // nagged with an "unsaved changes" prompt on stage navigation.
   //
-  // This writes to localStorage ONLY. Submitting a stage to the backend is still
+  // This writes to a SESSION cookie ONLY. Submitting a stage to the backend is still
   // an explicit Save, so nothing half-finished is ever POSTed. The draft is
   // wiped when the session ends or the user signs out (see clearDraft callers),
   // so an abandoned registration can't linger on a shared workstation.
@@ -1492,6 +1539,33 @@ export default function RegistryWizard({
   // out and returns them to login (with an explanatory notice); anything else
   // shows the inline form error AND, when the backend pinpoints offending
   // fields, the message inline at exactly those fields.
+  function queueConnectionFailure(
+    stageData: Record<string, string | boolean>,
+    meta: { sid?: string; appId?: string; updatedStages: Set<number> },
+  ) {
+    const idempotencyKey =
+      pendingSubmit?.step === step
+        ? pendingSubmit.idempotencyKey
+        : createIdempotencyKey();
+    const queued = { step, idempotencyKey, queuedAt: new Date().toISOString() };
+    setPendingSubmit(queued);
+    saveRegistration({
+      step,
+      maxStep,
+      completed: false,
+      ownerId: ownerId || undefined,
+      applicationId: meta.appId || applicationId || undefined,
+      subjectId: meta.sid || subjectId || undefined,
+      submittedStages: [...meta.updatedStages],
+      registrationType: activeRegistrationType,
+      pendingSubmit: queued,
+      data: stageData,
+    });
+    const message = t("connectivity.submitQueued");
+    setFormError(message);
+    notify(message, "info");
+  }
+
   function reportSubmitError(err: unknown) {
     if (err instanceof SessionExpiredError) {
       signOutToLogin();
@@ -1784,20 +1858,36 @@ export default function RegistryWizard({
       if (!agreed) return;
       // Stage 9 — Declaration (final submit).
       setSubmitting(true);
+      const finalIdempotencyKey =
+        pendingSubmit?.step === step
+          ? pendingSubmit.idempotencyKey
+          : createIdempotencyKey();
+      beginIdempotentWrite(finalIdempotencyKey);
       try {
         await submitStage9(subjectId);
       } catch (err) {
         setSubmitting(false);
-        reportSubmitError(err);
+        if (isConnectionError(err)) {
+          queueConnectionFailure(data, {
+            sid: subjectId,
+            appId: applicationId,
+            updatedStages: submittedStages,
+          });
+        } else {
+          reportSubmitError(err);
+        }
         return;
+      } finally {
+        endIdempotentWrite();
       }
       setSubmitting(false);
+      setPendingSubmit(undefined);
       onComplete(data, applicationId, subjectId);
       return;
     }
 
-    // Migrant flow: stages 4–6 require an explicit Yes/No on each gate question.
-    // Unanswered → block Save. "No" on a whole-stage gate (5 & 6) skips that stage.
+    // Migrant flow: stages 4 & 6 require an explicit Yes/No on each gate question.
+    // Unanswered → block Save. "No" on a whole-stage gate (family) skips that stage.
     if (isMigrant) {
       for (const field of MIGRANT_STEP_GATES[step] ?? []) {
         if (data[field] !== true && data[field] !== false) {
@@ -1828,7 +1918,13 @@ export default function RegistryWizard({
     const missing = missingFields();
     if (missing.length > 0) {
       setErrors(missing);
-      setFieldErrors({});
+      // Guardian parents-info question is a radio, not a labeled Field — pin a
+      // clear "please answer" message so Save doesn't look like a no-op.
+      setFieldErrors(
+        missing.includes("knowsParents")
+          ? { knowsParents: t("registry.pleaseAnswer") }
+          : {},
+      );
       setFormError("");
       return;
     }
@@ -2450,6 +2546,11 @@ export default function RegistryWizard({
     // Submit stage to backend
     if (step >= 1 && step <= 8) {
       setSubmitting(true);
+      const idempotencyKey =
+        pendingSubmit?.step === step
+          ? pendingSubmit.idempotencyKey
+          : createIdempotencyKey();
+      beginIdempotentWrite(idempotencyKey);
       try {
         if (step === 1) {
           if (edit) {
@@ -2579,10 +2680,17 @@ export default function RegistryWizard({
         }
       } catch (err) {
         setSubmitting(false);
-        reportSubmitError(err);
+        if (isConnectionError(err)) {
+          queueConnectionFailure(stageData, { sid, appId, updatedStages });
+        } else {
+          reportSubmitError(err);
+        }
         return;
+      } finally {
+        endIdempotentWrite();
       }
       setSubmitting(false);
+      setPendingSubmit(undefined);
       updatedStages.add(step);
       setSubmittedStages(updatedStages);
       notify(t("toast.stageSaved"));
@@ -2636,6 +2744,8 @@ export default function RegistryWizard({
       applicationId: appId || undefined,
       subjectId: sid || undefined,
       submittedStages: [...updatedStages],
+      registrationType: activeRegistrationType,
+      pendingSubmit: undefined,
       data: mergedData ?? stageData,
     });
     // The stage's data is now persisted — no longer dirty.
@@ -2680,7 +2790,7 @@ export default function RegistryWizard({
               {t(`registry.s${step}Intro`)}
             </p>
 
-            <form onSubmit={handlePrimary} className="mt-4">
+            <form ref={formRef} onSubmit={handlePrimary} className="mt-4">
               <div className="rounded-2xl border border-line bg-card p-5 sm:p-6">
                 <WizardProvider
                   data={data}
@@ -2709,6 +2819,13 @@ export default function RegistryWizard({
                 {formError && (
                   <p role="alert" data-form-error className="mt-6 text-base font-medium text-danger">
                     {formError}
+                  </p>
+                )}
+                {pendingSubmit && !formError && (
+                  <p role="status" className="mt-6 text-base font-medium text-amber-800">
+                    {submitting
+                      ? t("connectivity.autoRetry")
+                      : t("connectivity.pendingSubmit").replace("{step}", String(pendingSubmit.step))}
                   </p>
                 )}
 

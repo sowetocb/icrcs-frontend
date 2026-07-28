@@ -169,30 +169,39 @@ function ParentBlock({ prefix, label }: { prefix: string; label: string }) {
 }
 
 export default function StepGuardian() {
-  const { data, set, setQuiet } = useWizard();
+  const { data, set, setQuiet, errors, fieldErrors } = useWizard();
   const { t } = useI18n();
 
-  // When a foreigner registers a minor as a GUARDIAN, they're first asked whether
-  // they know the minor's parents. Default "yes" → show the parents' details; "no"
-  // → collect a single guardian's details instead. (For a "parent" registrant, or
-  // a normal registration, the parents are always collected.)
+  // When the account holder registers a minor as a GUARDIAN, they're asked
+  // whether they have the minor's parents' details (even if deceased). Yes →
+  // father + mother forms; No → collect the guardian's own details only.
+  // Parent registrants (and the account holder's own registration) always
+  // collect father + mother.
   const isGuardian = data.minorRelationship === "guardian";
-  const knowsParents = (typeof data.knowsParents === "string" ? data.knowsParents : "yes") !== "no";
-  const showParents = !isGuardian || knowsParents;
+  const knowsParentsAnswer =
+    typeof data.knowsParents === "string" ? data.knowsParents : "";
+  const showParents = !isGuardian || knowsParentsAnswer !== "no";
+  const showGuardianForm = isGuardian && knowsParentsAnswer === "no";
+  const knowsParentsInvalid =
+    errors.includes("knowsParents") || !!fieldErrors?.knowsParents;
 
   useEffect(() => {
     if (!data.fatherGender) setQuiet("fatherGender", "M");
     if (!data.motherGender) setQuiet("motherGender", "F");
-    if (isGuardian && data.knowsParents === undefined) setQuiet("knowsParents", "yes");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuardian]);
+  }, []);
 
   return (
     <div className="space-y-8">
       {isGuardian && (
-        <div className="rounded-lg border border-line bg-card p-4">
+        <div
+          className={`rounded-lg border bg-card p-4 ${
+            knowsParentsInvalid ? "border-danger" : "border-line"
+          }`}
+        >
           <p className="mb-3 text-sm font-medium text-ink">
             {t("registry.knowsParentsQuestion")}
+            <span className="ml-0.5 text-danger">*</span>
           </p>
           <div className="flex gap-6">
             {(["yes", "no"] as const).map((v) => (
@@ -200,7 +209,7 @@ export default function StepGuardian() {
                 <input
                   type="radio"
                   name="knowsParents"
-                  checked={(typeof data.knowsParents === "string" ? data.knowsParents : "yes") === v}
+                  checked={knowsParentsAnswer === v}
                   onChange={() => set("knowsParents", v)}
                   className="h-4 w-4 shrink-0 accent-navy-700"
                 />
@@ -210,18 +219,24 @@ export default function StepGuardian() {
               </label>
             ))}
           </div>
+          {knowsParentsInvalid && (
+            <p className="mt-2 text-sm font-medium text-danger">
+              {fieldErrors?.knowsParents || t("registry.pleaseAnswer")}
+            </p>
+          )}
         </div>
       )}
 
-      {showParents ? (
+      {/* Wait for the guardian to answer before showing either form. */}
+      {isGuardian && !knowsParentsAnswer ? null : showGuardianForm ? (
+        <ParentBlock prefix="guardian" label={t("fields.guardianInfo")} />
+      ) : showParents ? (
         <>
           <ParentBlock prefix="father" label={t("fields.fatherInfo")} />
           <hr className="border-line" />
           <ParentBlock prefix="mother" label={t("fields.motherInfo")} />
         </>
-      ) : (
-        <ParentBlock prefix="guardian" label={t("fields.guardianInfo")} />
-      )}
+      ) : null}
     </div>
   );
 }

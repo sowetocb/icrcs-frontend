@@ -5,7 +5,6 @@ import {
   useGenderOptions,
   useRelationshipTypeOptions,
   useOccupationTypeOptions,
-  MigrantStageGate,
 } from "@/components/registry/blocks";
 import CountrySelect from "@/components/registry/countrySelect";
 import WardCascade from "@/components/registry/wardCascade";
@@ -103,7 +102,7 @@ function ContactBlock({ prefix, index }: { prefix: string; index: number }) {
 }
 
 export default function StepEmergency() {
-  const { data, set, setQuiet, isMigrant } = useWizard();
+  const { data, set, setQuiet } = useWizard();
   const { t } = useI18n();
 
   // The 2nd contact is optional and hidden until the user adds it (or it already
@@ -117,9 +116,8 @@ export default function StepEmergency() {
     for (const k of Object.keys(data)) if (k.startsWith("ec2")) setQuiet(k, "");
   }
 
-  // At least one emergency contact is required when the migrant answers "Yes" to
-  // the gate (and for every non-migrant registration).
-  const content = (
+  // At least one emergency contact is always required (every registration track).
+  return (
     <div className="space-y-8">
       <ContactBlock prefix="ec1" index={1} />
       {ec2Shown ? (
@@ -149,13 +147,4 @@ export default function StepEmergency() {
       )}
     </div>
   );
-
-  if (isMigrant) {
-    return (
-      <MigrantStageGate field="mHasEmergency" question={t("registry.gateEmergency")}>
-        {content}
-      </MigrantStageGate>
-    );
-  }
-  return content;
 }

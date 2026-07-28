@@ -2,7 +2,7 @@ import { apiPost, apiGet, apiPut, apiDelete, apiUpload, ApiError } from "./clien
 import { resolveGenderId, resolveGenderCode } from "./lookup";
 import { loadSession, saveSession, clearSession } from "@/lib/auth/session";
 import { isOfficer as _isOfficer, clearOfficer as _clearOfficer } from "@/lib/auth/officerSession";
-import { loadProfile, toProxyUrl, type Profile } from "@/lib/auth/profile";
+import { loadProfile, clearProfile, fileViewUrl, type Profile } from "@/lib/auth/profile";
 import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
 
@@ -175,23 +175,24 @@ export async function refresh(_refreshToken?: string): Promise<Tokens> {
     await delay(200);
     return { ...MOCK_TOKENS };
   }
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = (async () => {
-    const res = await fetch("/api/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      throw new ApiError(res.status, "Session expired");
-    }
-    // Tokens are in HttpOnly cookies; return stubs.
-    return { accessToken: "__httponly__", refreshToken: "__httponly__" } as Tokens;
-  })();
-  try {
-    return await refreshInFlight;
-  } finally {
-    refreshInFlight = null;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new ApiError(res.status, "Session expired");
+        }
+        // Tokens are in HttpOnly cookies; return stubs.
+        return { accessToken: "__httponly__", refreshToken: "__httponly__" } as Tokens;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
   }
+  return refreshInFlight;
 }
 
 /** POST /api/auth/logout — clears HttpOnly cookies and invalidates the backend
@@ -373,6 +374,7 @@ export async function withFreshAuth<T>(
     const session = loadSession();
     if (!officerMode && !session?.refreshToken) {
       clearSession();
+      clearProfile();
       throw new SessionExpiredError();
     }
 
@@ -391,7 +393,10 @@ export async function withFreshAuth<T>(
         (refreshErr.status === 401 || refreshErr.status === 403)
       ) {
         if (officerMode) _clearOfficer();
-        else clearSession();
+        else {
+          clearSession();
+          clearProfile();
+        }
         throw new SessionExpiredError();
       }
       throw refreshErr; // transient — don't log the user out
@@ -405,7 +410,10 @@ export async function withFreshAuth<T>(
         (retryErr.status === 401 || retryErr.status === 403)
       ) {
         if (officerMode) _clearOfficer();
-        else clearSession();
+        else {
+          clearSession();
+          clearProfile();
+        }
         throw new SessionExpiredError();
       }
       throw retryErr; // transient — don't log the user out
@@ -415,17 +423,40 @@ export async function withFreshAuth<T>(
 
 /** Officer-specific refresh — hits the /api/officer/refresh server-side route
  * which reads the icrcs-officer-refresh cookie, exchanges it with the User
- * Management API, and writes fresh cookies. */
-async function refreshOfficer(): Promise<Tokens> {
-  const res = await fetch("/api/officer/refresh", {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, "Officer session expired");
+ * Management API, and writes fresh cookies.
+ *
+ * MUST be single-flight: the UM API rotates the refresh token on every call.
+ * Parallel refreshes (AuthGuard + keep-alive + withFreshAuth) would invalidate
+ * a live session and force a logout. */
+let officerRefreshInFlight: Promise<Tokens> | null = null;
+
+export async function refreshOfficerSession(): Promise<Tokens> {
+  if (BYPASS) {
+    await delay(100);
+    return { accessToken: "__httponly__", refreshToken: "__httponly__" };
   }
-  // Tokens are in HttpOnly cookies; return stubs.
-  return { accessToken: "__httponly__", refreshToken: "__httponly__" };
+  if (!officerRefreshInFlight) {
+    officerRefreshInFlight = (async () => {
+      try {
+        const res = await fetch("/api/officer/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new ApiError(res.status, "Officer session expired");
+        }
+        return { accessToken: "__httponly__", refreshToken: "__httponly__" };
+      } finally {
+        officerRefreshInFlight = null;
+      }
+    })();
+  }
+  return officerRefreshInFlight;
+}
+
+/** @deprecated Prefer refreshOfficerSession — kept for internal callers. */
+async function refreshOfficer(): Promise<Tokens> {
+  return refreshOfficerSession();
 }
 
 /** GET /v1/profile/me — the full profile for the signed-in account. Call once
@@ -453,7 +484,7 @@ export async function refreshMyProfile(): Promise<Profile> {
  * can't serve it. */
 export async function fetchProfilePicture(path: string): Promise<string | null> {
   if (!path || BYPASS) return null;
-  const url = toProxyUrl(path);
+  const url = fileViewUrl(path);
   if (!url) return null;
   // Best-effort, side-effect-free: a single authed request using the current
   // token. It must NEVER refresh or clear the session — a 403 from the file
@@ -520,9 +551,18 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
   return profile;
 }
 
-/** POST /v1/profile/picture — multipart upload (field "file", jpg/png ≤500KB).
+/** POST /v1/profile/picture — multipart upload (field "file", jpg/png ≤ FILE_MAX).
  * Returns the stored relative path. */
 export async function uploadProfilePicture(file: File): Promise<string> {
+  const { validateUploadFile, renameUploadFile } = await import(
+    "@/lib/validation/fileUpload"
+  );
+  const check = await validateUploadFile(file, "photo");
+  if (!check.ok) {
+    throw new ApiError(400, check.message, { code: check.code });
+  }
+  const safeFile = renameUploadFile(file, check.safeName, check.mime);
+
   if (BYPASS) {
     await delay(400);
     return "uploads/mock/profile.png";
@@ -530,7 +570,7 @@ export async function uploadProfilePicture(file: File): Promise<string> {
   const raw = (await withFreshAuth((at) => {
     // Build a fresh FormData per attempt (a body can't be re-sent on retry).
     const form = new FormData();
-    form.append("file", file);
+    form.append("file", safeFile);
     return apiUpload("/v1/profile/picture", form, at);
   })) as Record<string, unknown>;
   // Response shape: { success, data: "<relative path string>" }

@@ -328,13 +328,14 @@ export default function PeopleList() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen flex-col overflow-x-clip bg-surface">
+      {/* Viewport-locked shell: table body scrolls; header + pagination stay put. */}
+      <div className="flex h-screen flex-col overflow-hidden bg-surface">
         <DashboardTopbar />
-        <div className="flex flex-1">
+        <div className="flex min-h-0 flex-1">
           <CitizenSidebar />
-          <main className="min-w-0 flex-1 px-6 py-10 lg:px-10">
-            <div className="mx-auto w-full min-w-0 max-w-6xl">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col px-6 py-6 lg:px-10">
+            <div className="mx-auto flex w-full min-h-0 min-w-0 max-w-6xl flex-1 flex-col">
+              <div className="flex shrink-0 flex-wrap items-start justify-between gap-4">
                 <div>
                   <h1 className="font-display text-3xl font-black tracking-tight text-navy-700">
                     {t("people.title")}
@@ -363,9 +364,9 @@ export default function PeopleList() {
                   <p className="text-muted">{t("people.empty")}</p>
                 </div>
               ) : (
-                <>
+                <div className="mt-6 flex min-h-0 flex-1 flex-col">
                   {/* Summary cards */}
-                  <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3">
+                  <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-3">
                     {([
                       { key: "total", label: t("people.statRegistered"), value: counts.total, ring: "bg-navy-700 text-white" },
                       { key: "approved", label: t("people.statApproved"), value: counts.approved, ring: "bg-success/15 text-success" },
@@ -376,7 +377,7 @@ export default function PeopleList() {
                     ] as const).map((card) => (
                       <div
                         key={card.key}
-                        className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4"
+                        className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3 sm:p-4"
                       >
                         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-black ${card.ring}`}>
                           {card.value}
@@ -387,7 +388,7 @@ export default function PeopleList() {
                   </div>
 
                   {/* Search + filters */}
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="mt-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="relative flex-1">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
                         <SearchIcon />
@@ -424,117 +425,132 @@ export default function PeopleList() {
                     </select>
                   </div>
 
-                  <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
-                    <table className="w-full min-w-[720px] border-collapse text-left text-[13px]">
-                      <thead>
-                        <tr className="border-b border-line text-[15px] font-semibold uppercase tracking-wider text-muted">
-                          <th className="px-4 py-3 font-semibold">{t("people.colApplicationId")}</th>
-                          <th className="px-4 py-3 font-semibold">{t("people.colName")}</th>
-                          <th className="px-4 py-3 font-semibold">{t("people.colStatus")}</th>
-                          <th className="px-4 py-3 font-semibold">{t("people.colRegisteredOn")}</th>
-                          <th className="px-4 py-3 font-semibold text-right">{t("people.colActions")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedPeople.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
-                              {t("people.noResults")}
-                            </td>
+                  {/* Scrollable table + pinned pagination */}
+                  <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                    <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-line bg-card">
+                      <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-[13px]">
+                        <thead className="sticky top-0 z-10">
+                          <tr className="text-[15px] font-semibold uppercase tracking-wider text-muted">
+                            <th className="border-b border-line bg-card px-4 py-3 font-semibold">
+                              {t("people.colApplicationId")}
+                            </th>
+                            <th className="border-b border-line bg-card px-4 py-3 font-semibold">
+                              {t("people.colName")}
+                            </th>
+                            <th className="border-b border-line bg-card px-4 py-3 font-semibold">
+                              {t("people.colStatus")}
+                            </th>
+                            <th className="border-b border-line bg-card px-4 py-3 font-semibold">
+                              {t("people.colRegisteredOn")}
+                            </th>
+                            <th className="border-b border-line bg-card px-4 py-3 text-right font-semibold">
+                              {t("people.colActions")}
+                            </th>
                           </tr>
-                        ) : paginatedPeople.map((p) => {
-                          const remote = isRemotePerson(p);
-                          const name = remote ? p.fullName : p.name;
-                          const id = remote ? p.subjectId : p.applicationId;
-                          const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
-                          const registeredOn = remote ? formatDate(p.createdAt) : p.submittedDate;
-                          const sc = statusColor(rawStatus);
-
-                          return (
-                            <tr
-                              key={id}
-                              className="border-b border-line last:border-b-0 transition hover:bg-surface"
-                            >
-                              <td className="px-4 py-3 font-mono text-xs font-medium text-navy-500">
-                                {id}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {isAccountHolder(p) && (
-                                    <span
-                                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-700"
-                                      title={t("people.creatorBadge")}
-                                      aria-label={t("people.creatorBadge")}
-                                    >
-                                      <UserIcon />
-                                    </span>
-                                  )}
-                                  <span className="text-[13px] font-medium text-navy-700">{name}</span>
-                                  {isAccountHolder(p) && (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-semibold text-gold-700">
-                                      {t("people.creatorBadge")}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${sc.bg} ${sc.text}`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-                                  {getStatusLabel(rawStatus, t)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-xs text-muted">
-                                {registeredOn}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex justify-end">
-                                  {remote ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDownloadRemote(p)}
-                                      disabled={downloadingId === p.subjectId}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      <DownloadIcon />
-                                      {downloadingId === p.subjectId
-                                        ? t("people.preparing")
-                                        : t("people.download")}
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDownloadPdf(p.applicationId, p.name)}
-                                      disabled={downloadingId === p.applicationId}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      <DownloadIcon />
-                                      {downloadingId === p.applicationId
-                                        ? t("people.preparing")
-                                        : t("people.download")}
-                                    </button>
-                                  )}
-                                </div>
+                        </thead>
+                        <tbody>
+                          {paginatedPeople.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-10 text-center text-xs text-muted">
+                                {t("people.noResults")}
                               </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          ) : paginatedPeople.map((p) => {
+                            const remote = isRemotePerson(p);
+                            const name = remote ? p.fullName : p.name;
+                            const id = remote ? p.subjectId : p.applicationId;
+                            const rawStatus = remote ? p.status : (p.status === "submitted" ? "SUBMITTED" : "PENDING");
+                            const registeredOn = remote ? formatDate(p.createdAt) : p.submittedDate;
+                            const sc = statusColor(rawStatus);
 
-                  {/* Pagination */}
-                  {totalItems > 0 && (
-                    <Pagination
-                      page={page}
-                      totalPages={totalPages}
-                      totalItems={totalItems}
-                      pageSize={pageSize}
-                      onPageChange={setPage}
-                      onPageSizeChange={setPageSize}
-                      t={t}
-                    />
-                  )}
-                </>
+                            return (
+                              <tr
+                                key={id}
+                                className="transition hover:bg-surface"
+                              >
+                                <td className="border-b border-line px-4 py-3 font-mono text-xs font-medium text-navy-500">
+                                  {id}
+                                </td>
+                                <td className="border-b border-line px-4 py-3">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {isAccountHolder(p) && (
+                                      <span
+                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-700"
+                                        title={t("people.creatorBadge")}
+                                        aria-label={t("people.creatorBadge")}
+                                      >
+                                        <UserIcon />
+                                      </span>
+                                    )}
+                                    <span className="text-[13px] font-medium text-navy-700">{name}</span>
+                                    {isAccountHolder(p) && (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-semibold text-gold-700">
+                                        {t("people.creatorBadge")}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="border-b border-line px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${sc.bg} ${sc.text}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
+                                    {getStatusLabel(rawStatus, t)}
+                                  </span>
+                                </td>
+                                <td className="border-b border-line px-4 py-3 text-xs text-muted">
+                                  {registeredOn}
+                                </td>
+                                <td className="border-b border-line px-4 py-3">
+                                  <div className="flex justify-end">
+                                    {remote ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownloadRemote(p)}
+                                        disabled={downloadingId === p.subjectId}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        <DownloadIcon />
+                                        {downloadingId === p.subjectId
+                                          ? t("people.preparing")
+                                          : t("people.download")}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownloadPdf(p.applicationId, p.name)}
+                                        disabled={downloadingId === p.applicationId}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-navy-700 transition hover:border-gold/40 hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        <DownloadIcon />
+                                        {downloadingId === p.applicationId
+                                          ? t("people.preparing")
+                                          : t("people.download")}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination stays outside the scroll area so it never leaves view. */}
+                    {totalItems > 0 && (
+                      <div className="shrink-0">
+                        <Pagination
+                          page={page}
+                          totalPages={totalPages}
+                          totalItems={totalItems}
+                          pageSize={pageSize}
+                          onPageChange={setPage}
+                          onPageSizeChange={setPageSize}
+                          t={t}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </main>

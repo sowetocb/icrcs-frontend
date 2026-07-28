@@ -13,6 +13,7 @@ import {
 import { getErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/ui/toast";
 import { RULES } from "@/lib/validation/rules";
+import { PHOTO_ACCEPT } from "@/lib/api/files";
 import { LoaderCircle, X } from "lucide-react";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { useGenderOptions } from "@/components/registry/blocks";
@@ -465,7 +466,7 @@ function CitizenProfileView({ onClose }: { onClose?: () => void }) {
           <input
             ref={fileRef}
             type="file"
-            accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
+            accept={PHOTO_ACCEPT}
             onChange={handlePhoto}
             className="hidden"
           />

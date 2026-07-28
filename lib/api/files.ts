@@ -2,9 +2,10 @@
 // individually to /v1/files/upload with its attachmentTypeId; Stage 5 is then
 // finalised separately (see submitStage5).
 
-import { apiUpload } from "./client";
+import { apiUpload, ApiError } from "./client";
 import { loadSession } from "@/lib/auth/session";
 import { RULES } from "@/lib/validation/rules";
+import { renameUploadFile, validateUploadFile } from "@/lib/validation/fileUpload";
 
 const BYPASS = process.env.NEXT_PUBLIC_AUTH_BYPASS !== "false";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -66,9 +67,14 @@ export const MANDATORY_ATTACHMENT_TYPE_IDS = ATTACHMENT_TYPES.filter((a) => a.ma
  * Stage 8 enforces the either/or rule against this pair. */
 export const PARENT_BIRTH_CERT_TYPE_IDS = [2, 3];
 
-/** Accepted upload formats (jpg/png/pdf) — MIME types from the shared RULES,
- *  plus the matching file extensions for the native picker. */
-export const ATTACHMENT_ACCEPT = `${RULES.FILE_ALLOWED_MIME.join(",")},.jpg,.jpeg,.png,.pdf`;
+/** Accepted formats for supporting documents — PDF only. */
+export const DOCUMENT_ACCEPT = "application/pdf,.pdf";
+
+/** Accepted formats for passport / profile photos — JPG, JPEG, PNG. */
+export const PHOTO_ACCEPT = `${RULES.PHOTO_ALLOWED_MIME.join(",")},.jpg,.jpeg,.png`;
+
+/** @deprecated Use DOCUMENT_ACCEPT or PHOTO_ACCEPT. Kept as document accept. */
+export const ATTACHMENT_ACCEPT = DOCUMENT_ACCEPT;
 
 /** Metadata returned by an attachment upload — everything Stage 8 needs to
  * register the file against the application. */
@@ -87,18 +93,25 @@ export async function uploadAttachment(
   attachmentTypeId: number,
   file: File,
 ): Promise<UploadedAttachment> {
+  const kind = attachmentTypeId === PASSPORT_PHOTO_TYPE ? "photo" : "document";
+  const check = await validateUploadFile(file, kind);
+  if (!check.ok) {
+    throw new ApiError(400, check.message, { code: check.code });
+  }
+  const safeFile = renameUploadFile(file, check.safeName, check.mime);
+
   if (BYPASS) {
     await delay(500);
     return {
       fileId: `mock-file-${attachmentTypeId}`,
-      fileUrl: `uploads/mock-${attachmentTypeId}-${file.name}`,
-      mimeType: file.type || "application/octet-stream",
-      fileSizeBytes: file.size,
+      fileUrl: `uploads/mock-${attachmentTypeId}-${safeFile.name}`,
+      mimeType: check.mime,
+      fileSizeBytes: safeFile.size,
       fileHash: `mockhash-${attachmentTypeId}`,
     };
   }
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", safeFile);
   form.append("subjectId", subjectId);
   form.append("attachmentTypeId", String(attachmentTypeId));
 
@@ -110,8 +123,8 @@ export async function uploadAttachment(
     // Prefer server-provided metadata; fall back to the local File for the
     // fields the browser already knows.
     fileUrl: String(d.fileUrl ?? d.url ?? d.path ?? ""),
-    mimeType: String(d.mimeType ?? file.type ?? "application/octet-stream"),
-    fileSizeBytes: Number(d.fileSizeBytes ?? d.size ?? file.size ?? 0),
+    mimeType: String(d.mimeType ?? check.mime),
+    fileSizeBytes: Number(d.fileSizeBytes ?? d.size ?? safeFile.size ?? 0),
     fileHash: String(d.fileHash ?? d.hash ?? ""),
   };
 }

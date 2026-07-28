@@ -225,10 +225,13 @@ export default function CitizenshipGate({
             <h3 className="font-display text-lg font-bold text-navy-700">
               {t("gate.relationshipQuestion")}
             </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              {t("gate.relationshipHint")}
+            </p>
             <div className="mt-4 space-y-3">
               {([
-                ["guardian", t("gate.relationshipGuardian")],
                 ["parent", t("gate.relationshipParent")],
+                ["guardian", t("gate.relationshipGuardian")],
               ] as const).map(([value, label]) => (
                 <label
                   key={value}

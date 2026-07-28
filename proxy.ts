@@ -88,6 +88,22 @@ function isPublicProxyPath(segs: string[]): boolean {
   return false;
 }
 
+/** True when the request carries a session the proxy relay may forward. */
+function hasProxySession(request: NextRequest, segs: string[]): boolean {
+  const hasBearer = (request.headers.get("authorization") ?? "").startsWith("Bearer ");
+  if (hasBearer) return true;
+
+  const officer = Boolean(request.cookies.get("icrcs-officer-access")?.value);
+  const citizen = Boolean(request.cookies.get("icrcs-access")?.value);
+  const isOfficerPath = segs[0] === "v1" && segs[1] === "officer";
+  if (isOfficerPath) return officer;
+  // GET /v1/files/view is under the citizen namespace but officers reach it with
+  // icrcs-officer-access only (no citizen cookie on /registry/people).
+  const isFileView = segs[0] === "v1" && segs[1] === "files" && segs[2] === "view";
+  if (isFileView) return officer || citizen;
+  return citizen || officer;
+}
+
 // ---- In-memory per-IP rate limiting for sensitive endpoints ----------------
 const RL_LIMIT = 15; // requests
 const RL_WINDOW_MS = 60_000; // per minute, per (ip + path)
@@ -160,14 +176,7 @@ export function proxy(request: NextRequest): Response {
     }
 
     if (!isPublicProxyPath(segs)) {
-      const isOfficerPath = segs[0] === "v1" && segs[1] === "officer";
-      const hasCookie = isOfficerPath
-        ? Boolean(request.cookies.get("icrcs-officer-access")?.value)
-        : Boolean(request.cookies.get("icrcs-access")?.value);
-      const hasBearer = (request.headers.get("authorization") ?? "").startsWith(
-        "Bearer ",
-      );
-      if (!hasCookie && !hasBearer) {
+      if (!hasProxySession(request, segs)) {
         return Response.json({ error: "unauthorized" }, { status: 401 });
       }
     }

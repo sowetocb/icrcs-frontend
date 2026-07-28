@@ -7,6 +7,9 @@ import { ToastProvider } from "@/components/ui/toast";
 import { MobileNavProvider } from "@/components/layout/mobileNav";
 import SessionKeepAlive from "@/components/auth/sessionKeepAlive";
 import IdleLogout from "@/components/auth/idleLogout";
+import DevToolsGuard from "@/components/auth/devToolsGuard";
+import StoragePurge from "@/components/auth/storagePurge";
+import ConnectivityBanner from "@/components/connectivity/connectivityBanner";
 
 // Self-hosted (variable) fonts so the production build never reaches out to
 // Google Fonts at build time — the build container has no internet access.
@@ -38,6 +41,9 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: "#0d1f33",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -61,8 +67,11 @@ export default function RootLayout({
           <LocaleProvider>
             <ToastProvider>
               <MobileNavProvider>
+                <StoragePurge />
                 <SessionKeepAlive />
                 <IdleLogout />
+                <DevToolsGuard />
+                <ConnectivityBanner />
                 {children}
               </MobileNavProvider>
             </ToastProvider>

@@ -37,10 +37,17 @@ export async function POST(request: Request) {
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    // Clear stale cookies on refresh failure
-    jar.delete("icrcs-access");
-    jar.delete("icrcs-refresh");
-    return Response.json({ error: "Session expired" }, { status: 401 });
+    // Only clear cookies on definitive auth rejection — never on 5xx/network
+    // ambiguity, which would log out an active user.
+    if (res.status === 401 || res.status === 403) {
+      jar.delete("icrcs-access");
+      jar.delete("icrcs-refresh");
+      return Response.json({ error: "Session expired" }, { status: 401 });
+    }
+    return Response.json(
+      { error: "Unable to refresh session" },
+      { status: res.status >= 500 ? 503 : res.status },
+    );
   }
 
   const tokens = extractTokens(data, refreshToken);

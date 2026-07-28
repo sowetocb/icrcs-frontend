@@ -30,7 +30,7 @@ const ADULT_ID_DOCUMENT_TYPES: number[] = [
 export const uploadFileSchema = z
   .instanceof(File, { message: 'File is empty or missing' })
   .refine((f) => f.size > 0, 'File is empty or missing') // FILE_EMPTY
-  .refine((f) => f.size <= RULES.FILE_MAX_BYTES, 'File exceeds maximum size of 500KB') // FILE_TOO_LARGE
+  .refine((f) => f.size <= RULES.FILE_MAX_BYTES, `File exceeds maximum size of ${Math.round(RULES.FILE_MAX_BYTES / 1024)}KB`) // FILE_TOO_LARGE
   .refine(
     (f) => (RULES.FILE_ALLOWED_MIME as readonly string[]).includes(f.type),
     'File type not allowed. Use jpg, png or pdf',

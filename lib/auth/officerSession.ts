@@ -1,12 +1,19 @@
 // Officer (government user) session — parallel to lib/auth/session.ts.
 //
-// Officer authentication is a SEPARATE service (the User Management API,
-// username-based) from the citizen flow. Its access/refresh tokens live in
-// their own HttpOnly cookies (icrcs-officer-*) set by the /api/officer/* proxy
-// routes, so tokens never reach JavaScript. This module only tracks a shared
-// "logged-in" flag plus the cached officer profile (roles/permissions) used for
-// UI gating. Like the citizen session it lives in localStorage so it is shared
-// across tabs and emits cross-tab `storage` events.
+// Tokens: HttpOnly cookies (icrcs-officer-*) set by /api/officer/* — never JS.
+// Officer profile + roles: SESSION cookies (cleared on logout / browser close).
+// Never localStorage.
+
+import {
+  broadcastAuthChange,
+  deleteClientCookie,
+  getClientCookie,
+  getClientCookieJson,
+  purgeSensitiveLocalStorage,
+  setClientCookie,
+  setClientCookieJson,
+  subscribeAuthBroadcast,
+} from "./clientCookies";
 
 export type OfficerUser = {
   userId?: string;
@@ -29,10 +36,8 @@ const USER = "icrcs-officer-user";
 export function loadOfficer(): OfficerUser | null {
   if (typeof window === "undefined") return null;
   try {
-    if (window.localStorage.getItem(FLAG) !== "1") return null;
-    const raw = window.localStorage.getItem(USER);
-    const parsed = raw ? (JSON.parse(raw) as Partial<OfficerUser>) : {};
-    return { roles: [], permissions: [], ...parsed };
+    if (getClientCookie(FLAG) !== "1") return null;
+    return getClientCookieJson<OfficerUser>(USER);
   } catch {
     return null;
   }
@@ -41,24 +46,52 @@ export function loadOfficer(): OfficerUser | null {
 export function saveOfficer(user: OfficerUser): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(FLAG, "1");
-    window.localStorage.setItem(USER, JSON.stringify(user));
+    purgeSensitiveLocalStorage();
+    const next: OfficerUser = {
+      ...user,
+      roles: Array.isArray(user.roles) ? user.roles : [],
+      permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    };
+    setClientCookie(FLAG, "1");
+    setClientCookieJson(USER, next);
+    broadcastAuthChange({ kind: "officer", loggedIn: true });
   } catch {
     // ignore
   }
+}
+
+/** Merge identity fields from GET /v1/officer/profile into the session cookie. */
+export function hydrateOfficerProfile(
+  profile: Partial<OfficerUser> & { fullName?: string },
+): void {
+  if (typeof window === "undefined") return;
+  if (getClientCookie(FLAG) !== "1") return;
+  const prev = loadOfficer() ?? { roles: [], permissions: [] };
+  saveOfficer({
+    ...prev,
+    ...profile,
+    roles: prev.roles,
+    permissions: prev.permissions,
+  });
 }
 
 export function clearOfficer(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(FLAG);
-    window.localStorage.removeItem(USER);
+    deleteClientCookie(FLAG);
+    deleteClientCookie(USER);
+    deleteClientCookie("icrcs_user");
+    purgeSensitiveLocalStorage();
+    broadcastAuthChange({ kind: "officer", loggedIn: false });
   } catch {
     // ignore
   }
 }
 
-export const isOfficer = (): boolean => loadOfficer() !== null;
+export const isOfficer = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return getClientCookie(FLAG) === "1";
+};
 
 /** Case-insensitive permission check against the cached officer profile. The
  * authoritative check is server-side (User Management /verify-token); this only
@@ -77,16 +110,10 @@ export function officerHasRole(role: string): boolean {
   return o.roles.some((r) => r.trim().toUpperCase() === want);
 }
 
-// User Management authorization codes that grant ICRCS (migrant) registration —
-// the `ICRCS_REGISTRATION` action under the ICRCS module, or the ICRCS_OFFICER
-// role. These mirror the User Management contract (login response: Roles[].RoleCode
-// and PermissionsByModule[].Actions[].ActionCode).
 export const ICRCS_REGISTER_PERMISSION = "ICRCS_REGISTRATION";
 export const ICRCS_OFFICER_ROLE = "ICRCS_OFFICER";
 
-/** Whether the signed-in officer is authorized to register in ICRCS. A `.go.tz`
- * account may authenticate for other modules (RSICN / WEBSITE / …) without any
- * ICRCS right, so this must be checked before letting them into the registry. */
+/** Whether the signed-in officer is authorized to register in ICRCS. */
 export function officerCanRegisterIcrcs(): boolean {
   return (
     officerHasPermission(ICRCS_REGISTER_PERMISSION) ||
@@ -94,13 +121,9 @@ export function officerCanRegisterIcrcs(): boolean {
   );
 }
 
-/** Subscribe to cross-tab officer-session changes (log-in/out in another tab).
- * Mirrors subscribeSession in lib/auth/session.ts. */
+/** Subscribe to cross-tab officer-session changes (log-in/out in another tab). */
 export function subscribeOfficer(onChange: (loggedIn: boolean) => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const handler = (e: StorageEvent) => {
-    if (e.key === null || e.key === FLAG) onChange(isOfficer());
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+  return subscribeAuthBroadcast((d) => {
+    if (d.kind === "officer") onChange(d.loggedIn);
+  });
 }

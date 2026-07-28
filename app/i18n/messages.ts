@@ -24,7 +24,7 @@ const en = {
   status: {
     heading: "Application Status Check",
     label: " Check your application status without login",
-    placeholder: "TZN-000-000",
+    placeholder: "ICRCS-20260611-000003-77D162",
     verify: "Verify status",
     hint: "For more information visit a nearest immigration office.",
     incomplete: "Your registration is not yet complete.",
@@ -139,6 +139,16 @@ const en = {
     signIn: "Sign in again",
     idleNotice: "You were signed out due to inactivity. Please sign in again.",
     expiredNotice: "Your session expired. Please sign in again to continue.",
+  },
+  connectivity: {
+    offline:
+      "You appear to be offline. Your entries stay saved on this device until the connection returns.",
+    restored: "Connection restored.",
+    submitQueued:
+      "Could not reach the server. Your work is saved on this device — it will submit automatically when the connection returns.",
+    autoRetry: "Connection restored — submitting saved step…",
+    retrySubmit: "Connection restored.",
+    pendingSubmit: "Stage {step} is saved locally and will submit when the connection is back.",
   },
   toast: {
     loginSuccess: "Logged in successfully.",
@@ -342,7 +352,7 @@ const en = {
     travelHistorySaveError: "Travel history could not be saved. Please review the travel document details and try again.",
     dobTooOld: "Date of birth exceeds the maximum allowed age of {max} years.",
     submitError: "Could not submit this step. Please try again.",
-    attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
+    attachHint: "Tick a document, then upload it (PDF only, max 300KB).",
     attachTooLarge: "File must be 300KB or smaller.",
     attachTooMany: "Too many attachments — maximum {max} allowed.",
     attachFileEmpty: "File is empty — please choose a valid file.",
@@ -388,7 +398,7 @@ const en = {
     attachOnlyPdf: "Only PDF files are allowed.",
     attachListTitle: "Uploaded documents",
     otherDocsTitle: "Other Supporting Documents",
-    otherDocsHint: "Upload any additional supporting documents such as affidavits, letters, or other relevant paperwork (JPG, PNG or PDF, max 300KB each).",
+    otherDocsHint: "Upload any additional supporting documents such as affidavits, letters, or other relevant paperwork (PDF only, max 300KB each).",
     otherDocsCount: "{n} of {max} documents added",
     otherDocLabel: "Document name",
     otherDocsAdd: "Add Supporting Document",
@@ -405,7 +415,8 @@ const en = {
     sameAsPerm: "My current address is the same as my permanent address",
     neverAttendedSchool: "I have never attended school",
     haveAttendedSchool: "Have you attended school?",
-    knowsParentsQuestion: "Do you know parents information of this minor?",
+    knowsParentsQuestion:
+      "Do you have the parents' information for this minor, even if they are deceased?",
     primaryEducationMandatory: "Primary education is mandatory. Please provide at least your primary school details below.",
     radioYes: "Yes",
     radioNo: "No",
@@ -417,7 +428,7 @@ const en = {
     back6: "Back to Emergency Contacts",
     back7: "Back to Family",
     back8: "Back to Family",
-    back9: "Back to Uploads",
+    back9: "Back to Attachments",
     s1Title: "Personal Information",
     s1Desc: "Name, date of birth, citizenship and contact details",
     s2Title: "Address",
@@ -432,7 +443,7 @@ const en = {
     s6Desc: "Children, spouse, and relatives",
     s7Title: "Referees",
     s7Desc: "Referees for your application (print only)",
-    s8Title: "Uploads",
+    s8Title: "Attachments",
     s8Desc: "Upload supporting documents",
     s9Title: "Preview & Declaration",
     s9Desc: "Review your information and confirm",
@@ -464,8 +475,8 @@ const en = {
     s7Heading: "Referees",
     s7Intro:
       "Referees are individuals who can vouch for your identity and character. This section is for print purposes only.",
-    s8Tag: "Step 07 - Uploads",
-    s8Heading: "Document Uploads",
+    s8Tag: "Step 07 - Attachments",
+    s8Heading: "Attachments",
     s8Intro:
       "Upload supporting documents such as your birth certificate or national ID copy. You can preview and remove documents before submitting.",
     s9Tag: "Step 08 - Preview & Declaration",
@@ -636,7 +647,7 @@ const en = {
     removePhoto: "Remove photo",
     uploading: "Uploading…",
     removing: "Removing…",
-    photoHint: "JPG or PNG, up to 300KB.",
+    photoHint: "JPG, JPEG or PNG, up to 300KB.",
     photoInvalidType: "Please choose a JPG or PNG image.",
     photoTooLarge: "Image must be 300KB or smaller.",
     photoUpdated: "Profile photo updated.",
@@ -838,9 +849,10 @@ const en = {
     remove: "Remove", // REVIEW
     required: "Required", // REVIEW
     photo: "Photo", // REVIEW
-    photoHint: "Upload a passport-size photo (JPG or PNG).", // REVIEW
+    photoHint: "Upload a passport-size photo (JPG, JPEG or PNG).", // REVIEW
     photoSizeError: "Photo size should not be more than 300KB.", // REVIEW
     photoTypeError: "Invalid photo type.", // REVIEW
+    photoInvalid: "This file cannot be used as a photo.",
     uploadPhoto: "Upload Photo", // REVIEW
     changePhoto: "Change Photo", // REVIEW
     capturePhoto: "Capture Photo",
@@ -957,7 +969,9 @@ const en = {
     canRegisterMinor: "You can register a minor with a Tanzanian origin.",
     noMinorBtn: "I do not have a minor",
     continueRegistration: "Continue Registration",
-    relationshipQuestion: "What is your relationship to the minor?",
+    relationshipQuestion: "Are you the parent or guardian of this minor?",
+    relationshipHint:
+      "Choose Parent if you are the biological or legal parent. Choose Guardian if you care for the minor but are not their parent — you will then be asked whether you have the minor's parents' details.",
     relationshipGuardian: "Guardian",
     relationshipParent: "Parent",
     relationshipContinue: "Continue",
@@ -1033,7 +1047,7 @@ const en = {
     employer: "Employer", // REVIEW
     occupation: "Occupation", // REVIEW
     document: "Document", // REVIEW
-    documents: "Documents", // REVIEW
+    documents: "Attachments", // REVIEW
   },
   // Attachment labels, keyed attach.a{attachmentTypeId} (see ATTACHMENT_TYPES
   // in lib/api/files.ts). English values mirror those labels.
@@ -1131,7 +1145,7 @@ const sw: typeof en = {
   status: {
     heading: "Usalama: Ukaguzi wa Hali",
     label: "Thibitisha shughuli za kitambulisho bila kuingia",
-    placeholder: "TZN-000-000",
+    placeholder: "ICRCS-20260611-000003-77D162",
     verify: "Thibitisha hali",
     hint: "Kwa maelezo zaidi tembelea ofisi ya uhamiaji iliyo karibu nawe.",
     incomplete: "Usajili wako haujakamilika bado.",
@@ -1246,6 +1260,16 @@ const sw: typeof en = {
     signIn: "Ingia tena",
     idleNotice: "Umetolewa kwa sababu ya kutotumia mfumo. Tafadhali ingia tena.",
     expiredNotice: "Muda wa kikao chako umeisha. Tafadhali ingia tena ili kuendelea.",
+  },
+  connectivity: {
+    offline:
+      "Huonekani kuwa huna mtandao. Maelezo yako yamehifadhiwa kwenye kifaa hiki hadi muunganisho urudi.",
+    restored: "Muunganisho umerejeshwa.",
+    submitQueued:
+      "Imeshindwa kufikia seva. Kazi yako imehifadhiwa kwenye kifaa hiki — itawasilishwa kiotomatiki muunganisho ukirudi.",
+    autoRetry: "Muunganisho umerejeshwa — inawasilisha hatua iliyohifadhiwa…",
+    retrySubmit: "Muunganisho umerejeshwa.",
+    pendingSubmit: "Hatua {step} imehifadhiwa ndani na itawasilishwa muunganisho utakaporudi.",
   },
   toast: {
     loginSuccess: "Umeingia kwa mafanikio.",
@@ -1449,7 +1473,7 @@ const sw: typeof en = {
     travelHistorySaveError: "Historia ya safari haikuweza kuhifadhiwa. Tafadhali hakiki taarifa za hati ya safari na ujaribu tena.",
     dobTooOld: "Tarehe ya kuzaliwa inazidi umri wa juu unaoruhusiwa wa miaka {max}.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
-    attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
+    attachHint: "Weka alama kwenye hati, kisha uipakie (PDF pekee, kisichozidi 300KB).",
     attachTooLarge: "Faili lazima liwe 300KB au chini.",
     attachTooMany: "Nyaraka nyingi sana — kiwango cha juu ni {max}.",
     attachFileEmpty: "Faili ni tupu — tafadhali chagua faili sahihi.",
@@ -1495,7 +1519,7 @@ const sw: typeof en = {
     attachOnlyPdf: "Faili za PDF pekee zinaruhusiwa.",
     attachListTitle: "Nyaraka zilizopakiwa",
     otherDocsTitle: "Nyaraka Nyingine za Kusaidia",
-    otherDocsHint: "Pakia nyaraka zingine za kusaidia kama vile viapo, barua, au karatasi nyingine muhimu (JPG, PNG au PDF, kisichozidi 300KB kila moja).",
+    otherDocsHint: "Pakia nyaraka zingine za kusaidia kama vile viapo, barua, au karatasi nyingine muhimu (PDF pekee, kisichozidi 300KB kila moja).",
     otherDocsCount: "{n} kati ya {max} nyaraka zimeongezwa",
     otherDocLabel: "Nyaraka ya Kusaidia {n}",
     otherDocsAdd: "Ongeza Nyaraka ya Kusaidia",
@@ -1512,7 +1536,8 @@ const sw: typeof en = {
     sameAsPerm: "Anwani yangu ya sasa ni sawa na anwani yangu ya kudumu",
     neverAttendedSchool: "Sijawahi kwenda shule",
     haveAttendedSchool: "Je, umewahi kwenda shule?",
-    knowsParentsQuestion: "Je, unazifahamu taarifa za wazazi wa mtoto huyu?",
+    knowsParentsQuestion:
+      "Je, unazo taarifa za wazazi wa mtoto huyu, hata kama wamefariki?",
     primaryEducationMandatory: "Elimu ya msingi ni lazima. Tafadhali toa angalau taarifa za shule yako ya msingi hapa chini.",
     radioYes: "Ndiyo",
     radioNo: "Hapana",
@@ -1741,7 +1766,7 @@ const sw: typeof en = {
     removePhoto: "Ondoa picha",
     uploading: "Inapakia…",
     removing: "Inaondoa…",
-    photoHint: "JPG au PNG, hadi 300KB.",
+    photoHint: "JPG, JPEG au PNG, hadi 300KB.",
     photoInvalidType: "Tafadhali chagua picha ya JPG au PNG.",
     photoTooLarge: "Picha lazima iwe 300KB au chini.",
     photoUpdated: "Picha ya wasifu imesasishwa.",
@@ -1942,9 +1967,10 @@ const sw: typeof en = {
     remove: "Ondoa", // REVIEW
     required: "Inahitajika", // REVIEW
     photo: "Picha", // REVIEW
-    photoHint: "Pakia picha ya saizi ya pasipoti (JPG au PNG).", // REVIEW
+    photoHint: "Pakia picha ya saizi ya pasipoti (JPG, JPEG au PNG).", // REVIEW
     photoSizeError: "Ukubwa wa picha usizidi 300KB.",
     photoTypeError: "Aina ya picha si sahihi.", // REVIEW
+    photoInvalid: "Faili hili haliwezi kutumika kama picha.",
     uploadPhoto: "Pakia Picha", // REVIEW
     changePhoto: "Badilisha Picha", // REVIEW
     capturePhoto: "Piga Picha",
@@ -2060,7 +2086,9 @@ const sw: typeof en = {
     canRegisterMinor: "Unaweza kusajili mtoto mwenye asili ya Kitanzania.",
     noMinorBtn: "Sina mtoto",
     continueRegistration: "Endelea na Usajili",
-    relationshipQuestion: "Uhusiano wako na mtoto ni upi?",
+    relationshipQuestion: "Je, wewe ni mzazi au mlezi wa mtoto huyu?",
+    relationshipHint:
+      "Chagua Mzazi ikiwa wewe ni mzazi wa kibiolojia au wa kisheria. Chagua Mlezi ikiwa unamlea mtoto lakini si mzazi wake — utaulizwa kama unazo taarifa za wazazi wake.",
     relationshipGuardian: "Mlezi",
     relationshipParent: "Mzazi",
     relationshipContinue: "Endelea",
@@ -2136,7 +2164,7 @@ const sw: typeof en = {
     employer: "Mwajiri", // REVIEW
     occupation: "Kazi", // REVIEW
     document: "Hati", // REVIEW
-    documents: "Hati", // REVIEW
+    documents: "Viambatisho", // REVIEW
   },
   attach: {
     a1: "Cheti cha Kuzaliwa cha Mwombaji", // REVIEW

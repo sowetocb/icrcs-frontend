@@ -28,9 +28,15 @@ import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { RULES } from "@/lib/validation/rules";
 
+import {
+  getClientCookie,
+  setClientCookie,
+} from "@/lib/auth/clientCookies";
+
 type Mode = "landing" | "officer-cases" | "category" | "gate" | "wizard" | "success";
 
-// Persisted per-tab (sessionStorage) so a page refresh returns to the same view.
+// Persisted in a SESSION cookie so a page refresh returns to the same view
+// (never localStorage / sessionStorage).
 const REGISTRY_MODE_KEY = "icrcs-registry-mode";
 // False only on a fresh document load (a hard refresh or first navigation to the
 // app); stays true across client-side navigations. This is how we let a refresh
@@ -49,7 +55,7 @@ export default function RegistryClient() {
   const [officerMode] = useState(() => typeof window !== "undefined" && isOfficer());
 
   // Always start at "landing" so the first client render matches the server
-  // (SSR can't read sessionStorage). The persisted per-tab view is restored in a
+  // (SSR can't read cookies from document). The persisted per-tab view is restored in a
   // post-mount effect below — reading storage in this initialiser would cause a
   // hydration mismatch on a refresh mid-wizard.
   const [mode, setMode] = useState<Mode>("landing");
@@ -106,11 +112,13 @@ export default function RegistryClient() {
     if (hasMountedInSession) return;
     hasMountedInSession = true;
     if (isOfficer()) return; // officers always start at the landing page
-    let saved: string | null = null;
+    let saved: string | null = getClientCookie(REGISTRY_MODE_KEY);
     try {
-      saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
+      // Migrate leftover sessionStorage from older builds, then drop it.
+      if (!saved) saved = sessionStorage.getItem(REGISTRY_MODE_KEY);
+      sessionStorage.removeItem(REGISTRY_MODE_KEY);
     } catch {
-      // sessionStorage unavailable — stay on landing
+      // ignore
     }
     if (saved === "wizard") {
       const ownerId = loadProfile()?.profileId ?? "";
@@ -125,10 +133,11 @@ export default function RegistryClient() {
   // above). Runs after the restore effect, so it never clobbers the saved value
   // before it has been read.
   useEffect(() => {
+    setClientCookie(REGISTRY_MODE_KEY, mode);
     try {
-      sessionStorage.setItem(REGISTRY_MODE_KEY, mode);
+      sessionStorage.removeItem(REGISTRY_MODE_KEY);
     } catch {
-      // ignore — sessionStorage unavailable
+      // ignore
     }
   }, [mode]);
 
@@ -372,6 +381,7 @@ export default function RegistryClient() {
     clearRegistration();
     setRegisteringMinor(false);
     setForeignMinor(false);
+    setMinorRelationship("");
     setRegistrationType(null);
     // Every fresh registration now starts at the category picker, which routes
     // Citizen/Foreign into the existing flow and Migrant/Refugee/Asylum into the
@@ -382,7 +392,19 @@ export default function RegistryClient() {
   // Map the chosen category to a flow. Citizen → Stage 1 directly; Foreign →
   // the travel-document gate (+ minor registration); the migrant-track
   // categories carry their registrationType into the wizard.
-  function chooseCategory(category: RegistrationCategory) {
+  // When the account holder registers a DEPENDENT, CategoryGate also passes
+  // parent/guardian relationship so Stage 3 can branch correctly.
+  function chooseCategory(
+    category: RegistrationCategory,
+    relationship?: "guardian" | "parent",
+  ) {
+    // Dependent (minor) registration after the holder's own approval — always
+    // mark as registering a minor and carry the Parent/Guardian choice.
+    if (selfDone && !officerMode) {
+      setRegisteringMinor(true);
+      setMinorRelationship(relationship ?? "");
+    }
+
     if (category === "FOREIGN") {
       const nat = (loadProfile()?.nationality ?? "").trim();
       const isTanzanian = nat === "" || nat === "Tanzania";
@@ -393,7 +415,7 @@ export default function RegistryClient() {
         setRegistrationType(null);
         setRegisteringMinor(true);
         setForeignMinor(true);
-        setMinorRelationship("");
+        if (relationship) setMinorRelationship(relationship);
         setMode("wizard");
         return;
       }
@@ -439,11 +461,17 @@ export default function RegistryClient() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen flex-col overflow-x-clip bg-surface">
+      <div
+        className={
+          mode === "officer-cases"
+            ? "flex h-screen flex-col overflow-hidden bg-surface"
+            : "flex min-h-screen flex-col overflow-x-clip bg-surface"
+        }
+      >
         <DashboardTopbar />
 
         {mode === "officer-cases" && (
-          <div className="flex flex-1">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
             <CitizenSidebar />
             <OfficerCases
               onResume={officerResume}

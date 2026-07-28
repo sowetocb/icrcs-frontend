@@ -9,6 +9,7 @@ import { getMyProfile } from "@/lib/api/auth";
 import { saveSession, clearSession, takeSignoutNotice } from "@/lib/auth/session";
 import { saveOfficer, clearOfficer, officerCanRegisterIcrcs } from "@/lib/auth/officerSession";
 import { saveProfile, clearProfile } from "@/lib/auth/profile";
+import { purgeSensitiveLocalStorage } from "@/lib/auth/clientCookies";
 import { loadRegistration, clearRegistration } from "@/app/registry/registrationStore";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { RULES } from "@/lib/validation/rules";
@@ -55,6 +56,8 @@ export default function LoginForm() {
   // was dropped here — read once from the one-shot notice set before redirect.
   const [signoutNotice, setSignoutNotice] = useState("");
   useEffect(() => {
+    // Remove leftover tokens/PII from older builds as soon as the login screen loads.
+    purgeSensitiveLocalStorage();
     const reason = takeSignoutNotice();
     if (reason) {
       setSignoutNotice(t(reason === "idle" ? "session.idleNotice" : "session.expiredNotice"));
@@ -184,7 +187,7 @@ export default function LoginForm() {
     <div className="w-full">
       {/* Heading */}
       <div className="mb-3 sm:mb-4">
-        <h2 className="font-display text-xl font-bold text-navy-700 sm:text-2xl">
+        <h2 className="font-display text-2xl font-bold text-navy-700 sm:text-3xl">
           {t("brand.system")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>

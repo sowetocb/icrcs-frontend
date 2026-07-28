@@ -14,6 +14,7 @@ import WardCascade from "@/components/registry/wardCascade";
 import CountrySelect from "@/components/registry/countrySelect";
 import { COUNTRIES } from "@/lib/countries";
 import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
+import { PHOTO_ACCEPT } from "@/lib/api/files";
 import { Camera, X, Plus } from "lucide-react";
 
 /** ISO codes of the eight countries bordering Tanzania — the only valid transit
@@ -259,27 +260,30 @@ function PhotoUpload() {
   // Store the error as a translation KEY (not the resolved string) so the
   // message re-translates when the user switches language — a resolved string
   // captured in state would stay in whatever locale was active at upload time.
-  const [errorKey, setErrorKey] = useState<"" | "photoTypeError" | "photoSizeError">("");
+  const [errorKey, setErrorKey] = useState<"" | "photoTypeError" | "photoSizeError" | "photoInvalid">("");
   const error = errorKey ? t(`fields.${errorKey}`) : "";
 
-  function handle(e: ChangeEvent<HTMLInputElement>) {
+  async function handle(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!(RULES.PHOTO_ALLOWED_MIME as readonly string[]).includes(file.type)) {
-      setErrorKey("photoTypeError");
-      return;
-    }
-    // Cap at 300KB to match the message and the app-wide photo/attachment limit.
-    if (file.size > 300 * 1024) {
-      setErrorKey("photoSizeError");
+    const { validateUploadFile } = await import("@/lib/validation/fileUpload");
+    const check = await validateUploadFile(file, "photo");
+    if (!check.ok) {
+      setErrorKey(
+        check.code === "FILE_TOO_LARGE"
+          ? "photoSizeError"
+          : check.code === "FILE_TYPE_NOT_ALLOWED"
+            ? "photoTypeError"
+            : "photoInvalid",
+      );
       return;
     }
     setErrorKey("");
     const reader = new FileReader();
     reader.onload = () => {
       set("stage1PhotoData", String(reader.result));
-      set("stage1PhotoName", file.name);
+      set("stage1PhotoName", check.safeName);
     };
     reader.readAsDataURL(file);
   }
@@ -309,7 +313,7 @@ function PhotoUpload() {
               {preview ? t("fields.changePhoto") : t("fields.uploadPhoto")}
               <input
                 type="file"
-                accept={RULES.PHOTO_ALLOWED_MIME.join(",")}
+                accept={PHOTO_ACCEPT}
                 onChange={handle}
                 className="sr-only"
               />

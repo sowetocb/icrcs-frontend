@@ -80,15 +80,15 @@ export default function CitizenSidebar() {
 
       <aside
         onMouseLeave={() => setOpen(false)}
-        className={`flex w-64 shrink-0 flex-col bg-sidebar transition-transform duration-300 ease-in-out
+        className={`flex w-[14.25rem] shrink-0 flex-col bg-sidebar transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
-          lg:sticky lg:top-16 lg:z-auto lg:h-[calc(100vh-4rem)] lg:translate-x-0`}
+          lg:sticky lg:top-[4.25rem] lg:z-auto lg:h-[calc(100vh-4.25rem)] lg:translate-x-0`}
       >
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
-        <div className="h-1.5 w-full shrink-0 bg-gold" aria-hidden="true" />
+        <div className="h-1 w-full shrink-0 bg-gold" aria-hidden="true" />
 
         {/* Navigation label + close (close is mobile-only). */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="flex items-center justify-between px-5 pt-3 pb-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("nav.dashboard")}
           </p>

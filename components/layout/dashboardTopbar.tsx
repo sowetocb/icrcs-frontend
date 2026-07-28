@@ -7,7 +7,13 @@ import ProfileView from "@/app/dashboard/profile/profileView";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { refreshMyProfile, fetchProfilePicture, logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
-import { isOfficer, clearOfficer, loadOfficer, type OfficerUser } from "@/lib/auth/officerSession";
+import {
+  isOfficer,
+  clearOfficer,
+  loadOfficer,
+  hydrateOfficerProfile,
+  type OfficerUser,
+} from "@/lib/auth/officerSession";
 import { getOfficerProfile } from "@/lib/api/officer";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { clearRegistration } from "@/app/registry/registrationStore";
@@ -176,15 +182,21 @@ export default function DashboardTopbar() {
         try {
           const p = await getOfficerProfile();
           if (!alive) return;
-          setOfficer((o) => ({
-            roles: o?.roles ?? [],
-            permissions: o?.permissions ?? [],
-            ...o,
-            username: p.username || o?.username,
-            stationId: p.stationId || o?.stationId,
-          }));
+          const next: OfficerUser = {
+            roles: cachedOfficer?.roles ?? [],
+            permissions: cachedOfficer?.permissions ?? [],
+            userId: p.userId,
+            username: p.username || cachedOfficer?.username,
+            email: p.email,
+            fullName: p.fullName,
+            pfNo: p.pfNo,
+            stationId: p.stationId || cachedOfficer?.stationId,
+            stationName: p.stationName,
+          };
+          hydrateOfficerProfile(next);
+          setOfficer(next);
         } catch {
-          // keep the cached officer identity
+          // keep the cached officer identity (gate-only after hard refresh)
         }
       })();
       return () => {
@@ -243,7 +255,9 @@ export default function DashboardTopbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-sidebar">
-      <div className="flex h-20 items-center justify-between px-6">
+      {/* Gold accent — matches institutional masthead weight. */}
+      <div className="h-1 w-full bg-gold" aria-hidden="true" />
+      <div className="flex h-16 items-center justify-between px-3 sm:px-5 lg:px-6">
         {/* Left — Brand (emblem stays pinned to the left of the bar) */}
         <div className="flex items-center gap-3">
           {/* Plain img (not next/image) so the ?v= cache-bust on a same-named
@@ -252,15 +266,15 @@ export default function DashboardTopbar() {
           <img
             src={LOGO_EMBLEM}
             alt={t("brand.country")}
-            width={88}
-            height={88}
-            className="h-16 w-16 object-contain"
+            width={56}
+            height={56}
+            className="h-11 w-11 object-contain sm:h-12 sm:w-12"
           />
           <div className="hidden leading-tight sm:block">
-            <p className="text-lg font-medium uppercase tracking-wider text-icrcs-gold-light/80 sm:text-xl">
+            <p className="text-xs font-medium uppercase tracking-wider text-icrcs-gold-light/80 sm:text-sm">
               {t("brand.country")}
             </p>
-            <p className="font-display text-md font-bold text-white">
+            <p className="font-display text-sm font-bold text-white sm:text-base">
               {t("brand.department")}
             </p>
           </div>
