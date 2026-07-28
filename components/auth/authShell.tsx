@@ -370,8 +370,8 @@ export default function AuthShell({
       {/* Top bar — single official banner: coat of arms · titles + flag strip · emblem */}
       <header className="relative z-20 border-b border-white/10 bg-navy-700">
         {/* Gold institutional accent bar (matches the CRCS portal masthead). */}
-        <div className="h-1 w-full bg-gold" aria-hidden="true" />
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-4 sm:px-5">
+        <div className="h-1.5 w-full bg-gold" aria-hidden="true" />
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5">
           {/* Left — national coat of arms */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -379,7 +379,7 @@ export default function AuthShell({
             alt={t("brand.country")}
             width={96}
             height={96}
-            className="h-11 w-11 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-12 w-12 shrink-0 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
           />
 
           {/* Center — three titles + national flag strip */}
@@ -387,13 +387,13 @@ export default function AuthShell({
             <p className="text-xs font-bold uppercase tracking-wide text-white/80 sm:text-sm">
               {t("brand.country")}
             </p>
-            <p className="font-display text-xs font-bold text-white sm:text-sm">
+            <p className="font-display text-sm font-bold text-white sm:text-base">
               {t("brand.ministry")}
             </p>
-            <p className="font-display text-[11px] font-black uppercase tracking-tight text-white sm:text-sm">
+            <p className="font-display text-xs font-black uppercase tracking-tight text-white sm:text-sm">
               {t("brand.servicesDepartment")}
             </p>
-            <span className="mt-1 flex h-1 w-44 max-w-full overflow-hidden rounded-full sm:mt-1.5 sm:w-64">
+            <span className="mt-1.5 flex h-1.5 w-44 max-w-full overflow-hidden rounded-full sm:mt-2 sm:w-64">
               <span className="flex-1 bg-[#1eb53a]" />
               <span className="flex-1 bg-[#fcd116]" />
               <span className="flex-1 bg-black" />
@@ -409,7 +409,7 @@ export default function AuthShell({
             alt={t("brand.servicesDepartment")}
             width={96}
             height={96}
-            className="h-11 w-11 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-12 w-12 shrink-0 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
           />
         </div>
       </header>
@@ -421,24 +421,24 @@ export default function AuthShell({
       </div>
 
       {/* Main — centered split card */}
-      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-1 sm:px-6 sm:py-2 ${wide ? "sm:py-2" : ""}`}>
+      <main className={`relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6 sm:py-5 ${wide ? "sm:py-6" : ""}`}>
         {/* The split card. On mobile the left panel is hidden and its status
             check + "About CRCS" are rendered below the form instead. */}
-        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-5xl" : "max-w-4xl"}`}>
+        <div className={`flex w-full overflow-hidden rounded-2xl bg-card shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ${wide ? "max-w-6xl" : "max-w-5xl"}`}>
           {/* Left panel — deep blue with coat of arms + status check (desktop only) */}
-          <div className={`hidden flex-col items-center justify-start gap-3 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-4 py-4 md:flex ${wide ? "md:w-[32%]" : "w-[40%]"}`}>
+          <div className={`hidden flex-col items-center justify-start gap-4 bg-gradient-to-br from-navy-700 via-navy-500 to-navy-900 px-5 py-6 md:flex ${wide ? "md:w-[32%]" : "w-[40%]"}`}>
             {/* Immigration emblem + branding — on top. The emblem sits on a light
                 pad so its blue ribbons and gold lettering stay legible against
                 the deep-blue panel. */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-white/95 p-2 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+              <div className="rounded-full bg-white/95 p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={LOGO_EMBLEM}
                   alt={t("brand.servicesDepartment")}
                   width={200}
                   height={200}
-                  className="h-auto w-28 object-contain"
+                  className="h-auto w-32 object-contain sm:w-36"
                 />
               </div>
               {/* <div className="mt-5 text-center">
@@ -458,7 +458,7 @@ export default function AuthShell({
           </div>
 
           {/* Right panel — form only */}
-          <div className={`flex w-full flex-col justify-center px-5 sm:px-6 ${wide ? "py-3 md:w-[68%]" : "py-3 sm:py-4 md:w-[60%]"}`}>
+          <div className={`flex w-full flex-col justify-center px-6 sm:px-8 ${wide ? "py-5 md:w-[68%]" : "py-5 sm:py-6 md:w-[60%]"}`}>
             {/* Form (LoginForm / CreateProfileFlow / ForgotFlow) */}
             {children}
 

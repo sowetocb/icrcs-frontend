@@ -59,13 +59,13 @@ export default function Stepper({
         onMouseLeave={() => setOpen(false)}
         className={`flex w-64 shrink-0 flex-col overflow-hidden bg-sidebar transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50 transform ${open ? "translate-x-0" : "-translate-x-full"}
-          lg:sticky lg:top-20 lg:z-auto lg:h-[calc(100vh-5rem)] lg:translate-x-0 lg:self-start lg:overflow-hidden lg:shadow-none`}
+          lg:sticky lg:top-[4.25rem] lg:z-auto lg:h-[calc(100vh-4.25rem)] lg:translate-x-0 lg:self-start lg:overflow-hidden lg:shadow-none`}
       >
         {/* Gold institutional accent bar (matches the ICRCS portal masthead). */}
         <div className="h-1 w-full shrink-0 bg-gold" aria-hidden="true" />
 
         {/* Header badge + close (close is mobile-only). */}
-        <div className="flex items-center justify-between px-3 pt-2 pb-0.5">
+        <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/40">
             {t("registry.stepsLabel")}
           </p>

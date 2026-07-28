@@ -595,6 +595,12 @@ function DetailView({
               <KeyGrid obj={d.physicalDetail} />
             </Section>
           )}
+          {/* Travel history is Stage 1 data — keep it with Personal, not Attachments. */}
+          {isObj(d.travelHistory) && (
+            <Section title="Travel History">
+              <KeyGrid obj={d.travelHistory} />
+            </Section>
+          )}
         </div>
       ),
     },
@@ -689,10 +695,10 @@ function DetailView({
     });
   }
 
-  if (documents.length > 0 || attachments.length > 0 || isObj(d.travelHistory)) {
+  if (documents.length > 0 || attachments.length > 0) {
     tabs.push({
-      key: "documents",
-      label: "Documents",
+      key: "attachments",
+      label: "Attachments",
       content: (
         <div className="space-y-5">
           {documents.length > 0 && (
@@ -712,11 +718,6 @@ function DetailView({
           )}
           {attachments.length > 0 && (
             <AttachmentsSection attachments={attachments} resetKey={subjectId} />
-          )}
-          {isObj(d.travelHistory) && (
-            <Section title="Travel History">
-              <KeyGrid obj={d.travelHistory} />
-            </Section>
           )}
         </div>
       ),
@@ -779,7 +780,7 @@ function DetailView({
               negative margins bleed the opaque bar to the page edges (cancelling
               <main>'s px-6/lg:px-10) so nothing peeks past it while scrolling.
               On narrow screens the strip itself scrolls horizontally. */}
-          <div className="sticky top-20 z-20 -mx-6 flex overflow-x-auto border-b border-line bg-surface px-6 lg:-mx-10 lg:px-10">
+          <div className="sticky top-16 z-20 -mx-6 flex overflow-x-auto border-b border-line bg-surface px-6 lg:-mx-10 lg:px-10">
             {tabs.map((tb) => (
               <button
                 key={tb.key}

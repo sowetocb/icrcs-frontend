@@ -294,7 +294,7 @@ export default function StepPreviewDeclaration() {
           Narrow screens scroll horizontally; laptop+ (lg) distributes tabs evenly
           so every title is fully visible without scrolling. Sticky below the
           5rem masthead so tabs stay put while reviewing. */}
-      <div className="sticky top-20 z-20 -mx-5 flex overflow-x-auto border-y border-line bg-card px-5 sm:-mx-6 sm:px-6 lg:overflow-x-visible">
+      <div className="sticky top-16 z-20 -mx-5 flex overflow-x-auto border-y border-line bg-card px-5 sm:-mx-6 sm:px-6 lg:overflow-x-visible">
         {STAGES.map((n) => {
           const isActive = activeStage === n;
           const done = reviewed.has(n);

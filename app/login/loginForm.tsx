@@ -187,7 +187,7 @@ export default function LoginForm() {
     <div className="w-full">
       {/* Heading */}
       <div className="mb-3 sm:mb-4">
-        <h2 className="font-display text-xl font-bold text-navy-700 sm:text-2xl">
+        <h2 className="font-display text-2xl font-bold text-navy-700 sm:text-3xl">
           {t("brand.system")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("form.subtitle")}</p>

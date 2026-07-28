@@ -428,7 +428,7 @@ const en = {
     back6: "Back to Emergency Contacts",
     back7: "Back to Family",
     back8: "Back to Family",
-    back9: "Back to Uploads",
+    back9: "Back to Attachments",
     s1Title: "Personal Information",
     s1Desc: "Name, date of birth, citizenship and contact details",
     s2Title: "Address",
@@ -443,7 +443,7 @@ const en = {
     s6Desc: "Children, spouse, and relatives",
     s7Title: "Referees",
     s7Desc: "Referees for your application (print only)",
-    s8Title: "Uploads",
+    s8Title: "Attachments",
     s8Desc: "Upload supporting documents",
     s9Title: "Preview & Declaration",
     s9Desc: "Review your information and confirm",
@@ -475,8 +475,8 @@ const en = {
     s7Heading: "Referees",
     s7Intro:
       "Referees are individuals who can vouch for your identity and character. This section is for print purposes only.",
-    s8Tag: "Step 07 - Uploads",
-    s8Heading: "Document Uploads",
+    s8Tag: "Step 07 - Attachments",
+    s8Heading: "Attachments",
     s8Intro:
       "Upload supporting documents such as your birth certificate or national ID copy. You can preview and remove documents before submitting.",
     s9Tag: "Step 08 - Preview & Declaration",
@@ -1047,7 +1047,7 @@ const en = {
     employer: "Employer", // REVIEW
     occupation: "Occupation", // REVIEW
     document: "Document", // REVIEW
-    documents: "Documents", // REVIEW
+    documents: "Attachments", // REVIEW
   },
   // Attachment labels, keyed attach.a{attachmentTypeId} (see ATTACHMENT_TYPES
   // in lib/api/files.ts). English values mirror those labels.
@@ -2164,7 +2164,7 @@ const sw: typeof en = {
     employer: "Mwajiri", // REVIEW
     occupation: "Kazi", // REVIEW
     document: "Hati", // REVIEW
-    documents: "Hati", // REVIEW
+    documents: "Viambatisho", // REVIEW
   },
   attach: {
     a1: "Cheti cha Kuzaliwa cha Mwombaji", // REVIEW
