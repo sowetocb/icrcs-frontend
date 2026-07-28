@@ -392,8 +392,11 @@ export async function withFreshAuth<T>(
         refreshErr instanceof ApiError &&
         (refreshErr.status === 401 || refreshErr.status === 403)
       ) {
-        if (officerMode) _clearOfficer();
-        else {
+        if (officerMode) {
+          _clearOfficer();
+          // Wipe HttpOnly cookies — refresh no longer deletes them on 401.
+          void fetch("/api/officer/logout", { method: "POST", credentials: "include" });
+        } else {
           clearSession();
           clearProfile();
         }

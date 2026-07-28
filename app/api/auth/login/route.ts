@@ -26,6 +26,8 @@ export async function POST(request: Request) {
     jar.set("icrcs-refresh", "mock-refresh-token", {
       ...COOKIE_OPTS,
     });
+    jar.delete("icrcs-officer-access");
+    jar.delete("icrcs-officer-refresh");
     return Response.json({ success: true });
   }
 
@@ -81,6 +83,9 @@ export async function POST(request: Request) {
       ...COOKIE_OPTS,
     });
   }
+  // Drop leftover officer cookies so they cannot shadow citizen calls on the proxy.
+  jar.delete("icrcs-officer-access");
+  jar.delete("icrcs-officer-refresh");
 
   // Return success without exposing the tokens to the browser
   return Response.json({ success: true });

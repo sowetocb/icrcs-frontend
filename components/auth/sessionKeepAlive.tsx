@@ -17,9 +17,9 @@ export default function SessionKeepAlive() {
     async function keepAlive() {
       if (!active) return;
       if (!loadSession() && !isOfficer()) return;
-      // verifySession only clears the session on definitive 401/403 — never on
-      // network/5xx — and is single-flight with AuthGuard.
-      await verifySession();
+      // Soft verify: never clear the session on a failed background refresh.
+      // Logging out mid-form is worse than a briefly stale access token.
+      await verifySession({ logoutOnFailure: false });
     }
 
     // Warm the session once on mount (shares AuthGuard's in-flight request).

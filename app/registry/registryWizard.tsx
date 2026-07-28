@@ -45,6 +45,7 @@ import { reviewToForm } from "@/lib/registry/reviewToForm";
 import { stageToForm, travelHistoryToForm } from "@/lib/registry/stageToForm";
 import { mapApiFieldErrors } from "@/lib/registry/errorFields";
 import { localizeBackendMessage } from "@/lib/api/errorMessagesSw";
+import { addMonthsIso } from "@/lib/dateFormat";
 import { useToast } from "@/components/ui/toast";
 import { resolveGenderCode, getPersonDocumentTypes, getEducationLevels, type PersonGroup } from "@/lib/api/lookup";
 import { isPhoneComplete } from "@/lib/phoneLengths";
@@ -1990,16 +1991,35 @@ export default function RegistryWizard({
         return;
       }
 
-      // Migrant travel document: the issue date must be before the expiry date
-      // (backend: "Issued date must be before expiry date"). Validate here so the
-      // travel-history submission can't fail AFTER Stage 1 is already created.
+      // Migrant travel history: entry / document-issue dates must not precede
+      // the person's date of birth; expiry must be ≥ DOB + 1 month; issue must
+      // be before expiry. Validate here so travel-history submit can't fail
+      // AFTER Stage 1 is already saved.
       // ISO YYYY-MM-DD strings compare chronologically as plain strings.
-      if (isMigrant && data.hasTravelDoc === true) {
+      if (isMigrant) {
+        const personDob = typeof data.dob === "string" ? data.dob : "";
+        const entry = typeof data.firstDateOfEntry === "string" ? data.firstDateOfEntry : "";
         const issued = typeof data.travelIssuedDate === "string" ? data.travelIssuedDate : "";
         const expiry = typeof data.travelExpiryDate === "string" ? data.travelExpiryDate : "";
-        if (issued && expiry && issued >= expiry) {
-          setErrors(["travelExpiryDate"]);
-          setFieldErrors({ travelExpiryDate: t("registry.travelDatesInvalid") });
+        const expiryMin = personDob ? addMonthsIso(personDob, 1) : "";
+        const travelDateErrors: Record<string, string> = {};
+        if (personDob && entry && entry < personDob) {
+          travelDateErrors.firstDateOfEntry = t("registry.travelDateBeforeDob");
+        }
+        if (data.hasTravelDoc === true) {
+          if (personDob && issued && issued < personDob) {
+            travelDateErrors.travelIssuedDate = t("registry.travelDateBeforeDob");
+          }
+          if (expiryMin && expiry && expiry < expiryMin) {
+            travelDateErrors.travelExpiryDate = t("registry.travelExpiryBeforeDobPlusMonth");
+          } else if (issued && expiry && issued >= expiry) {
+            travelDateErrors.travelExpiryDate = t("registry.travelDatesInvalid");
+          }
+        }
+        const travelErrKeys = Object.keys(travelDateErrors);
+        if (travelErrKeys.length > 0) {
+          setErrors(travelErrKeys);
+          setFieldErrors(travelDateErrors);
           setFormError("");
           return;
         }

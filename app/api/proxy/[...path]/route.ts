@@ -35,6 +35,13 @@ function accessTokenForPath(
   // Officers on /registry/people often hold ONLY icrcs-officer-access. A stale
   // icrcs-access cookie must not win here — it yields {"error":"unauthorized"}.
   if (isFileViewPath(path)) return officerToken ?? citizenToken;
+  // Shared lookups during migrant registration: prefer officer when present so
+  // a leftover citizen JWT cannot 401 mid-form and force a logout refresh.
+  const isLookup =
+    path[0] === "lookup" || (path[0] === "v1" && path[1] === "lookup");
+  if (isLookup) return officerToken ?? citizenToken;
+  // Both cookies set (stale leftover): prefer the officer session while it exists.
+  if (officerToken && citizenToken) return officerToken;
   return citizenToken ?? officerToken;
 }
 

@@ -349,6 +349,9 @@ const en = {
     parentAgeError: "Parent must be at least 18 years old.",
     futureDateError: "The date of birth cannot be in the future.",
     travelDatesInvalid: "The issue date must be before the expiry date.",
+    travelDateBeforeDob: "This date cannot be before the person's date of birth.",
+    travelExpiryBeforeDobPlusMonth:
+      "The expiry date must be at least 1 month after the person's date of birth.",
     travelHistorySaveError: "Travel history could not be saved. Please review the travel document details and try again.",
     dobTooOld: "Date of birth exceeds the maximum allowed age of {max} years.",
     submitError: "Could not submit this step. Please try again.",
@@ -1472,6 +1475,9 @@ const sw: typeof en = {
     parentAgeError: "Mzazi lazima awe na umri wa angalau miaka 18.",
     futureDateError: "Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.",
     travelDatesInvalid: "Tarehe ya kutolewa lazima iwe kabla ya tarehe ya kuisha.",
+    travelDateBeforeDob: "Tarehe hii haiwezi kuwa kabla ya tarehe ya kuzaliwa ya mtu.",
+    travelExpiryBeforeDobPlusMonth:
+      "Tarehe ya kuisha lazima iwe angalau mwezi 1 baada ya tarehe ya kuzaliwa ya mtu.",
     travelHistorySaveError: "Historia ya safari haikuweza kuhifadhiwa. Tafadhali hakiki taarifa za hati ya safari na ujaribu tena.",
     dobTooOld: "Tarehe ya kuzaliwa inazidi umri wa juu unaoruhusiwa wa miaka {max}.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",

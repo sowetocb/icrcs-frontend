@@ -33,6 +33,19 @@ export function toIso(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Add calendar months to an ISO date (yyyy-mm-dd). Returns "" when invalid.
+ * Day-of-month clamps (e.g. Jan 31 + 1 month → Feb 28/29). */
+export function addMonthsIso(iso: string, months: number): string {
+  const base = parseIso(iso);
+  if (!base) return "";
+  const day = base.getDate();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + months);
+  const last = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  base.setDate(Math.min(day, last));
+  return toIso(base);
+}
+
 export function todayIso(): string {
   return toIso(new Date());
 }

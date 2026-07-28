@@ -157,7 +157,18 @@ export default function DatePickerCalendar({
   const { t, locale } = useI18n();
   const tag = localeTag(locale);
   const selected = parseIso(value);
-  const initial = selected ?? new Date();
+  const max = maxDate ? parseIso(maxDate) : null;
+  const min = minDate ? parseIso(minDate) : null;
+
+  // Prefer the selected date; otherwise open on today clamped into [min, max]
+  // so a blank field never lands on a fully disabled month (e.g. before DOB).
+  function clampToBounds(d: Date): Date {
+    let next = d;
+    if (min && next.getTime() < min.getTime()) next = min;
+    if (max && next.getTime() > max.getTime()) next = max;
+    return next;
+  }
+  const initial = clampToBounds(selected ?? new Date());
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
   const [showYears, setShowYears] = useState(false);
@@ -181,9 +192,6 @@ export default function DatePickerCalendar({
     return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2024, m, 1)));
   }, [tag]);
 
-  const max = maxDate ? parseIso(maxDate) : null;
-  const min = minDate ? parseIso(minDate) : null;
-
   // Year choices for the dropdown, newest first (DOB entry usually scrolls back).
   // Bound by min/max when given; otherwise span a sensible ~120-year window.
   const years = useMemo(() => {
@@ -201,22 +209,36 @@ export default function DatePickerCalendar({
     return false;
   }
 
+  function canShowMonth(y: number, m: number): boolean {
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
+    if (max && first.getTime() > max.getTime()) return false;
+    if (min && last.getTime() < min.getTime()) return false;
+    return true;
+  }
+
   function prevMonth() {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else {
-      setViewMonth((m) => m - 1);
+    let y = viewYear;
+    let m = viewMonth - 1;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
     }
+    if (!canShowMonth(y, m)) return;
+    setViewYear(y);
+    setViewMonth(m);
   }
 
   function nextMonth() {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else {
-      setViewMonth((m) => m + 1);
+    let y = viewYear;
+    let m = viewMonth + 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
     }
+    if (!canShowMonth(y, m)) return;
+    setViewYear(y);
+    setViewMonth(m);
   }
 
   const leading = weekdayIndex(startOfMonth(viewYear, viewMonth));

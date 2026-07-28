@@ -16,25 +16,28 @@ import { isOfficer, clearOfficer } from "./officerSession";
 import { clearProfile } from "./profile";
 
 let inFlight: Promise<boolean> | null = null;
+let softInFlight: Promise<boolean> | null = null;
 
 function isAuthRejection(err: unknown): boolean {
   return err instanceof ApiError && (err.status === 401 || err.status === 403);
 }
 
-async function run(): Promise<boolean> {
+async function run(opts: { logoutOnFailure: boolean }): Promise<boolean> {
   // Officers authenticate against the separate User Management cookies.
   if (isOfficer()) {
     try {
       await refreshOfficerSession();
       return true;
     } catch (err) {
-      // Only a definitive rejection ends the session. Network blips / 5xx must
-      // NOT log out an officer who is still working.
-      if (isAuthRejection(err)) {
+      // Keep-alive / background refresh must NOT log out a user mid-form when
+      // refresh is flaky. Only AuthGuard's hard check (or withFreshAuth) clears.
+      if (opts.logoutOnFailure && isAuthRejection(err)) {
         clearOfficer();
+        void fetch("/api/officer/logout", { method: "POST", credentials: "include" });
         return false;
       }
-      return true;
+      // Soft failure or transient — treat as still logged in.
+      return !isAuthRejection(err) || !opts.logoutOnFailure;
     }
   }
 
@@ -45,24 +48,34 @@ async function run(): Promise<boolean> {
     if (tokens.accessToken) saveSession(tokens);
     return true;
   } catch (err) {
-    // Only a definitive rejection means the cookie is gone/expired.
-    if (isAuthRejection(err)) {
+    if (opts.logoutOnFailure && isAuthRejection(err)) {
       clearSession();
       clearProfile();
       return false;
     }
-    return true;
+    return !isAuthRejection(err) || !opts.logoutOnFailure;
   }
 }
 
-/** Confirm with the server that the session cookie is still valid. Clears the
- * local session and resolves false when it isn't. Concurrent callers share one
- * request. */
-export function verifySession(): Promise<boolean> {
-  if (!inFlight) {
-    inFlight = run().finally(() => {
-      inFlight = null;
+/** Confirm with the server that the session cookie is still valid.
+ * @param options.logoutOnFailure When false (keep-alive), a failed refresh does
+ *   not clear the session — avoids kicking officers out mid-registration. */
+export function verifySession(options?: {
+  logoutOnFailure?: boolean;
+}): Promise<boolean> {
+  const logoutOnFailure = options?.logoutOnFailure !== false;
+  if (logoutOnFailure) {
+    if (!inFlight) {
+      inFlight = run({ logoutOnFailure: true }).finally(() => {
+        inFlight = null;
+      });
+    }
+    return inFlight;
+  }
+  if (!softInFlight) {
+    softInFlight = run({ logoutOnFailure: false }).finally(() => {
+      softInFlight = null;
     });
   }
-  return inFlight;
+  return softInFlight;
 }

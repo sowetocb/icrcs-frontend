@@ -15,6 +15,7 @@ import CountrySelect from "@/components/registry/countrySelect";
 import { COUNTRIES } from "@/lib/countries";
 import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { PHOTO_ACCEPT } from "@/lib/api/files";
+import { addMonthsIso } from "@/lib/dateFormat";
 import { Camera, X, Plus } from "lucide-react";
 
 /** ISO codes of the eight countries bordering Tanzania — the only valid transit
@@ -705,7 +706,10 @@ export default function StepPersonal() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label={t("fields.firstDateOfEntry")} optional>
-              <DateInput name="firstDateOfEntry" />
+              <DateInput
+                name="firstDateOfEntry"
+                minDate={typeof data.dob === "string" && data.dob ? data.dob : undefined}
+              />
             </Field>
           </div>
           {/* Entry route: through a neighbouring country (land border → one of
@@ -750,13 +754,23 @@ export default function StepPersonal() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t("fields.travelIssuedDate")} optional>
-                  <DateInput name="travelIssuedDate" />
+                  <DateInput
+                    name="travelIssuedDate"
+                    minDate={typeof data.dob === "string" && data.dob ? data.dob : undefined}
+                  />
                 </Field>
                 <Field label={t("fields.travelExpiryDate")} optional>
-                  {/* A travel document expires in the FUTURE, so the picker must
-                      reach past today — the calendar's year grid ends at maxDate
-                      (defaulting to the current year). Allow the next 10 years. */}
-                  <DateInput name="travelExpiryDate" maxDate={`${currentYear + 10}-12-31`} />
+                  {/* Expiry must be ≥ DOB + 1 month, and may be in the future —
+                      calendar year grid ends at maxDate (defaulting to today). */}
+                  <DateInput
+                    name="travelExpiryDate"
+                    minDate={
+                      typeof data.dob === "string" && data.dob
+                        ? addMonthsIso(data.dob, 1) || undefined
+                        : undefined
+                    }
+                    maxDate={`${currentYear + 10}-12-31`}
+                  />
                 </Field>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

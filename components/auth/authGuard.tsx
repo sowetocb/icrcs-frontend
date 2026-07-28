@@ -70,9 +70,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, router]);
 
-  // When the tab becomes visible again, re-check with the server — but debounce
-  // so a quick alt-tab doesn't race keep-alive / API refreshes (refresh-token
-  // rotation would otherwise kill a live session).
+  // When the tab becomes visible again, soft-refresh only — never kick the user
+  // out of an in-progress form because a background refresh raced or failed.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     function onVisible() {
@@ -82,19 +81,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        verifySession().then((ok) => {
+        void verifySession({ logoutOnFailure: false }).then((ok) => {
           if (ok) {
             sessionVerified = true;
             setAuthorized(true);
-            return;
           }
-          // verifySession only returns false on definitive 401/403.
-          sessionVerified = false;
-          setAuthorized(false);
-          setSignoutNotice("expired");
-          router.replace("/login");
+          // Soft failure: leave the user on the page; the next real API 401
+          // path (withFreshAuth) still handles true session death.
         });
-      }, 1500);
+      }, 2000);
     }
     document.addEventListener("visibilitychange", onVisible);
     return () => {

@@ -37,11 +37,9 @@ export async function POST(request: Request) {
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    // Only clear cookies on definitive auth rejection — never on 5xx/network
-    // ambiguity, which would log out an active user.
+    // Do not wipe cookies on failed refresh — keep-alive must not destroy a
+    // live session. Explicit logout / withFreshAuth clear when needed.
     if (res.status === 401 || res.status === 403) {
-      jar.delete("icrcs-access");
-      jar.delete("icrcs-refresh");
       return Response.json({ error: "Session expired" }, { status: 401 });
     }
     return Response.json(

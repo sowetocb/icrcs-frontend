@@ -1,11 +1,10 @@
 // Officer refresh — reads the officer refresh token from its HttpOnly cookie,
 // rotates it against the SAME auth backend that issued it at login, and writes
-// the new tokens back. The auth API ROTATES the refresh token on every refresh,
-// so both cookies are always replaced with the values it returns.
+// the new tokens back. The auth API ROTATES the refresh token on every call.
 //
-// IMPORTANT: base URL resolution MUST match /api/officer/login. Hitting a
-// different host (e.g. USER_MGT alone while login used BACKEND_API) rejects a
-// brand-new login's refresh token and wipes the session immediately.
+// CRITICAL: never wipe cookies on a failed refresh. Proactive keep-alive /
+// AuthGuard refreshes run while the user is mid-form; a flaky or raced refresh
+// must not destroy a still-usable access cookie. Explicit logout clears cookies.
 
 import { cookies } from "next/headers";
 import { authCookieOptions } from "@/lib/auth/cookieOptions";
@@ -29,6 +28,7 @@ export async function POST(request: Request) {
   }
 
   if (!refreshToken) {
+    // No wipe — caller may still have a live access cookie.
     return Response.json({ error: "No refresh token" }, { status: 401 });
   }
 
@@ -56,21 +56,24 @@ export async function POST(request: Request) {
   const ok = res.ok && (codeOk || !!tokens.accessToken);
 
   if (!ok) {
-    // Only clear cookies on a definitive auth rejection (401/403). A 5xx / odd
-    // payload must not wipe a live session (e.g. flaky UM during refresh, or
-    // right after login when AuthGuard warm-refreshes).
-    if (res.status === 401 || res.status === 403) {
-      jar.delete("icrcs-officer-access");
-      jar.delete("icrcs-officer-refresh");
-      return Response.json({ error: "Session expired" }, { status: 401 });
-    }
+    // Do NOT delete cookies here. Mid-session keep-alive must not log the user
+    // out of an otherwise working form. withFreshAuth / explicit logout handle
+    // true session death.
+    const status =
+      res.status === 401 || res.status === 403
+        ? 401
+        : res.status >= 500
+          ? 503
+          : res.status || 502;
     return Response.json(
-      { error: "Unable to refresh session" },
-      { status: res.status >= 500 ? 503 : res.status || 502 },
+      { error: status === 401 ? "Session expired" : "Unable to refresh session" },
+      { status },
     );
   }
 
-  jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS });
+  if (tokens.accessToken) {
+    jar.set("icrcs-officer-access", tokens.accessToken, { ...COOKIE_OPTS });
+  }
   if (tokens.refreshToken) {
     jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS });
   }
@@ -100,6 +103,5 @@ function extractTokens(
       if (v && typeof v === "object") stack.push(v);
     }
   }
-  // Keep the current refresh token if the response didn't include a new one.
   return { accessToken, refreshToken: refreshToken || fallbackRefresh };
 }

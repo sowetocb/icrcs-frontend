@@ -21,6 +21,8 @@ export async function POST(request: Request) {
     const jar = await cookies();
     jar.set("icrcs-officer-access", "mock-officer-access", { ...COOKIE_OPTS });
     jar.set("icrcs-officer-refresh", "mock-officer-refresh", { ...COOKIE_OPTS });
+    jar.delete("icrcs-access");
+    jar.delete("icrcs-refresh");
     return Response.json({
       success: true,
       user: {
@@ -68,6 +70,10 @@ export async function POST(request: Request) {
   if (tokens.refreshToken) {
     jar.set("icrcs-officer-refresh", tokens.refreshToken, { ...COOKIE_OPTS });
   }
+  // Drop any leftover citizen HttpOnly cookies — a stale icrcs-access would be
+  // preferred by the proxy for shared paths (lookups) and 401 → destructive refresh.
+  jar.delete("icrcs-access");
+  jar.delete("icrcs-refresh");
 
   // Return the officer profile (roles/permissions) for UI gating — never the tokens.
   return Response.json({ success: true, user: extractOfficer(data) });
