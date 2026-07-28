@@ -51,7 +51,13 @@ import { isPhoneComplete } from "@/lib/phoneLengths";
 import { RULES, docNumberRuleFor, type DocNumberRule } from "@/lib/validation/rules";
 import { SessionExpiredError } from "@/lib/api/auth";
 import { setSignoutNotice } from "@/lib/auth/session";
-import { getErrorMessage } from "@/lib/api/client";
+import { getErrorMessage, isConnectionError } from "@/lib/api/client";
+import { createIdempotencyKey } from "@/lib/connectivity/idempotencyKey";
+import {
+  beginIdempotentWrite,
+  endIdempotentWrite,
+} from "@/lib/connectivity/activeIdempotency";
+import { useConnectivity } from "@/lib/connectivity/useConnectivity";
 import ApplicationIdDialog from "./applicationIdDialog";
 import StepPersonal from "./steps/stepPersonal";
 import StepAddress from "./steps/stepCitizenship";
@@ -365,6 +371,8 @@ export default function RegistryWizard({
   // without an entry here fall back to a generic "required" message at the field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
+  const [pendingSubmit, setPendingSubmit] = useState(() => resumable?.pendingSubmit);
+  const { justReconnected } = useConnectivity();
   // Bumped each time a SAVE is attempted (and only then). The error-focus effect
   // keys off this — not off `errors` directly — so that focus moves to the first
   // problem only on a save, never while the user is typing (which continuously
@@ -378,9 +386,12 @@ export default function RegistryWizard({
   // drives the "unsaved changes" reminder when leaving the page.
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty, t("registry.unsavedWarning"));
+
   // Stages already hydrated from the backend this session — the skeleton only
   // blocks the FIRST load; later visits already have the data, so it never
   // reappears (the refresh then happens silently behind the populated form).
+  const formRef = useRef<HTMLFormElement>(null);
+  const autoRetryScheduled = useRef(false);
   const hydratedStages = useRef<Set<number>>(new Set());
   // documentTypeId values for NIDA and TIN, cached so blur() can distinguish
   // them from other doc types synchronously without an async lookup.
@@ -1223,6 +1234,36 @@ export default function RegistryWizard({
   const agreed = data.agree === true;
   const StepComponent = STEP_COMPONENTS[step - 1];
 
+  // When connectivity returns, automatically resubmit the pending stage (same
+  // idempotency key) instead of making the user tap Save again.
+  useEffect(() => {
+    if (!justReconnected || !pendingSubmit || pendingSubmit.step !== step) return;
+    if (submitting || autoRetryScheduled.current) return;
+    if (isLast && !agreed) return;
+
+    autoRetryScheduled.current = true;
+    notify(t("connectivity.autoRetry"), "info");
+
+    const timer = window.setTimeout(() => {
+      autoRetryScheduled.current = false;
+      formRef.current?.requestSubmit();
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timer);
+      autoRetryScheduled.current = false;
+    };
+  }, [
+    justReconnected,
+    pendingSubmit,
+    step,
+    submitting,
+    isLast,
+    agreed,
+    notify,
+    t,
+  ]);
+
   // Returns only the FIRST incomplete level of a Tanzania cascade so that
   // errors never appear on fields that are still disabled (Region can't be
   // picked before Territory, District before Region, etc.).
@@ -1467,7 +1508,7 @@ export default function RegistryWizard({
   // stages, a reload or a crash never loses typed data — and the user is never
   // nagged with an "unsaved changes" prompt on stage navigation.
   //
-  // This writes to localStorage ONLY. Submitting a stage to the backend is still
+  // This writes to a SESSION cookie ONLY. Submitting a stage to the backend is still
   // an explicit Save, so nothing half-finished is ever POSTed. The draft is
   // wiped when the session ends or the user signs out (see clearDraft callers),
   // so an abandoned registration can't linger on a shared workstation.
@@ -1498,6 +1539,33 @@ export default function RegistryWizard({
   // out and returns them to login (with an explanatory notice); anything else
   // shows the inline form error AND, when the backend pinpoints offending
   // fields, the message inline at exactly those fields.
+  function queueConnectionFailure(
+    stageData: Record<string, string | boolean>,
+    meta: { sid?: string; appId?: string; updatedStages: Set<number> },
+  ) {
+    const idempotencyKey =
+      pendingSubmit?.step === step
+        ? pendingSubmit.idempotencyKey
+        : createIdempotencyKey();
+    const queued = { step, idempotencyKey, queuedAt: new Date().toISOString() };
+    setPendingSubmit(queued);
+    saveRegistration({
+      step,
+      maxStep,
+      completed: false,
+      ownerId: ownerId || undefined,
+      applicationId: meta.appId || applicationId || undefined,
+      subjectId: meta.sid || subjectId || undefined,
+      submittedStages: [...meta.updatedStages],
+      registrationType: activeRegistrationType,
+      pendingSubmit: queued,
+      data: stageData,
+    });
+    const message = t("connectivity.submitQueued");
+    setFormError(message);
+    notify(message, "info");
+  }
+
   function reportSubmitError(err: unknown) {
     if (err instanceof SessionExpiredError) {
       signOutToLogin();
@@ -1790,14 +1858,30 @@ export default function RegistryWizard({
       if (!agreed) return;
       // Stage 9 — Declaration (final submit).
       setSubmitting(true);
+      const finalIdempotencyKey =
+        pendingSubmit?.step === step
+          ? pendingSubmit.idempotencyKey
+          : createIdempotencyKey();
+      beginIdempotentWrite(finalIdempotencyKey);
       try {
         await submitStage9(subjectId);
       } catch (err) {
         setSubmitting(false);
-        reportSubmitError(err);
+        if (isConnectionError(err)) {
+          queueConnectionFailure(data, {
+            sid: subjectId,
+            appId: applicationId,
+            updatedStages: submittedStages,
+          });
+        } else {
+          reportSubmitError(err);
+        }
         return;
+      } finally {
+        endIdempotentWrite();
       }
       setSubmitting(false);
+      setPendingSubmit(undefined);
       onComplete(data, applicationId, subjectId);
       return;
     }
@@ -2462,6 +2546,11 @@ export default function RegistryWizard({
     // Submit stage to backend
     if (step >= 1 && step <= 8) {
       setSubmitting(true);
+      const idempotencyKey =
+        pendingSubmit?.step === step
+          ? pendingSubmit.idempotencyKey
+          : createIdempotencyKey();
+      beginIdempotentWrite(idempotencyKey);
       try {
         if (step === 1) {
           if (edit) {
@@ -2591,10 +2680,17 @@ export default function RegistryWizard({
         }
       } catch (err) {
         setSubmitting(false);
-        reportSubmitError(err);
+        if (isConnectionError(err)) {
+          queueConnectionFailure(stageData, { sid, appId, updatedStages });
+        } else {
+          reportSubmitError(err);
+        }
         return;
+      } finally {
+        endIdempotentWrite();
       }
       setSubmitting(false);
+      setPendingSubmit(undefined);
       updatedStages.add(step);
       setSubmittedStages(updatedStages);
       notify(t("toast.stageSaved"));
@@ -2648,6 +2744,8 @@ export default function RegistryWizard({
       applicationId: appId || undefined,
       subjectId: sid || undefined,
       submittedStages: [...updatedStages],
+      registrationType: activeRegistrationType,
+      pendingSubmit: undefined,
       data: mergedData ?? stageData,
     });
     // The stage's data is now persisted — no longer dirty.
@@ -2692,7 +2790,7 @@ export default function RegistryWizard({
               {t(`registry.s${step}Intro`)}
             </p>
 
-            <form onSubmit={handlePrimary} className="mt-4">
+            <form ref={formRef} onSubmit={handlePrimary} className="mt-4">
               <div className="rounded-2xl border border-line bg-card p-5 sm:p-6">
                 <WizardProvider
                   data={data}
@@ -2721,6 +2819,13 @@ export default function RegistryWizard({
                 {formError && (
                   <p role="alert" data-form-error className="mt-6 text-base font-medium text-danger">
                     {formError}
+                  </p>
+                )}
+                {pendingSubmit && !formError && (
+                  <p role="status" className="mt-6 text-base font-medium text-amber-800">
+                    {submitting
+                      ? t("connectivity.autoRetry")
+                      : t("connectivity.pendingSubmit").replace("{step}", String(pendingSubmit.step))}
                   </p>
                 )}
 

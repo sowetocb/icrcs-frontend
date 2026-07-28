@@ -19,6 +19,25 @@ function upstreamFor(path: string[]): string {
   return path[0] === "lookup" && LOOKUP ? LOOKUP : BACKEND;
 }
 
+/** GET /v1/files/view — shared by citizens and officers; token choice matters. */
+function isFileViewPath(path: string[]): boolean {
+  return path[0] === "v1" && path[1] === "files" && path[2] === "view";
+}
+
+/** Pick the HttpOnly access token to forward for a proxied path. */
+function accessTokenForPath(
+  path: string[],
+  citizenToken: string | undefined,
+  officerToken: string | undefined,
+): string | undefined {
+  const isOfficerPath = path[0] === "v1" && path[1] === "officer";
+  if (isOfficerPath) return officerToken;
+  // Officers on /registry/people often hold ONLY icrcs-officer-access. A stale
+  // icrcs-access cookie must not win here — it yields {"error":"unauthorized"}.
+  if (isFileViewPath(path)) return officerToken ?? citizenToken;
+  return citizenToken ?? officerToken;
+}
+
 // ---- terminal logging -------------------------------------------------------
 // Status-line logs (method, path, status, latency) are always emitted. Request/
 // response BODIES are logged only when DEBUG_PROXY=true, because this is a civil
@@ -85,35 +104,48 @@ async function forward(
   } else if (contentType) {
     headers.set("content-type", "application/json");
   }
+  const method = request.method;
+
   // Prefer an explicit Authorization header (e.g. pre-auth tokens during
   // registration). If absent, read the HttpOnly access-token cookie the login
   // route set — the browser sends it automatically but JavaScript cannot read it.
-  // Officer endpoints (/v1/officer/**) are protected by the OFFICER token, so use
-  // the icrcs-officer-access cookie for those; everything else uses the citizen
-  // icrcs-access cookie.
   let auth = request.headers.get("authorization");
   if (!auth) {
     const jar = await cookies();
-    const isOfficerPath = path[0] === "v1" && path[1] === "officer";
     const citizenToken = jar.get("icrcs-access")?.value;
     const officerToken = jar.get("icrcs-officer-access")?.value;
-    // Officer namespace → officer token. Everything else → citizen token, but
-    // fall back to the officer token for SHARED authenticated endpoints (e.g. the
-    // public-ish GET /v1/files/view, which an officer must reach with THEIR token
-    // since they have no citizen session — otherwise it 401s "unauthorized").
-    const accessToken = isOfficerPath ? officerToken : (citizenToken ?? officerToken);
+    const accessToken = accessTokenForPath(path, citizenToken, officerToken);
     if (accessToken) auth = `Bearer ${accessToken}`;
   }
   if (auth) headers.set("authorization", auth);
   // Forward the client's Accept (so binary assets like profile photos can be
   // requested with image/*); default to JSON for normal API calls.
   headers.set("accept", request.headers.get("accept") || "application/json");
-
-  const method = request.method;
   const body =
     method === "GET" || method === "HEAD"
       ? undefined
       : await request.arrayBuffer();
+
+  // Defense in depth: reject oversized multipart uploads at the proxy before
+  // they hit the backend. Allow modest multipart overhead above FILE_MAX.
+  const isFileUpload =
+    isMultipart &&
+    ((path[0] === "v1" && path[1] === "files" && path[2] === "upload") ||
+      (path[0] === "v1" && path[1] === "officer" && path[2] === "files" && path[3] === "upload") ||
+      (path[0] === "v1" && path[1] === "profile" && path[2] === "picture"));
+  if (isFileUpload && body) {
+    const FILE_MAX = 300 * 1024;
+    const MULTIPART_OVERHEAD = 64 * 1024;
+    if (body.byteLength > FILE_MAX + MULTIPART_OVERHEAD) {
+      return Response.json(
+        {
+          error: "FILE_TOO_LARGE",
+          message: `File must be ${Math.round(FILE_MAX / 1024)} KB or smaller.`,
+        },
+        { status: 413 },
+      );
+    }
+  }
 
   // One line per outgoing request. Bodies are logged only under DEBUG_PROXY
   // (and never for file uploads); otherwise just the method + path.

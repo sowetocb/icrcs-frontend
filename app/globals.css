@@ -72,10 +72,7 @@
   --font-sans: var(--font-montserrat), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
 
-  /* Type scale (shared ICRCS) — sized for cross-platform consistency.
-     Windows/Mac render text larger than Ubuntu at the same px size; the
-     root clamp caps the upper bound to prevent overflow on those OSes
-     while these rem values keep readable proportions everywhere. */
+  /* Type scale (shared ICRCS) — rem values relative to the fixed 16px root. */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.25rem;
   --text-sm: 0.9rem;
@@ -170,24 +167,10 @@
 html {
   color-scheme: light;
   background: var(--background);
-  /* Cross-platform base: clamp keeps everything proportional from compact
-     laptops up to wide desktops. The upper cap of 18px prevents content
-     overflow on Windows/Mac (heavier font rendering) while the 16px floor
-     keeps text comfortably readable on Ubuntu's lighter hinting.
-     The type scale tokens above are rem-based so they scale with this. */
-  font-size: clamp(16px, 0.9vw + 12px, 18px);
-}
-
-/* Larger monitors: scale the whole (rem-based) UI up proportionally so it fills
-   the screen instead of sitting as a small island in a sea of whitespace.
-   Standard laptops/desktops (<1920px) stay at the 18px base — the sweet spot for
-   cross-OS consistency; only genuinely large screens scale, smoothly from 18px up
-   to a 28px cap. The type scale, max-widths, padding and gaps are all rem-based,
-   so they grow together — no per-component changes needed. */
-@media (min-width: 1920px) {
-  html {
-    font-size: clamp(18px, calc(18px + (100vw - 1920px) * 0.0075), 32px);
-  }
+  /* Fixed 16px root — rem-based Tailwind tokens stay at their designed size.
+     Do NOT scale html font-size with viewport width: that enlarges the whole
+     UI on wide monitors and looks like browser zoom. */
+  font-size: 16px;
 }
 
 html.dark {

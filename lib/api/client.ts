@@ -1,15 +1,59 @@
 import { localizeBackendMessage } from "./errorMessagesSw";
+import { activeIdempotencyKey } from "@/lib/connectivity/activeIdempotency";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
-// The active locale is persisted by the LocaleProvider under this key. Reading it
-// here lets getErrorMessage() localize backend (English) messages without every
-// call site having to thread the locale through. (Mirrors STORAGE_KEY/DEFAULT in
-// app/i18n/localeProvider.tsx — keep in sync.)
+/** Browser → same-origin proxy timeout. The proxy has its own upstream timeout. */
+const CLIENT_FETCH_TIMEOUT_MS = 30_000;
+
+type WriteOptions = {
+  /** Reuse across retries of the same logical submit to avoid duplicate writes. */
+  idempotencyKey?: string;
+};
+
+function writeHeaders(token: string | undefined, options?: WriteOptions): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...authHeaders(token),
+  };
+  if (options?.idempotencyKey) {
+    headers["Idempotency-Key"] = options.idempotencyKey;
+  } else {
+    const scoped = activeIdempotencyKey();
+    if (scoped) headers["Idempotency-Key"] = scoped;
+  }
+  return headers;
+}
+
+async function fetchJson(
+  input: string,
+  init: RequestInit,
+): Promise<{ res: Response; data: unknown }> {
+  const res = await fetch(input, {
+    ...init,
+    signal: init.signal ?? AbortSignal.timeout(CLIENT_FETCH_TIMEOUT_MS),
+  });
+
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    // empty / non-JSON body
+  }
+
+  return { res, data };
+}
+
+import {
+  getClientCookie,
+} from "@/lib/auth/clientCookies";
+
+// The active locale is persisted by the LocaleProvider under this key (session
+// cookie). Reading it here lets getErrorMessage() localize backend messages
 const LOCALE_STORAGE_KEY = "icrcs-locale";
 function activeLocale(): string {
   if (typeof window === "undefined") return "en";
-  return window.localStorage.getItem(LOCALE_STORAGE_KEY) || "en";
+  return getClientCookie(LOCALE_STORAGE_KEY) || "en";
 }
 
 // When tokens are stored in HttpOnly cookies (the __httponly__ stub), the
@@ -82,23 +126,14 @@ export async function apiPost<T = unknown>(
   path: string,
   body: unknown,
   token?: string,
+  options?: WriteOptions,
 ): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const { res, data } = await fetchJson(`${BASE}${path}`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    headers: writeHeaders(token, options),
     body: JSON.stringify(body),
   });
-
-  let data: unknown = null;
-  try {
-    data = await res.json();
-  } catch {
-    // empty / non-JSON body
-  }
 
   if (!res.ok) {
     throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
@@ -111,23 +146,14 @@ export async function apiPut<T = unknown>(
   path: string,
   body: unknown,
   token?: string,
+  options?: WriteOptions,
 ): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const { res, data } = await fetchJson(`${BASE}${path}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    headers: writeHeaders(token, options),
     body: JSON.stringify(body),
   });
-
-  let data: unknown = null;
-  try {
-    data = await res.json();
-  } catch {
-    // empty / non-JSON body
-  }
 
   if (!res.ok) {
     throw new ApiError(res.status, apiErrorMessage(data, res.status), data);
@@ -195,20 +221,13 @@ export async function apiUpload<T = unknown>(
 }
 
 export async function apiGet<T = unknown>(path: string, token?: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const { res, data } = await fetchJson(`${BASE}${path}`, {
     credentials: "include",
     headers: {
       accept: "application/json",
       ...authHeaders(token),
     },
   });
-
-  let data: unknown = null;
-  try {
-    data = await res.json();
-  } catch {
-    // empty / non-JSON body
-  }
 
   if (!res.ok) {
     throw new ApiError(res.status, apiErrorMessage(data, res.status), data);

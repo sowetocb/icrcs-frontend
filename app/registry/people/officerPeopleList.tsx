@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "../../i18n/localeProvider";
 import { loadOfficer } from "@/lib/auth/officerSession";
-import { toProxyUrl } from "@/lib/auth/profile";
+import { fileViewUrl } from "@/lib/auth/profile";
+import { fetchFileViewObjectUrl } from "@/lib/api/fileView";
 import {
   getDeclaredMine,
   getDeclaredAll,
@@ -25,6 +26,8 @@ import {
   UserCheck,
   ArrowLeft,
   Download,
+  Eye,
+  X,
 } from "lucide-react";
 
 // ── Status styling ──────────────────────────────────────────────────────────
@@ -208,11 +211,230 @@ const humanize = (k: string) =>
 const arr = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? v.filter(isObj) : [];
 
-/** Resolve a backend file URL for viewing through the same-origin proxy. The
- * backend's GET /v1/files/view is PUBLIC (no auth needed), so the plain proxied
- * path works for officers too — there is NO /v1/officer/files/view endpoint. */
-function officerFileUrl(raw: string): string | null {
-  return toProxyUrl(raw);
+function mimeToExt(mime: string): string {
+  if (mime.includes("pdf")) return "pdf";
+  if (mime.startsWith("image/")) return mime.split("/")[1]?.split(";")[0] || "img";
+  return "file";
+}
+
+type AttachmentRow = {
+  id: number;
+  attachmentType: string;
+  name: string;
+  rawFileUrl: string;
+  url: string | null;
+  mimeType: string;
+  isImage: boolean;
+  ext: string;
+};
+
+function mapAttachments(attachments: Record<string, unknown>[]): AttachmentRow[] {
+  return attachments.map((a, i) => {
+    const mime = S(a.mimeType);
+    const attachmentType = S(a.attachmentType) || "Document";
+    const ext = mimeToExt(mime);
+    const rawFileUrl = S(a.fileUrl);
+    return {
+      id: i + 1,
+      attachmentType,
+      name: `${attachmentType}.${ext}`,
+      rawFileUrl,
+      url: fileViewUrl(rawFileUrl),
+      mimeType: mime,
+      isImage: mime.startsWith("image/"),
+      ext,
+    };
+  });
+}
+
+/** Load attachment bytes via fetch (avoids broken `<img>` when the proxy returns JSON). */
+function AttachmentPreviewImage({ rawFileUrl, alt }: { rawFileUrl: string; alt: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    setSrc(null);
+    setFailed(false);
+
+    (async () => {
+      objectUrl = await fetchFileViewObjectUrl(rawFileUrl, "image/*,*/*");
+      if (cancelled) return;
+      if (objectUrl) setSrc(objectUrl);
+      else setFailed(true);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl?.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    };
+  }, [rawFileUrl]);
+
+  if (failed) {
+    return <p className="px-4 text-center text-sm text-muted">Could not load image preview</p>;
+  }
+  if (!src) {
+    return <LoaderCircle className="h-8 w-8 animate-spin text-muted" aria-hidden="true" />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className="max-h-[420px] max-w-full rounded object-contain" />
+  );
+}
+
+function AttachmentPreviewFrame({ rawFileUrl, title }: { rawFileUrl: string; title: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    setSrc(null);
+    setFailed(false);
+
+    (async () => {
+      objectUrl = await fetchFileViewObjectUrl(rawFileUrl, "application/pdf,*/*");
+      if (cancelled) return;
+      if (objectUrl) setSrc(objectUrl);
+      else setFailed(true);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl?.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    };
+  }, [rawFileUrl]);
+
+  if (failed) {
+    return <p className="px-4 text-center text-sm text-muted">Could not load document preview</p>;
+  }
+  if (!src) {
+    return (
+      <div className="flex min-h-[350px] flex-1 items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+  return <iframe src={src} className="min-h-[350px] w-full flex-1 border-0" title={title} />;
+}
+
+/** Split-pane attachments list + inline preview (matches management biometric UI). */
+function AttachmentsSection({
+  attachments,
+  resetKey,
+}: {
+  attachments: Record<string, unknown>[];
+  resetKey: string;
+}) {
+  const rows = mapAttachments(attachments);
+  const [previewDoc, setPreviewDoc] = useState<AttachmentRow | null>(null);
+
+  useEffect(() => {
+    const firstImage = rows.find((r) => r.isImage && r.url);
+    setPreviewDoc(firstImage ?? null);
+  }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps -- reset when record changes
+
+  if (rows.length === 0) return null;
+
+  return (
+    <Section title="Attachments">
+      <div className="flex flex-col gap-5 lg:flex-row">
+        <div className="min-w-0 space-y-2 lg:w-[55%]">
+          <p className="text-xs text-muted">
+            Uploaded Attachments ({rows.length}) — read-only preview
+          </p>
+          {rows.map((d) => (
+            <div
+              key={d.id}
+              className="flex items-center justify-between gap-2 rounded-xl border border-line bg-navy-50/30 p-3 transition hover:bg-navy-50/50"
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                    d.isImage ? "bg-info/10" : "bg-danger/10"
+                  }`}
+                >
+                  <span
+                    className={`text-[9px] font-bold uppercase ${
+                      d.isImage ? "text-info" : "text-danger"
+                    }`}
+                  >
+                    {d.ext}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-medium text-navy-700">{d.name}</div>
+                  <div className="truncate text-[10px] text-muted">{d.attachmentType}</div>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {d.url && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDoc(d)}
+                      className="rounded-lg p-1.5 text-muted transition hover:bg-card hover:text-navy-700"
+                      title="Preview"
+                    >
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      download={d.name}
+                      className="rounded-lg p-1.5 text-muted transition hover:bg-card hover:text-navy-700"
+                      title="Download"
+                    >
+                      <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="min-w-0 lg:w-[45%]">
+          {previewDoc?.url ? (
+            <div className="flex h-full min-h-[280px] flex-col rounded-xl border border-line bg-card p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between border-b border-line pb-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="h-4 w-4 shrink-0 text-navy-700" aria-hidden="true" />
+                  <span className="truncate text-sm font-semibold text-navy-700">{previewDoc.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="rounded p-1 text-muted transition hover:bg-navy-50"
+                  title="Close preview"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+              {previewDoc.isImage ? (
+                <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg border border-line bg-navy-50/30">
+                  <AttachmentPreviewImage rawFileUrl={previewDoc.rawFileUrl} alt={previewDoc.name} />
+                </div>
+              ) : (
+                <div className="flex min-h-[350px] flex-1 flex-col overflow-hidden rounded-lg border border-line bg-navy-50/30">
+                  <AttachmentPreviewFrame rawFileUrl={previewDoc.rawFileUrl} title={previewDoc.name} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-line bg-card p-4 text-center shadow-sm">
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-50">
+                <FileText className="h-6 w-6 text-muted" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-medium text-navy-700">Select a document to preview</p>
+              <p className="mt-1 text-xs text-muted">Click the eye icon on any attachment</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Section>
+  );
 }
 
 /** Flatten an object's primitive fields into label/value rows, recursing ONE
@@ -489,40 +711,7 @@ function DetailView({
             </Section>
           )}
           {attachments.length > 0 && (
-            <Section title="Attachments">
-              <div className="space-y-3">
-                {attachments.map((a, i) => {
-                  const url = officerFileUrl(S(a.fileUrl));
-                  const isImg = S(a.mimeType).startsWith("image/");
-                  return (
-                    <div key={i} className="flex items-center gap-4 rounded-xl border border-line p-3">
-                      {isImg && url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={url} alt={S(a.attachmentType)} className="h-16 w-16 rounded-lg object-cover" />
-                      ) : (
-                        <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-navy-50 text-navy-500">
-                          <FileText size={22} strokeWidth={1.5} aria-hidden="true" />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-navy-700">{S(a.attachmentType) || "Attachment"}</p>
-                        <p className="truncate text-xs text-muted">{S(a.mimeType)}</p>
-                      </div>
-                      {url && (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="shrink-0 rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold-700 transition hover:bg-gold/20"
-                        >
-                          {t("officer.viewDetails")}
-                        </a>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
+            <AttachmentsSection attachments={attachments} resetKey={subjectId} />
           )}
           {isObj(d.travelHistory) && (
             <Section title="Travel History">

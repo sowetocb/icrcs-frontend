@@ -59,6 +59,15 @@ const nextConfig: NextConfig = {
   // original (un-minified) source. The build stays minified-only client-side.
   productionBrowserSourceMaps: false,
 
+  // Extra belt-and-braces: ensure webpack never emits client source maps in
+  // production (covers edge cases beyond productionBrowserSourceMaps).
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      config.devtool = false;
+    }
+    return config;
+  },
+
   compiler: {
     // Strip client console.* in production (keep errors) so debug logs and any
     // internal data they reference don't leak to the browser console.
@@ -67,6 +76,17 @@ const nextConfig: NextConfig = {
 
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+
+  // Backend file URLs are /api/v1/files/view?path=… (same as management nginx).
+  // Rewrite to the Next.js proxy so img/iframe src can use them unchanged.
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/files/view",
+        destination: "/api/proxy/v1/files/view",
+      },
+    ];
   },
 };
 

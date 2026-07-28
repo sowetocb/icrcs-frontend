@@ -2,23 +2,18 @@
 
 // Authoritative "is this session still alive?" check.
 //
-// The logged-in flag lives in localStorage, but the real credential is an
-// HttpOnly SESSION cookie (no max-age) that the browser drops when it closes.
-// Those two disagree in one important case: the user closes the browser WITHOUT
-// closing the tabs, then reopens and the browser restores the tabs. localStorage
-// (and even sessionStorage, which browsers restore too) still says "logged in",
-// while the auth cookie is gone — so the app would happily render the dashboard
-// for a user who is no longer authenticated.
-//
-// Asking the SERVER is the only reliable answer: the refresh endpoints succeed
-// only if the cookie survived. Calls are de-duplicated through a single in-flight
-// promise so the guard and the keep-alive can both ask without racing (a double
-// refresh could rotate the token twice and invalidate a good session).
+// The logged-in flag is a session cookie (see lib/auth/session.ts), and the real
+// credential is an HttpOnly SESSION cookie that the browser drops when it closes.
+// Those two can still disagree after a crash/restore, so we ask the SERVER:
+// refresh succeeds only if the auth cookie survived. Calls are de-duplicated
+// through a single in-flight promise so the guard and the keep-alive can both
+// ask without racing.
 
 import { refresh } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { clearSession, loadSession, saveSession } from "./session";
 import { isOfficer, clearOfficer } from "./officerSession";
+import { clearProfile } from "./profile";
 
 let inFlight: Promise<boolean> | null = null;
 
@@ -53,6 +48,7 @@ async function run(): Promise<boolean> {
     const rejected = err instanceof ApiError && (err.status === 401 || err.status === 403);
     if (rejected) {
       clearSession();
+      clearProfile();
       return false;
     }
     return true;

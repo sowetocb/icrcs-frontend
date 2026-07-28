@@ -7,7 +7,13 @@ import ProfileView from "@/app/dashboard/profile/profileView";
 import { useI18n } from "@/app/i18n/localeProvider";
 import { refreshMyProfile, fetchProfilePicture, logout } from "@/lib/api/auth";
 import { clearSession, loadSession } from "@/lib/auth/session";
-import { isOfficer, clearOfficer, loadOfficer, type OfficerUser } from "@/lib/auth/officerSession";
+import {
+  isOfficer,
+  clearOfficer,
+  loadOfficer,
+  hydrateOfficerProfile,
+  type OfficerUser,
+} from "@/lib/auth/officerSession";
 import { getOfficerProfile } from "@/lib/api/officer";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { clearRegistration } from "@/app/registry/registrationStore";
@@ -176,15 +182,21 @@ export default function DashboardTopbar() {
         try {
           const p = await getOfficerProfile();
           if (!alive) return;
-          setOfficer((o) => ({
-            roles: o?.roles ?? [],
-            permissions: o?.permissions ?? [],
-            ...o,
-            username: p.username || o?.username,
-            stationId: p.stationId || o?.stationId,
-          }));
+          const next: OfficerUser = {
+            roles: cachedOfficer?.roles ?? [],
+            permissions: cachedOfficer?.permissions ?? [],
+            userId: p.userId,
+            username: p.username || cachedOfficer?.username,
+            email: p.email,
+            fullName: p.fullName,
+            pfNo: p.pfNo,
+            stationId: p.stationId || cachedOfficer?.stationId,
+            stationName: p.stationName,
+          };
+          hydrateOfficerProfile(next);
+          setOfficer(next);
         } catch {
-          // keep the cached officer identity
+          // keep the cached officer identity (gate-only after hard refresh)
         }
       })();
       return () => {

@@ -93,12 +93,12 @@ export const RULES = {
   EDU_YEAR_MIN: 1900, // REGISTRATION_EDUCATION_YEAR_INVALID
 
   // ---- Files (FILE_EMPTY / FILE_TOO_LARGE / FILE_TYPE_NOT_ALLOWED) ----
-  // Backend FILE_TOO_LARGE now caps uploads at 300KB (was 500KB) — matches the
-  // UI (profileView / stepPersonal / stepAttachments all enforce 300KB).
+  // Backend FILE_TOO_LARGE caps uploads at 300KB. Documents = PDF only;
+  // passport/profile photos = JPG/JPEG/PNG only.
   FILE_MAX_BYTES: 300 * 1024, // 300KB
-  FILE_ALLOWED_MIME: ['image/jpeg', 'image/png', 'application/pdf'] as const,
-  // Photo-only fields (passport photo, profile picture) intentionally accept
-  // images only (no PDF) — use this, not FILE_ALLOWED_MIME.
+  /** Supporting documents / certificates — PDF only. */
+  FILE_ALLOWED_MIME: ['application/pdf'] as const,
+  /** Passport photo & profile picture — images only (no PDF). */
   PHOTO_ALLOWED_MIME: ['image/jpeg', 'image/png'] as const,
 
   // ---- Collection sizes ----

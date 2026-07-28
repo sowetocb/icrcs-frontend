@@ -125,7 +125,7 @@ export const otpCodeField = z
 export const fileField = z
   .instanceof(File, { message: 'File is required' })
   .refine((f) => f.size > 0, 'File is empty or missing')
-  .refine((f) => f.size <= RULES.FILE_MAX_BYTES, `File exceeds maximum size of 500KB`)
+  .refine((f) => f.size <= RULES.FILE_MAX_BYTES, `File exceeds maximum size of ${Math.round(RULES.FILE_MAX_BYTES / 1024)}KB`)
   .refine(
     (f) => (RULES.FILE_ALLOWED_MIME as readonly string[]).includes(f.type),
     'File type not allowed. Use jpg, png or pdf',

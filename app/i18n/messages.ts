@@ -140,6 +140,16 @@ const en = {
     idleNotice: "You were signed out due to inactivity. Please sign in again.",
     expiredNotice: "Your session expired. Please sign in again to continue.",
   },
+  connectivity: {
+    offline:
+      "You appear to be offline. Your entries stay saved on this device until the connection returns.",
+    restored: "Connection restored.",
+    submitQueued:
+      "Could not reach the server. Your work is saved on this device — it will submit automatically when the connection returns.",
+    autoRetry: "Connection restored — submitting saved step…",
+    retrySubmit: "Connection restored.",
+    pendingSubmit: "Stage {step} is saved locally and will submit when the connection is back.",
+  },
   toast: {
     loginSuccess: "Logged in successfully.",
     otpVerified: "Verification successful. Your account is ready.",
@@ -342,7 +352,7 @@ const en = {
     travelHistorySaveError: "Travel history could not be saved. Please review the travel document details and try again.",
     dobTooOld: "Date of birth exceeds the maximum allowed age of {max} years.",
     submitError: "Could not submit this step. Please try again.",
-    attachHint: "Tick a document, then upload it (JPG, PNG or PDF, max 300KB).",
+    attachHint: "Tick a document, then upload it (PDF only, max 300KB).",
     attachTooLarge: "File must be 300KB or smaller.",
     attachTooMany: "Too many attachments — maximum {max} allowed.",
     attachFileEmpty: "File is empty — please choose a valid file.",
@@ -388,7 +398,7 @@ const en = {
     attachOnlyPdf: "Only PDF files are allowed.",
     attachListTitle: "Uploaded documents",
     otherDocsTitle: "Other Supporting Documents",
-    otherDocsHint: "Upload any additional supporting documents such as affidavits, letters, or other relevant paperwork (JPG, PNG or PDF, max 300KB each).",
+    otherDocsHint: "Upload any additional supporting documents such as affidavits, letters, or other relevant paperwork (PDF only, max 300KB each).",
     otherDocsCount: "{n} of {max} documents added",
     otherDocLabel: "Document name",
     otherDocsAdd: "Add Supporting Document",
@@ -637,7 +647,7 @@ const en = {
     removePhoto: "Remove photo",
     uploading: "Uploading…",
     removing: "Removing…",
-    photoHint: "JPG or PNG, up to 300KB.",
+    photoHint: "JPG, JPEG or PNG, up to 300KB.",
     photoInvalidType: "Please choose a JPG or PNG image.",
     photoTooLarge: "Image must be 300KB or smaller.",
     photoUpdated: "Profile photo updated.",
@@ -839,9 +849,10 @@ const en = {
     remove: "Remove", // REVIEW
     required: "Required", // REVIEW
     photo: "Photo", // REVIEW
-    photoHint: "Upload a passport-size photo (JPG or PNG).", // REVIEW
+    photoHint: "Upload a passport-size photo (JPG, JPEG or PNG).", // REVIEW
     photoSizeError: "Photo size should not be more than 300KB.", // REVIEW
     photoTypeError: "Invalid photo type.", // REVIEW
+    photoInvalid: "This file cannot be used as a photo.",
     uploadPhoto: "Upload Photo", // REVIEW
     changePhoto: "Change Photo", // REVIEW
     capturePhoto: "Capture Photo",
@@ -1250,6 +1261,16 @@ const sw: typeof en = {
     idleNotice: "Umetolewa kwa sababu ya kutotumia mfumo. Tafadhali ingia tena.",
     expiredNotice: "Muda wa kikao chako umeisha. Tafadhali ingia tena ili kuendelea.",
   },
+  connectivity: {
+    offline:
+      "Huonekani kuwa huna mtandao. Maelezo yako yamehifadhiwa kwenye kifaa hiki hadi muunganisho urudi.",
+    restored: "Muunganisho umerejeshwa.",
+    submitQueued:
+      "Imeshindwa kufikia seva. Kazi yako imehifadhiwa kwenye kifaa hiki — itawasilishwa kiotomatiki muunganisho ukirudi.",
+    autoRetry: "Muunganisho umerejeshwa — inawasilisha hatua iliyohifadhiwa…",
+    retrySubmit: "Muunganisho umerejeshwa.",
+    pendingSubmit: "Hatua {step} imehifadhiwa ndani na itawasilishwa muunganisho utakaporudi.",
+  },
   toast: {
     loginSuccess: "Umeingia kwa mafanikio.",
     otpVerified: "Uthibitisho umefanikiwa. Akaunti yako iko tayari.",
@@ -1452,7 +1473,7 @@ const sw: typeof en = {
     travelHistorySaveError: "Historia ya safari haikuweza kuhifadhiwa. Tafadhali hakiki taarifa za hati ya safari na ujaribu tena.",
     dobTooOld: "Tarehe ya kuzaliwa inazidi umri wa juu unaoruhusiwa wa miaka {max}.",
     submitError: "Imeshindwa kuwasilisha hatua hii. Tafadhali jaribu tena.",
-    attachHint: "Weka alama kwenye hati, kisha uipakie (JPG, PNG au PDF, kisichozidi 300KB).",
+    attachHint: "Weka alama kwenye hati, kisha uipakie (PDF pekee, kisichozidi 300KB).",
     attachTooLarge: "Faili lazima liwe 300KB au chini.",
     attachTooMany: "Nyaraka nyingi sana — kiwango cha juu ni {max}.",
     attachFileEmpty: "Faili ni tupu — tafadhali chagua faili sahihi.",
@@ -1498,7 +1519,7 @@ const sw: typeof en = {
     attachOnlyPdf: "Faili za PDF pekee zinaruhusiwa.",
     attachListTitle: "Nyaraka zilizopakiwa",
     otherDocsTitle: "Nyaraka Nyingine za Kusaidia",
-    otherDocsHint: "Pakia nyaraka zingine za kusaidia kama vile viapo, barua, au karatasi nyingine muhimu (JPG, PNG au PDF, kisichozidi 300KB kila moja).",
+    otherDocsHint: "Pakia nyaraka zingine za kusaidia kama vile viapo, barua, au karatasi nyingine muhimu (PDF pekee, kisichozidi 300KB kila moja).",
     otherDocsCount: "{n} kati ya {max} nyaraka zimeongezwa",
     otherDocLabel: "Nyaraka ya Kusaidia {n}",
     otherDocsAdd: "Ongeza Nyaraka ya Kusaidia",
@@ -1745,7 +1766,7 @@ const sw: typeof en = {
     removePhoto: "Ondoa picha",
     uploading: "Inapakia…",
     removing: "Inaondoa…",
-    photoHint: "JPG au PNG, hadi 300KB.",
+    photoHint: "JPG, JPEG au PNG, hadi 300KB.",
     photoInvalidType: "Tafadhali chagua picha ya JPG au PNG.",
     photoTooLarge: "Picha lazima iwe 300KB au chini.",
     photoUpdated: "Picha ya wasifu imesasishwa.",
@@ -1946,9 +1967,10 @@ const sw: typeof en = {
     remove: "Ondoa", // REVIEW
     required: "Inahitajika", // REVIEW
     photo: "Picha", // REVIEW
-    photoHint: "Pakia picha ya saizi ya pasipoti (JPG au PNG).", // REVIEW
+    photoHint: "Pakia picha ya saizi ya pasipoti (JPG, JPEG au PNG).", // REVIEW
     photoSizeError: "Ukubwa wa picha usizidi 300KB.",
     photoTypeError: "Aina ya picha si sahihi.", // REVIEW
+    photoInvalid: "Faili hili haliwezi kutumika kama picha.",
     uploadPhoto: "Pakia Picha", // REVIEW
     changePhoto: "Badilisha Picha", // REVIEW
     capturePhoto: "Piga Picha",

@@ -7,6 +7,10 @@ import {
   Messages,
   messages,
 } from "./messages";
+import {
+  getClientCookie,
+  setClientCookie,
+} from "@/lib/auth/clientCookies";
 
 const STORAGE_KEY = "icrcs-locale";
 
@@ -35,11 +39,19 @@ function resolve(dict: Messages, path: string): string {
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
-  // Hydrate from storage after mount (avoids SSR/client mismatch).
+  // Hydrate from session cookie after mount (avoids SSR/client mismatch).
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
+    let stored = getClientCookie(STORAGE_KEY) as Locale | null;
+    try {
+      if (!stored) {
+        stored = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
+        if (stored) setClientCookie(STORAGE_KEY, stored);
+      }
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     if (stored && stored in messages && stored !== locale) {
-      // Sync the persisted locale from localStorage on first mount.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(stored);
     }
@@ -53,7 +65,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   const setLocale = (next: Locale) => {
     setLocaleState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    setClientCookie(STORAGE_KEY, next);
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   };
 
   const t = (path: string) => resolve(messages[locale], path);

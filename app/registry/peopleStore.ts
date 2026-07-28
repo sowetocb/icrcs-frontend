@@ -1,7 +1,16 @@
 // Everyone registered under the current account/profile. The first person is
 // the account holder themselves.
+//
+// Stored in a SESSION cookie (not localStorage) — cleared on logout / browser close.
+
+import {
+  deleteClientCookie,
+  getClientCookieJson,
+  setClientCookieJson,
+} from "@/lib/auth/clientCookies";
 
 const KEY = "icrcs-people";
+const MAX_COOKIE_CHARS = 3500;
 
 export type PersonStatus = "in_progress" | "submitted";
 
@@ -19,11 +28,23 @@ export type Person = {
  * records saved before status existed are treated as submitted. */
 export const isSubmitted = (p: Person) => p.status !== "in_progress";
 
+function slimPeople(people: Person[]): Person[] {
+  // Drop per-person form caches — list UI only needs identity/status.
+  return people.map((p) => ({
+    applicationId: p.applicationId,
+    submittedDate: p.submittedDate,
+    name: p.name,
+    isCreator: p.isCreator,
+    status: p.status,
+    step: p.step,
+    data: {},
+  }));
+}
+
 export function loadPeople(): Person[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Person[]) : [];
+    return getClientCookieJson<Person[]>(KEY) ?? [];
   } catch {
     return [];
   }
@@ -34,11 +55,25 @@ export function loadPeople(): Person[] {
 export function upsertPerson(person: Person): void {
   if (typeof window === "undefined") return;
   try {
+    window.localStorage.removeItem(KEY);
     const people = loadPeople();
     const i = people.findIndex((p) => p.applicationId === person.applicationId);
     if (i >= 0) people[i] = { ...people[i], ...person };
     else people.push(person);
-    window.localStorage.setItem(KEY, JSON.stringify(people));
+    const payload = slimPeople(people);
+    const json = JSON.stringify(payload);
+    if (json.length > MAX_COOKIE_CHARS) {
+      // Keep the most recent entries that fit.
+      const kept: Person[] = [];
+      for (let j = payload.length - 1; j >= 0; j--) {
+        const next = [payload[j], ...kept];
+        if (JSON.stringify(next).length > MAX_COOKIE_CHARS) break;
+        kept.unshift(payload[j]);
+      }
+      setClientCookieJson(KEY, kept);
+      return;
+    }
+    setClientCookieJson(KEY, payload);
   } catch {
     // ignore
   }
@@ -63,6 +98,7 @@ export function addPerson(person: Partial<Person> & { applicationId: string }): 
 export function clearPeople(): void {
   if (typeof window === "undefined") return;
   try {
+    deleteClientCookie(KEY);
     window.localStorage.removeItem(KEY);
   } catch {
     // ignore

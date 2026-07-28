@@ -8,7 +8,7 @@ import { loadProfile } from "@/lib/auth/profile";
 import { Check, Plus, Trash2 } from "lucide-react";
 import {
   ATTACHMENT_TYPES,
-  ATTACHMENT_ACCEPT,
+  DOCUMENT_ACCEPT,
   PASSPORT_PHOTO_TYPE,
   OTHER_SUPPORTING_DOC_TYPE,
   MAX_OTHER_SUPPORTING_DOCS,
@@ -46,9 +46,6 @@ export function parseAttachments(raw: unknown): Attachment[] {
 
 type Status = "idle" | "uploading" | "done" | "error";
 type RowState = { status: Status; name?: string; error?: string };
-
-// Maximum accepted size for an uploaded supporting document.
-const MAX_ATTACHMENT_BYTES = 300 * 1024; // 300KB
 
 /** Read a file as a base64 data URL (used to keep the passport photo locally). */
 function readDataUrl(file: File): Promise<string> {
@@ -154,21 +151,19 @@ export default function StepAttachments() {
   async function handleFile(typeId: number, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reject a 0-byte file up front — the backend rejects empty uploads
-    // (FILE_EMPTY), and uploading one just wastes a round-trip.
-    if (file.size === 0) {
+    const { validateUploadFile } = await import("@/lib/validation/fileUpload");
+    const kind = typeId === PASSPORT_PHOTO_TYPE ? "photo" : "document";
+    const check = await validateUploadFile(file, kind);
+    if (!check.ok) {
+      const msg =
+        check.code === "FILE_EMPTY"
+          ? t("registry.attachFileEmpty")
+          : check.code === "FILE_TOO_LARGE"
+            ? t("registry.attachTooLarge")
+            : check.message;
       setRows((r) => ({
         ...r,
-        [typeId]: { status: "error", name: file.name, error: t("registry.attachFileEmpty") },
-      }));
-      e.target.value = "";
-      return;
-    }
-    // Cap uploads at 300KB — reject larger files before any upload attempt.
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setRows((r) => ({
-        ...r,
-        [typeId]: { status: "error", name: file.name, error: t("registry.attachTooLarge") },
+        [typeId]: { status: "error", name: file.name, error: msg },
       }));
       e.target.value = "";
       return;
@@ -176,17 +171,17 @@ export default function StepAttachments() {
     // Keep a local copy of the passport photo as a data URL so it can be shown
     // on the printable form — the backend doesn't serve uploaded images.
     if (typeId === PASSPORT_PHOTO_TYPE) {
-      if (file.type.startsWith("image/")) {
+      if (check.mime.startsWith("image/")) {
         readDataUrl(file).then((url) => set("passportPhotoData", url));
       } else {
         set("passportPhotoData", "");
       }
     }
-    setRows((r) => ({ ...r, [typeId]: { status: "uploading", name: file.name } }));
+    setRows((r) => ({ ...r, [typeId]: { status: "uploading", name: check.safeName } }));
     try {
       const uploaded = await uploadAttachment(subjectId, typeId, file);
-      setRows((r) => ({ ...r, [typeId]: { status: "done", name: file.name } }));
-      persist(typeId, file.name, uploaded);
+      setRows((r) => ({ ...r, [typeId]: { status: "done", name: check.safeName } }));
+      persist(typeId, check.safeName, uploaded);
     } catch (err) {
       setRows((r) => ({
         ...r,
@@ -288,27 +283,27 @@ export default function StepAttachments() {
     const file = e.target.files?.[0];
     if (!file) return;
     const key = otherKey(slot);
-    if (file.size === 0) {
+    const { validateUploadFile } = await import("@/lib/validation/fileUpload");
+    const check = await validateUploadFile(file, "document");
+    if (!check.ok) {
+      const msg =
+        check.code === "FILE_EMPTY"
+          ? t("registry.attachFileEmpty")
+          : check.code === "FILE_TOO_LARGE"
+            ? t("registry.attachTooLarge")
+            : check.message;
       setOtherRows((r) => ({
         ...r,
-        [key]: { status: "error", name: file.name, error: t("registry.attachFileEmpty") },
+        [key]: { status: "error", name: file.name, error: msg },
       }));
       e.target.value = "";
       return;
     }
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setOtherRows((r) => ({
-        ...r,
-        [key]: { status: "error", name: file.name, error: t("registry.attachTooLarge") },
-      }));
-      e.target.value = "";
-      return;
-    }
-    setOtherRows((r) => ({ ...r, [key]: { status: "uploading", name: file.name } }));
+    setOtherRows((r) => ({ ...r, [key]: { status: "uploading", name: check.safeName } }));
     try {
       const uploaded = await uploadAttachment(subjectId, OTHER_SUPPORTING_DOC_TYPE, file);
-      setOtherRows((r) => ({ ...r, [key]: { status: "done", name: file.name } }));
-      persistOther(slot, file.name, uploaded);
+      setOtherRows((r) => ({ ...r, [key]: { status: "done", name: check.safeName } }));
+      persistOther(slot, check.safeName, uploaded);
     } catch (err) {
       setOtherRows((r) => ({
         ...r,
@@ -382,7 +377,7 @@ export default function StepAttachments() {
                     </span>
                     <input
                       type="file"
-                      accept={ATTACHMENT_ACCEPT}
+                      accept={DOCUMENT_ACCEPT}
                       disabled={row.status === "uploading"}
                       className="sr-only"
                       onChange={(e) => handleFile(type.id, e)}
@@ -460,7 +455,7 @@ export default function StepAttachments() {
                     </span>
                     <input
                       type="file"
-                      accept={ATTACHMENT_ACCEPT}
+                      accept={DOCUMENT_ACCEPT}
                       disabled={row.status === "uploading"}
                       className="sr-only"
                       onChange={(e) => handleOtherFile(slot, e)}

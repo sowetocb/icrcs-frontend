@@ -10,7 +10,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.remove("dark");
     try {
+      // Never leave theme preferences in Local Storage.
       window.localStorage.removeItem("icrcs-theme");
+      window.localStorage.removeItem("theme");
     } catch {
       // ignore
     }

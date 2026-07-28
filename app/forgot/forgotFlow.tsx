@@ -7,6 +7,11 @@ import { useI18n } from "../i18n/localeProvider";
 import { forgotPassword, verifyResetOtp, resetPassword } from "@/lib/api/auth";
 import { getErrorMessage, ApiError } from "@/lib/api/client";
 import { RULES } from "@/lib/validation/rules";
+import {
+  deleteClientCookie,
+  getClientCookie,
+  setClientCookie,
+} from "@/lib/auth/clientCookies";
 import { Eye, EyeOff, LoaderCircle, CircleCheck } from "lucide-react";
 
 // The reset OTP is valid for 10 minutes, so resend is only offered after that
@@ -37,9 +42,9 @@ function Requirement({ met, label }: { met: boolean; label: string }) {
   );
 }
 
-// Persist just enough of the reset flow (per-tab) so a page refresh returns to
-// the same step instead of dropping back to "request OTP". Only step/identifier/
-// profileId are kept — never the OTP code or the new password.
+// Persist just enough of the reset flow in a SESSION cookie so a page refresh
+// returns to the same step. Only step/identifier/profileId are kept — never the
+// OTP code or the new password. Never localStorage / sessionStorage.
 const FORGOT_STATE_KEY = "icrcs-forgot-state";
 // False only on a fresh document load (a hard refresh); stays true across
 // client-side navigations, so arriving at /forgot from the login link starts
@@ -49,7 +54,11 @@ let forgotMountedInSession = false;
 function readRestorableForgot(): { step: 2 | 3; identifier: string; profileId: string } | null {
   if (typeof window === "undefined" || forgotMountedInSession) return null;
   try {
-    const raw = sessionStorage.getItem(FORGOT_STATE_KEY);
+    let raw = getClientCookie(FORGOT_STATE_KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(FORGOT_STATE_KEY);
+      sessionStorage.removeItem(FORGOT_STATE_KEY);
+    }
     if (!raw) return null;
     const s = JSON.parse(raw) as { step?: number; identifier?: string; profileId?: string };
     // Only steps 2 (verify OTP) and 3 (new password) are resumable, and both
@@ -70,8 +79,7 @@ function readRestorableForgot(): { step: 2 | 3; identifier: string; profileId: s
 export default function ForgotFlow() {
   const { t } = useI18n();
   // Initialise to SSR-safe defaults (step 1) so the first client render matches
-  // the server; the resumable step is restored in the effect below. Reading
-  // sessionStorage in the useState initialiser would cause a hydration mismatch.
+  // the server; the resumable step is restored in the effect below.
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [identifier, setIdentifier] = useState("");
   const [profileId, setProfileId] = useState("");
@@ -107,16 +115,17 @@ export default function ForgotFlow() {
   // Steps 1 (identifier) and 4 (success) are not resumable, so clear there.
   useEffect(() => {
     try {
-      if (step === 2 || step === 3) {
-        sessionStorage.setItem(
-          FORGOT_STATE_KEY,
-          JSON.stringify({ step, identifier, profileId }),
-        );
-      } else {
-        sessionStorage.removeItem(FORGOT_STATE_KEY);
-      }
+      sessionStorage.removeItem(FORGOT_STATE_KEY);
     } catch {
-      // ignore — sessionStorage unavailable
+      // ignore
+    }
+    if (step === 2 || step === 3) {
+      setClientCookie(
+        FORGOT_STATE_KEY,
+        JSON.stringify({ step, identifier, profileId }),
+      );
+    } else {
+      deleteClientCookie(FORGOT_STATE_KEY);
     }
   }, [step, identifier, profileId]);
 

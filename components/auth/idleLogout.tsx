@@ -8,6 +8,11 @@ import { clearProfile } from "@/lib/auth/profile";
 import { clearPeople } from "@/app/registry/peopleStore";
 import { clearRegistration } from "@/app/registry/registrationStore";
 import { isOfficer, clearOfficer } from "@/lib/auth/officerSession";
+import {
+  deleteClientCookie,
+  getClientCookie,
+  setClientCookie,
+} from "@/lib/auth/clientCookies";
 
 // Sign the user out after inactivity (no mouse/keyboard/scroll/touch). Officers
 // use a shorter limit because they often work on shared workstations.
@@ -54,6 +59,7 @@ export default function IdleLogout() {
       clearOfficer();
       clearRegistration();
       clearPeople();
+      deleteClientCookie(ACTIVITY_KEY);
       window.localStorage.removeItem(ACTIVITY_KEY);
       setSignoutNotice("idle");
       router.push("/login");
@@ -76,6 +82,7 @@ export default function IdleLogout() {
     // workstation. Submitted stages remain on the backend.
     clearRegistration();
     clearPeople();
+    deleteClientCookie(ACTIVITY_KEY);
     window.localStorage.removeItem(ACTIVITY_KEY);
     // Inform the user WHY they were signed out — the login screen shows a notice.
     setSignoutNotice("idle");
@@ -88,7 +95,7 @@ export default function IdleLogout() {
     signedOutRef.current = false;
 
     function readLastActivity(): number {
-      const raw = window.localStorage.getItem(ACTIVITY_KEY);
+      const raw = getClientCookie(ACTIVITY_KEY);
       const n = raw ? Number(raw) : NaN;
       return Number.isFinite(n) ? n : Date.now();
     }
@@ -110,10 +117,11 @@ export default function IdleLogout() {
 
     function onActivity() {
       const now = Date.now();
-      // Throttle localStorage writes (activity events fire very frequently).
+      // Throttle cookie writes (activity events fire very frequently).
       if (now - lastWriteRef.current > 5000) {
         lastWriteRef.current = now;
-        window.localStorage.setItem(ACTIVITY_KEY, String(now));
+        setClientCookie(ACTIVITY_KEY, String(now));
+        window.localStorage.removeItem(ACTIVITY_KEY);
       }
       arm();
     }
@@ -123,7 +131,8 @@ export default function IdleLogout() {
       if (document.visibilityState === "visible") arm();
     }
 
-    window.localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    setClientCookie(ACTIVITY_KEY, String(Date.now()));
+    window.localStorage.removeItem(ACTIVITY_KEY);
     lastWriteRef.current = Date.now();
     ACTIVITY_EVENTS.forEach((e) =>
       window.addEventListener(e, onActivity, { passive: true }),

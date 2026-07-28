@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { loadSession, subscribeSession, setSignoutNotice } from "@/lib/auth/session";
 import { isOfficer, subscribeOfficer } from "@/lib/auth/officerSession";
+import {
+  clearBrowserStorage,
+  deleteClientCookie,
+} from "@/lib/auth/clientCookies";
 import { verifySession } from "@/lib/auth/verifySession";
 import { PageSkeleton } from "@/components/ui/skeleton";
 
@@ -27,6 +31,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    // CRITICAL: wipe Local Storage / Session Storage — session lives in cookies only.
+    clearBrowserStorage();
+    deleteClientCookie("icrcs-officer-gate");
     // A citizen session OR an officer session (government user) both grant access.
     const loggedIn = !!loadSession() || isOfficer();
     if (!loggedIn) {
@@ -43,9 +50,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     // FRESH PAGE LOAD (including a browser restart that restored the tabs).
-    // The localStorage flag survives a browser restart but the HttpOnly session
-    // cookie does NOT, so the flag alone can't be trusted here — ask the server.
-    // Protected content stays hidden behind the spinner until it answers.
+    // The logged-in flag is a session cookie; HttpOnly tokens may still be gone
+    // after a browser restart — ask the server before showing protected UI.
     verifySession().then((ok) => {
       if (!alive) return;
       if (ok) {

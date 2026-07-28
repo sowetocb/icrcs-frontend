@@ -1,0 +1,71 @@
+# Edge / field-office deployment — applicant portal on the shared Docker LAN.
+#
+# Stack service names (all on icrcs-net):
+#   Database:           icrcsdb:1433          (MSSQL — backends connect; FE does not)
+#   Management API:     icrcs-be-management:1010
+#   Portal API:         TBD — set PORTAL_BACKEND_URL in .env.edge before deploy
+#
+# Prerequisites (one-time, while online):
+#   docker network create icrcs-net
+#   docker pull 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+#   # Attach backend + DB containers to icrcs-net
+#
+# Configure:
+#   cp .env.edge.example .env.edge
+#   # Set PORTAL_BACKEND_URL when the portal backend service is confirmed
+#
+# Run:
+#   docker compose -f docker-compose.edge.yml --env-file .env.edge up -d
+#
+# Air-gap transfer:
+#   docker save -o icrcs-fe-portal.tar 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+#   docker load -i icrcs-fe-portal.tar
+
+services:
+  web:
+    container_name: icrcs-fe-portal
+    image: 10.248.0.7:30000/icrcs-fe-portal:${IMAGE_TAG:-v1.6.0}
+    ports:
+      - "6060:6060"
+    env_file:
+      - .env.edge
+    environment:
+      - NODE_ENV=production
+      - PORT=6060
+      - HOSTNAME=0.0.0.0
+      # Portal applicant API (TBD — override PORTAL_BACKEND_URL in .env.edge)
+      - BACKEND_API_BASE_URL=${PORTAL_BACKEND_URL}
+      - AUTH_API_BASE_URL=${PORTAL_BACKEND_URL}
+      - API_BASE_URL=${PORTAL_BACKEND_URL}
+      # Lookups: set LOOKUP_API_BASE_URL in .env.edge if on a separate host;
+      # otherwise omit it and the proxy uses BACKEND for /lookup/* too.
+      - LOOKUP_API_BASE_URL=${LOOKUP_API_BASE_URL:-}
+    networks:
+      - icrcs-net
+    restart: unless-stopped
+
+  # Reference — database is run/managed by the backend team. Listed here so
+  # compose documents the stack; remove or replace if DB is started elsewhere.
+  icrcsdb:
+    container_name: icrcsdb
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles:
+      - full-stack
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${MSSQL_SA_PASSWORD:-YourStrong@Passw0rd}
+    ports:
+      - "1433:1433"
+    volumes:
+      - icrcsdb-data:/var/opt/mssql
+    networks:
+      - icrcs-net
+    restart: unless-stopped
+
+networks:
+  icrcs-net:
+    name: icrcs-net
+    external: true
+
+volumes:
+  icrcsdb-data:

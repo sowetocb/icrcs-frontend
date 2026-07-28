@@ -2,7 +2,7 @@ import { apiPost, apiGet, apiPut, apiDelete, apiUpload, ApiError } from "./clien
 import { resolveGenderId, resolveGenderCode } from "./lookup";
 import { loadSession, saveSession, clearSession } from "@/lib/auth/session";
 import { isOfficer as _isOfficer, clearOfficer as _clearOfficer } from "@/lib/auth/officerSession";
-import { loadProfile, toProxyUrl, type Profile } from "@/lib/auth/profile";
+import { loadProfile, clearProfile, fileViewUrl, type Profile } from "@/lib/auth/profile";
 import { COUNTRIES } from "@/lib/countries";
 import { alpha2ToAlpha3 } from "@/lib/iso3";
 
@@ -373,6 +373,7 @@ export async function withFreshAuth<T>(
     const session = loadSession();
     if (!officerMode && !session?.refreshToken) {
       clearSession();
+      clearProfile();
       throw new SessionExpiredError();
     }
 
@@ -391,7 +392,10 @@ export async function withFreshAuth<T>(
         (refreshErr.status === 401 || refreshErr.status === 403)
       ) {
         if (officerMode) _clearOfficer();
-        else clearSession();
+        else {
+          clearSession();
+          clearProfile();
+        }
         throw new SessionExpiredError();
       }
       throw refreshErr; // transient — don't log the user out
@@ -405,7 +409,10 @@ export async function withFreshAuth<T>(
         (retryErr.status === 401 || retryErr.status === 403)
       ) {
         if (officerMode) _clearOfficer();
-        else clearSession();
+        else {
+          clearSession();
+          clearProfile();
+        }
         throw new SessionExpiredError();
       }
       throw retryErr; // transient — don't log the user out
@@ -453,7 +460,7 @@ export async function refreshMyProfile(): Promise<Profile> {
  * can't serve it. */
 export async function fetchProfilePicture(path: string): Promise<string | null> {
   if (!path || BYPASS) return null;
-  const url = toProxyUrl(path);
+  const url = fileViewUrl(path);
   if (!url) return null;
   // Best-effort, side-effect-free: a single authed request using the current
   // token. It must NEVER refresh or clear the session — a 403 from the file
@@ -520,9 +527,18 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
   return profile;
 }
 
-/** POST /v1/profile/picture — multipart upload (field "file", jpg/png ≤500KB).
+/** POST /v1/profile/picture — multipart upload (field "file", jpg/png ≤ FILE_MAX).
  * Returns the stored relative path. */
 export async function uploadProfilePicture(file: File): Promise<string> {
+  const { validateUploadFile, renameUploadFile } = await import(
+    "@/lib/validation/fileUpload"
+  );
+  const check = await validateUploadFile(file, "photo");
+  if (!check.ok) {
+    throw new ApiError(400, check.message, { code: check.code });
+  }
+  const safeFile = renameUploadFile(file, check.safeName, check.mime);
+
   if (BYPASS) {
     await delay(400);
     return "uploads/mock/profile.png";
@@ -530,7 +546,7 @@ export async function uploadProfilePicture(file: File): Promise<string> {
   const raw = (await withFreshAuth((at) => {
     // Build a fresh FormData per attempt (a body can't be re-sent on retry).
     const form = new FormData();
-    form.append("file", file);
+    form.append("file", safeFile);
     return apiUpload("/v1/profile/picture", form, at);
   })) as Record<string, unknown>;
   // Response shape: { success, data: "<relative path string>" }
