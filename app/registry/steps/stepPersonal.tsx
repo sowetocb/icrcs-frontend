@@ -16,6 +16,17 @@ import { COUNTRIES } from "@/lib/countries";
 import { RULES, docNumberRuleFor } from "@/lib/validation/rules";
 import { PHOTO_ACCEPT } from "@/lib/api/files";
 import { addMonthsIso } from "@/lib/dateFormat";
+import {
+  captureCanonPhoto,
+  isCanonCameraReady,
+  normalizeLiveFrameDataUrl,
+  openCanonLiveView,
+  releaseCanonCamera,
+  setEnrollmentStep,
+  toPassportJpegDataUrl,
+  toPassportJpegFromBlob,
+  type LiveViewHandle,
+} from "@/lib/device/camera";
 import { Camera, X, Plus } from "lucide-react";
 
 /** ISO codes of the eight countries bordering Tanzania — the only valid transit
@@ -97,11 +108,10 @@ function EntryCountryField() {
   );
 }
 
-/** Webcam capture for the passport photo (officer registrations — the applicant
- * is physically at the desk). Streams the camera, grabs a centre-cropped square
- * frame, and hands back a JPEG data URL compressed under the 300KB cap.
- * NOTE: getUserMedia only works in a SECURE context (HTTPS or localhost) — over
- * plain http:// the browser hides the API, so we surface a clear message. */
+/** Passport photo capture for officer registrations (applicant at the desk).
+ * Uses enrollment icrcs-device-service (:8090 → Canon :6070) the same way
+ * ICRCS-Management does — never auto-opens the laptop selfie camera when Canon
+ * is available. Webcam is only an explicit opt-in if the agent is offline. */
 function CameraCapture({
   onClose,
   onCapture,
@@ -112,73 +122,158 @@ function CameraCapture({
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const liveViewRef = useRef<LiveViewHandle | null>(null);
   const [error, setError] = useState("");
   const [shot, setShot] = useState("");
+  const [liveFrame, setLiveFrame] = useState("");
+  const [mode, setMode] = useState<"loading" | "canon" | "webcam">("loading");
+  const [busy, setBusy] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [canonAttempt, setCanonAttempt] = useState(0);
 
-  const stop = useCallback(() => {
+  const stopWebcam = useCallback(() => {
     streamRef.current?.getTracks().forEach((tr) => tr.stop());
     streamRef.current = null;
   }, []);
 
+  const stopCanon = useCallback(() => {
+    liveViewRef.current?.close();
+    liveViewRef.current = null;
+    void releaseCanonCamera();
+  }, []);
+
+  const stopAll = useCallback(() => {
+    stopWebcam();
+    stopCanon();
+    void setEnrollmentStep("NONE");
+  }, [stopWebcam, stopCanon]);
+
+  const startWebcam = useCallback(async () => {
+    liveViewRef.current?.close();
+    liveViewRef.current = null;
+    void releaseCanonCamera();
+    setMode("webcam");
+    setLiveFrame("");
+    setError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(t("fields.cameraUnavailable"));
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+    } catch {
+      setError(t("fields.cameraError"));
+    }
+  }, [t]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError(t("fields.cameraUnavailable"));
+      // Same coordination as management Biometric step 1.
+      await setEnrollmentStep("CAMERA");
+      if (cancelled) return;
+      const ready = await isCanonCameraReady();
+      if (cancelled) return;
+      if (!ready) {
+        setMode("canon");
+        setError(t("fields.cameraCanonUnavailable"));
         return;
       }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } },
-          audio: false,
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((tr) => tr.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-        }
-      } catch {
-        if (!cancelled) setError(t("fields.cameraError"));
-      }
+      setMode("canon");
+      setError("");
+      liveViewRef.current = openCanonLiveView(
+        (frame) => {
+          if (!cancelled) {
+            setLiveFrame(frame);
+            setError("");
+          }
+        },
+        (message) => {
+          if (cancelled) return;
+          // Stay on Canon — do NOT open selfie webcam (management never does).
+          setError(message || t("fields.cameraCanonLiveViewError"));
+        },
+      );
     })();
     return () => {
       cancelled = true;
-      stop();
+      liveViewRef.current?.close();
+      liveViewRef.current = null;
+      void releaseCanonCamera();
+      void setEnrollmentStep("NONE");
+      stopWebcam();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canonAttempt]);
 
-  function capture() {
-    const v = videoRef.current;
-    if (!v || !v.videoWidth) return;
-    // Centre-crop to a square (passport framing), capped at 640px.
-    const side = Math.min(v.videoWidth, v.videoHeight);
-    const out = Math.min(640, side);
-    const canvas = document.createElement("canvas");
-    canvas.width = out;
-    canvas.height = out;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, out, out);
-    // Step the JPEG quality down until the encoded image fits the 300KB cap.
-    let q = 0.9;
-    let url = canvas.toDataURL("image/jpeg", q);
-    while (url.length * 0.75 > 300 * 1024 && q > 0.3) {
-      q -= 0.1;
-      url = canvas.toDataURL("image/jpeg", q);
+  async function capture() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (mode === "canon") {
+        // Track A: freeze last live frame immediately (Management pattern),
+        // then swap in rembg cutout when device-service returns.
+        if (liveFrame) {
+          setShot(normalizeLiveFrameDataUrl(liveFrame));
+          setFinalizing(true);
+        }
+        const blob = await captureCanonPhoto();
+        setShot(await toPassportJpegFromBlob(blob));
+        setFinalizing(false);
+        return;
+      }
+      const v = videoRef.current;
+      if (!v || !v.videoWidth) return;
+      setShot(toPassportJpegDataUrl(v));
+      setFinalizing(false);
+    } catch (e) {
+      const detail = e instanceof Error && e.message ? e.message : "";
+      setError(detail ? `${t("fields.cameraCanonError")} (${detail})` : t("fields.cameraCanonError"));
+      setFinalizing(false);
+      // Keep provisional freeze if we had one so the desk isn't blank.
+    } finally {
+      setBusy(false);
     }
-    setShot(url);
   }
 
   function use() {
+    // Only accept the final rembg JPEG — not the provisional live freeze alone
+    // while still finalizing (would upload raw studio background).
+    if (finalizing || busy) return;
     onCapture(shot);
-    stop();
+    stopAll();
     onClose();
   }
+
+  function handleClose() {
+    stopAll();
+    onClose();
+  }
+
+  function retryCanon() {
+    if (busy) return;
+    stopWebcam();
+    setShot("");
+    setLiveFrame("");
+    setError("");
+    setFinalizing(false);
+    setMode("loading");
+    setCanonAttempt((n) => n + 1);
+  }
+
+  // Canon shutter is REST on :8090 — does not require live-view frames (same as management).
+  const canCapture =
+    !busy && !shot && mode !== "loading" && (mode === "canon" || mode === "webcam");
+  const canUsePhoto = Boolean(shot) && !busy && !finalizing;
 
   return (
     <div
@@ -187,18 +282,33 @@ function CameraCapture({
       aria-label={t("fields.cameraTitle")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      <div className="absolute inset-0 bg-navy-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-navy-900/60 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-line bg-card p-6 shadow-2xl">
         <h3 className="font-display text-lg font-bold text-navy-700">{t("fields.cameraTitle")}</h3>
+        {mode === "canon" && (
+          <p className="mt-1 text-xs text-muted">Canon via icrcs-device-service (:8090)</p>
+        )}
+        {finalizing && (
+          <p className="mt-1 text-xs font-medium text-navy-700">{t("fields.cameraFinalizing")}</p>
+        )}
 
         <div className="mt-4 overflow-hidden rounded-xl bg-surface">
-          {error ? (
-            <p role="alert" className="px-4 py-8 text-center text-sm font-medium text-danger">
-              {error}
-            </p>
-          ) : shot ? (
+          {shot ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={shot} alt="" className="mx-auto block aspect-square w-full max-w-xs object-cover" />
+          ) : mode === "canon" ? (
+            liveFrame ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={liveFrame}
+                alt=""
+                className="mx-auto block aspect-square w-full max-w-xs object-cover"
+              />
+            ) : (
+              <p className="px-4 py-8 text-center text-sm text-muted">{t("fields.cameraCapturing")}</p>
+            )
+          ) : mode === "loading" ? (
+            <p className="px-4 py-8 text-center text-sm text-muted">{t("fields.cameraCapturing")}</p>
           ) : (
             <video
               ref={videoRef}
@@ -209,38 +319,72 @@ function CameraCapture({
           )}
         </div>
 
+        {error && (
+          <p role="alert" className="mt-3 text-center text-sm font-medium text-danger">
+            {error}
+          </p>
+        )}
+
         <div className="mt-5 flex flex-wrap justify-end gap-3">
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface"
+            onClick={handleClose}
+            disabled={busy}
+            className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface disabled:opacity-60"
           >
             {t("fields.cancel")}
           </button>
-          {!error && !shot && (
+          {mode === "canon" && !shot && (
+            <>
+              <button
+                type="button"
+                onClick={retryCanon}
+                disabled={busy}
+                className="rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-60"
+              >
+                {t("fields.cameraRetryCanon")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void startWebcam()}
+                disabled={busy}
+                className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface disabled:opacity-60"
+              >
+                {t("fields.cameraUseWebcam")}
+              </button>
+            </>
+          )}
+          {!shot && mode !== "loading" && !(mode === "canon" && error && !liveFrame) && (
             <button
               type="button"
-              onClick={capture}
-              className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+              disabled={!canCapture}
+              onClick={() => void capture()}
+              className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:opacity-60"
             >
-              {t("fields.cameraCapture")}
+              {busy ? t("fields.cameraCapturing") : t("fields.cameraCapture")}
             </button>
           )}
           {shot && (
             <>
               <button
                 type="button"
-                onClick={() => setShot("")}
-                className="rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+                disabled={busy}
+                onClick={() => {
+                  setShot("");
+                  setFinalizing(false);
+                  if (mode === "canon") retryCanon();
+                }}
+                className="rounded-lg border border-navy-700 px-4 py-2.5 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-60"
               >
                 {t("fields.cameraRetake")}
               </button>
               <button
                 type="button"
+                disabled={!canUsePhoto}
                 onClick={use}
-                className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500"
+                className="rounded-lg bg-navy-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-500 disabled:opacity-60"
               >
-                {t("fields.cameraUse")}
+                {finalizing ? t("fields.cameraFinalizing") : t("fields.cameraUse")}
               </button>
             </>
           )}

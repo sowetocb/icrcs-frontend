@@ -3,25 +3,54 @@
 // to ${BACKEND_API_BASE_URL}/... and relays the response. This is the single
 // backend base for the whole app — auth, registration, profile, lookups, etc.
 // (AUTH_API_BASE_URL kept as a fallback for backwards compatibility.)
+//
+// Every proxied path hits this one upstream — there is no per-path routing to
+// a second host. (LOOKUP_API_BASE_URL may still be set in .env for other
+// tooling, but this route no longer reads or branches on it.)
 
 import { cookies } from "next/headers";
 
 const BACKEND =
   process.env.BACKEND_API_BASE_URL ?? process.env.AUTH_API_BASE_URL ?? "";
 
-// The Lookup microservice is a separate host served under /lookup/* (no /v1,
-// no auth). Any path whose first segment is "lookup" routes there; everything
-// else (incl. /v1/lookup/* tables that stay on the main backend) hits BACKEND.
-const LOOKUP = process.env.LOOKUP_API_BASE_URL ?? "";
+/** Single upstream base for every proxied path. */
+function upstreamFor(_path: string[]): string {
+  return BACKEND;
+}
 
-/** Pick the upstream base for a proxied path. */
-function upstreamFor(path: string[]): string {
-  return path[0] === "lookup" && LOOKUP ? LOOKUP : BACKEND;
+// ---- per-upstream circuit breaker -------------------------------------------
+// Without this, every single call while an upstream (e.g. the external Lookup
+// microservice) is down pays the FULL retry budget below - up to three 10s
+// attempts plus backoff, ~30s - before the browser sees a 502. That made the
+// registration form's location/demographic dropdowns hang for tens of seconds
+// on every load whenever that service was unreachable. Once a call to a given
+// upstream fails, skip straight to a fast 502 for the cooldown window instead
+// of repeating the full timeout; a real success closes the circuit again
+// immediately so recovery is picked up on the very next attempt.
+const CIRCUIT_COOLDOWN_MS = 30_000;
+const lastFailureAt = new Map<string, number>();
+
+function circuitOpen(upstream: string): boolean {
+  const last = lastFailureAt.get(upstream);
+  return last !== undefined && Date.now() - last < CIRCUIT_COOLDOWN_MS;
+}
+
+function recordFailure(upstream: string): void {
+  lastFailureAt.set(upstream, Date.now());
+}
+
+function recordSuccess(upstream: string): void {
+  lastFailureAt.delete(upstream);
 }
 
 /** GET /v1/files/view — shared by citizens and officers; token choice matters. */
 function isFileViewPath(path: string[]): boolean {
   return path[0] === "v1" && path[1] === "files" && path[2] === "view";
+}
+
+/** Lookup lists are on the hot path for dropdowns — fail fast when the API is down. */
+function isLookupPath(path: string[]): boolean {
+  return path[0] === "v1" && path[1] === "lookup";
 }
 
 /** Pick the HttpOnly access token to forward for a proxied path. */
@@ -94,6 +123,10 @@ async function forward(
       { error: "BACKEND_API_BASE_URL is not configured" },
       { status: 500 },
     );
+  }
+
+  if (circuitOpen(base)) {
+    return Response.json({ error: "upstream_unreachable" }, { status: 502 });
   }
 
   const search = new URL(request.url).search;
@@ -171,7 +204,9 @@ async function forward(
   // flaky upstream doesn't surface as a 502 to the user. POST/PUT/etc. are not
   // retried (avoid duplicate writes).
   const idempotent = method === "GET" || method === "HEAD";
-  const maxAttempts = idempotent ? 3 : 1;
+  const lookup = isLookupPath(path);
+  const timeoutMs = lookup ? 3_000 : 10_000;
+  const maxAttempts = idempotent ? (lookup ? 2 : 3) : 1;
 
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -180,8 +215,9 @@ async function forward(
         method,
         headers,
         body,
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
+      recordSuccess(base); // upstream responded at all - reachable, regardless of status code
       const ms = Date.now() - started;
       const respType = res.headers.get("content-type") ?? "";
       const isTextual = /json|text|xml|javascript|urlencoded/i.test(respType);
@@ -220,6 +256,7 @@ async function forward(
     }
   }
 
+  recordFailure(base);
   console.error(
     `[api] ✗ NETWORK ${label} — unreachable after ${maxAttempts} attempt(s) (${Date.now() - started}ms)`,
     lastErr,

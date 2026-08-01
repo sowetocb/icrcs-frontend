@@ -18,7 +18,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: http: https:",
   "font-src 'self' data:",
-  "connect-src 'self' http: https:",
+  "connect-src 'self' http: https: ws: wss:",
   // Allow the hidden blob: iframe used to open the browser print dialog for a
   // fetched PDF (Print Form). Without this it falls back to default-src 'self',
   // which excludes blob: and silently blocks the print frame.
@@ -36,7 +36,7 @@ const securityHeaders = [
   // Disable powerful browser features the app never uses.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    value: "camera=(self), microphone=(), geolocation=(), browsing-topics=()",
   },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   // Force HTTPS once TLS is terminated in front of the app (harmless on HTTP).

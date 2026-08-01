@@ -23,9 +23,34 @@ function listEnvelope(raw: unknown): Row[] {
   return Array.isArray(data) ? (data as Row[]) : [];
 }
 
-/** Fetch + map a lookup list. No caching — always fetches fresh data. */
+const LOOKUP_TTL_MS = 30 * 60 * 1000;
+
+type CacheEntry = { promise: Promise<LookupItem[]>; expiresAt: number };
+
+const lookupCache = new Map<string, CacheEntry>();
+
+/** Clear session lookup cache — call on logout so a different user does not reuse geography data. */
+export function clearLookupCache(): void {
+  lookupCache.clear();
+}
+
+/** Fetch + map a lookup list. Cached in memory for the session (30 min TTL). */
 function getList(path: string, map: (o: Row) => LookupItem): Promise<LookupItem[]> {
-  return apiGet(path).then((raw) => listEnvelope(raw).map(map));
+  const now = Date.now();
+  const cached = lookupCache.get(path);
+  if (cached && cached.expiresAt > now) {
+    return cached.promise;
+  }
+
+  const promise = apiGet(path)
+    .then((raw) => listEnvelope(raw).map(map))
+    .catch((err) => {
+      lookupCache.delete(path);
+      throw err;
+    });
+
+  lookupCache.set(path, { promise, expiresAt: now + LOOKUP_TTL_MS });
+  return promise;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -48,8 +73,11 @@ export function getCountries(): Promise<LookupItem[]> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Geographic cascade — Lookup service. Territory → Region → District → Ward →
-// Street. Verified shapes: each level is { <entity>Name, id }.
+// Geographic cascade — served entirely from icrcs-api's own local data now
+// (Territory → Region → District → Ward → Street). The local Region table is
+// now linked to Territory (Mainland/Zanzibar) directly via TerritoryId, seeded
+// from the real imported dataset - this replaces the external Lookup
+// microservice's equivalent Territory-rooted hierarchy, which is now unused.
 // ──────────────────────────────────────────────────────────────────────────
 
 const MOCK_TERRITORIES: LookupItem[] = [
@@ -74,71 +102,53 @@ const MOCK_STREETS: LookupItem[] = [
   { id: 45, name: "CORRIDOR AREA" },
 ];
 
-/** GET /lookup/territories */
+/** GET /v1/lookup/territories */
 export function getTerritories(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_TERRITORIES);
-  return getList("/lookup/territories", (o) => ({
+  return getList("/v1/lookup/territories", (o) => ({
     id: num(o.id),
     name: str(o.territoryName),
     code: str(o.territoryCode),
   })).catch(() => MOCK_TERRITORIES);
 }
 
-/** GET /lookup/regions/{territoryId} */
+/** GET /v1/lookup/territories/{territoryId}/regions */
 export function getRegions(territoryId: number): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_REGIONS);
-  return getList(`/lookup/regions/${territoryId}`, (o) => ({
-    id: num(o.id),
+  return getList(`/v1/lookup/territories/${territoryId}/regions`, (o) => ({
+    id: num(o.regionId),
     name: str(o.regionName),
-  }));
+  })).catch(() => MOCK_REGIONS);
 }
 
-/** GET /lookup/districts/{regionId} */
+/** GET /v1/lookup/regions/{regionId}/districts */
 export function getDistricts(regionId: number): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_DISTRICTS);
-  return getList(`/lookup/districts/${regionId}`, (o) => ({
-    id: num(o.id),
+  return getList(`/v1/lookup/regions/${regionId}/districts`, (o) => ({
+    id: num(o.districtId),
     name: str(o.districtName),
-  }));
+  })).catch(() => MOCK_DISTRICTS);
 }
 
-/** GET /lookup/district-councils/{districtId} */
-export function getDistrictCouncils(districtId: number): Promise<LookupItem[]> {
-  if (BYPASS) return Promise.resolve([]);
-  return getList(`/lookup/district-councils/${districtId}`, (o) => ({
-    id: num(o.id),
-    name: str(o.districtCouncilName),
-  }));
-}
-
-/** GET /lookup/wards/by-district/{districtId} */
+/** GET /v1/lookup/districts/{districtId}/wards */
 export function getWards(districtId: number): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_WARDS);
-  return getList(`/lookup/wards/by-district/${districtId}`, (o) => ({
-    id: num(o.id),
+  return getList(`/v1/lookup/districts/${districtId}/wards`, (o) => ({
+    id: num(o.wardId),
     name: str(o.wardName),
-  }));
+  })).catch(() => MOCK_WARDS);
 }
 
-/** GET /lookup/wards/by-district-council/{councilId} */
-export function getWardsByCouncil(councilId: number): Promise<LookupItem[]> {
-  if (BYPASS) return Promise.resolve(MOCK_WARDS);
-  return getList(`/lookup/wards/by-district-council/${councilId}`, (o) => ({
-    id: num(o.id),
-    name: str(o.wardName),
-  }));
-}
-
-/** GET /lookup/streets/{wardId} */
+/** GET /v1/lookup/streets/{wardId} */
 export function getStreets(wardId: number): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_STREETS);
-  return getList(`/lookup/streets/${wardId}`, (o) => ({
+  return getList(`/v1/lookup/streets/${wardId}`, (o) => ({
     id: num(o.id),
     name: str(o.streetName),
-  }));
+  })).catch(() => MOCK_STREETS);
 }
 
-// Upward hierarchy from a street id (territory → street).
+// Upward hierarchy from a street id (country → street).
 
 export type StreetHierarchy = {
   streetId: number;
@@ -149,33 +159,32 @@ export type StreetHierarchy = {
   districtName: string;
   regionId: number;
   regionName: string;
+  countryId: number;
+  countryName: string;
   territoryId: number;
   territoryName: string;
 };
 
-/** GET /lookup/street-info/{streetId} — full hierarchy from a street id. */
+/** GET /v1/lookup/street-info/{streetId} — full hierarchy from a street id. */
 export async function getStreetInfo(streetId: number): Promise<StreetHierarchy | null> {
   if (BYPASS || !streetId) return null;
   try {
-    const raw = await apiGet(`/lookup/street-info/${streetId}`);
+    const raw = await apiGet(`/v1/lookup/street-info/${streetId}`);
     const d = ((raw as { data?: unknown })?.data ?? raw) as Record<string, unknown>;
     if (!d || typeof d !== "object") return null;
-    const territory = (d.territory ?? {}) as Record<string, unknown>;
-    const region = (d.region ?? {}) as Record<string, unknown>;
-    const district = (d.district ?? {}) as Record<string, unknown>;
-    const ward = (d.ward ?? {}) as Record<string, unknown>;
-    const street = (d.street ?? {}) as Record<string, unknown>;
     return {
-      streetId: num(street.id),
-      streetName: str(street.streetName),
-      wardId: num(ward.id),
-      wardName: str(ward.wardName),
-      districtId: num(district.id),
-      districtName: str(district.districtName),
-      regionId: num(region.id),
-      regionName: str(region.regionName),
-      territoryId: num(territory.id),
-      territoryName: str(territory.territoryName),
+      streetId: num(d.streetId),
+      streetName: str(d.streetName),
+      wardId: num(d.wardId),
+      wardName: str(d.wardName),
+      districtId: num(d.districtId),
+      districtName: str(d.districtName),
+      regionId: num(d.regionId),
+      regionName: str(d.regionName),
+      countryId: num(d.countryId),
+      countryName: str(d.countryName),
+      territoryId: num(d.territoryId),
+      territoryName: str(d.territoryName),
     };
   } catch {
     return null;
@@ -241,11 +250,12 @@ function genderCodeFromName(name: string): string {
   return "O";
 }
 
-/** GET /lookup/genders → { genderName, id }. We attach a `code` (M/F/O) so the
- * option `value` submitted to the backend is the code, not the lookup id. */
+/** GET /v1/lookup/genders → { genderName, code, id }. We derive the M/F/O code
+ * from the name (rather than trusting the backend's own code column blindly)
+ * so behavior is unchanged from before this was moved to local data. */
 export function getGenders(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_GENDERS);
-  return getList("/lookup/genders", (o) => {
+  return getList("/v1/lookup/genders", (o) => {
     const name = str(o.genderName);
     return { id: num(o.id), name, code: genderCodeFromName(name) };
   }).catch(() => MOCK_GENDERS);
@@ -310,13 +320,13 @@ function maritalCodeFromName(name: string): string {
   return name.toUpperCase().replace(/\s+/g, "_");
 }
 
-/** GET /lookup/marital-statuses → { statusName, id }.
+/** GET /v1/lookup/marital-statuses → { statusName, id }.
  * The backend stores statuses without a separate code field — derive the
  * canonical enum ("SINGLE", "MARRIED", "DIVORCED", "WIDOW", "SEPARATED") so the
  * registration payload can use it directly. */
 export function getMaritalStatuses(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_MARITAL_STATUSES);
-  return getList("/lookup/marital-statuses", (o) => {
+  return getList("/v1/lookup/marital-statuses", (o) => {
     const name = str(o.statusName);
     return {
       id: num(o.id),
@@ -358,39 +368,39 @@ export async function resolveEmploymentStatusId(value: string): Promise<number |
   return null;
 }
 
-/** GET /lookup/educations → { levelName, id } */
+/** GET /v1/lookup/education-levels → { educationLevelId, code, levelName } */
 export function getEducationLevels(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_EDUCATION);
-  return getList("/lookup/educations", (o) => ({
-    id: num(o.id),
+  return getList("/v1/lookup/education-levels", (o) => ({
+    id: num(o.educationLevelId),
     name: str(o.levelName),
   })).catch(() => MOCK_EDUCATION);
 }
 
-/** GET /lookup/occupations → { occupationName, id } */
+/** GET /v1/lookup/occupation-types → { occupationTypeId, code, occupationName } */
 export function getOccupations(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_OCCUPATIONS);
-  return getList("/lookup/occupations", (o) => ({
-    id: num(o.id),
+  return getList("/v1/lookup/occupation-types", (o) => ({
+    id: num(o.occupationTypeId),
     name: str(o.occupationName),
   })).catch(() => MOCK_OCCUPATIONS);
 }
 
-/** GET /lookup/relationships → { relation, id } */
+/** GET /v1/lookup/relationship-types → { relationshipTypeId, code, relationshipName } */
 export function getRelationships(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_RELATIONSHIPS);
-  return getList("/lookup/relationships", (o) => ({
-    id: num(o.id),
-    name: str(o.relation),
+  return getList("/v1/lookup/relationship-types", (o) => ({
+    id: num(o.relationshipTypeId),
+    name: str(o.relationshipName),
   })).catch(() => MOCK_RELATIONSHIPS);
 }
 
-/** GET /lookup/citizenship → { name, id } */
+/** GET /v1/lookup/citizenship-types → { citizenshipTypeId, code, typeName } */
 export function getCitizenshipTypes(): Promise<LookupItem[]> {
   if (BYPASS) return Promise.resolve(MOCK_CITIZENSHIP_TYPES);
-  return getList("/lookup/citizenship", (o) => ({
-    id: num(o.id),
-    name: str(o.name),
+  return getList("/v1/lookup/citizenship-types", (o) => ({
+    id: num(o.citizenshipTypeId),
+    name: str(o.typeName),
   })).catch(() => MOCK_CITIZENSHIP_TYPES);
 }
 

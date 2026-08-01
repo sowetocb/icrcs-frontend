@@ -227,6 +227,17 @@ export default function WardCascade({
   const wardIdNum = Number(wardIdVal) || 0;
   const streetIdVal = String(data[`${prefix}StreetId`] ?? "");
 
+  // Region/District/Ward only apply to Tanzania. The cascade is shown ONLY
+  // when Tanzania is explicitly picked as the country. When no country has been
+  // selected yet, neither the cascade nor the city field is rendered — just the
+  // country picker. A foreign country hides the cascade entirely; the caller's
+  // free-text City field is used instead.
+  const explicitlyTanzania = countryName.trim().toLowerCase() === "tanzania";
+  // Domestic-forced: no country picker (address) or alwaysCascade.
+  const forceCascade = alwaysCascade || !showCountry;
+  // Show cascade when Tanzania is explicitly chosen, or when the caller forces it.
+  const showTzCascade = forceCascade || explicitlyTanzania;
+
   const { options: countries, loading: countriesLoading } = useLookup(() => getCountries(), []);
   const { options: territories, loading: territoriesLoading } = useLookup(() => getTerritories(), []);
   const { options: regions, loading: regionsLoading } = useLookup(
@@ -250,17 +261,6 @@ export default function WardCascade({
 
   const cols =
     levels === "district" ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
-
-  // Region/District/Ward only apply to Tanzania. The cascade is shown ONLY
-  // when Tanzania is explicitly picked as the country. When no country has been
-  // selected yet, neither the cascade nor the city field is rendered — just the
-  // country picker. A foreign country hides the cascade entirely; the caller's
-  // free-text City field is used instead.
-  const explicitlyTanzania = countryName.trim().toLowerCase() === "tanzania";
-  // Domestic-forced: no country picker (address) or alwaysCascade.
-  const forceCascade = alwaysCascade || !showCountry;
-  // Show cascade when Tanzania is explicitly chosen, or when the caller forces it.
-  const showTzCascade = forceCascade || explicitlyTanzania;
   // Territory is enabled only once Tanzania is the chosen country; before any
   // country is picked it renders disabled.
   const territoryDisabled = disabled || (!forceCascade && !explicitlyTanzania);

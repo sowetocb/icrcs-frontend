@@ -53,6 +53,7 @@ export default function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [officerStatus, setOfficerStatus] = useState("");
   // Explain an automatic sign-out (idle timeout / expired session) when the user
   // was dropped here — read once from the one-shot notice set before redirect.
   const [signoutNotice, setSignoutNotice] = useState("");
@@ -81,12 +82,16 @@ export default function LoginForm() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+    setOfficerStatus("");
 
     // ── Officer sign-in (.go.tz) — same form, SEPARATE service ───────────────
     // Officers authenticate against the User Management API via /api/officer/login
     // (username = their .go.tz email). On success their profile is cached
     // (icrcs-officer-*) and they go straight to the registry to register migrants.
     if (OFFICER_EMAIL.test(email.trim())) {
+      const statusTimer = window.setTimeout(() => {
+        setOfficerStatus("Checking credentials…");
+      }, 1500);
       let ores: Response;
       try {
         ores = await fetch("/api/officer/login", {
@@ -96,10 +101,14 @@ export default function LoginForm() {
           body: JSON.stringify({ username: email.trim(), password }),
         });
       } catch {
+        window.clearTimeout(statusTimer);
+        setOfficerStatus("");
         setSubmitting(false);
         setLoginError(t("form.connectionError"));
         return;
       }
+      window.clearTimeout(statusTimer);
+      setOfficerStatus("");
       const odata = (await ores.json().catch(() => null)) as
         | { success?: boolean; error?: string; user?: Record<string, unknown> }
         | null;
@@ -298,6 +307,12 @@ export default function LoginForm() {
         {loginError && (
           <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
             {loginError}
+          </p>
+        )}
+
+        {officerStatus && !loginError && (
+          <p role="status" className="rounded-lg bg-navy-700/5 px-3 py-2 text-sm text-muted">
+            {officerStatus}
           </p>
         )}
 

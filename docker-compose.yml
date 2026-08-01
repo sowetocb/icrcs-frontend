@@ -1,18 +1,37 @@
-# Local build + run. For edge/offline LAN see docker-compose.edge.yml.
+# Local build + run (Docker Desktop). Pairs with icrcs-api on icrcs-net.
+#
+# Device agent is NOT Docker — Windows install at C:\ICRCS\DeviceService
+# (config.cmd / .exe launcher) on http://127.0.0.1:8090. Browser talks to it
+# directly, same as ICRCS-Management.
+#
+#   docker network create icrcs-net   # one-time (shared with icrcs-api)
+#   docker compose up -d --build
+#   docker push 10.248.0.7:30000/icrcs-fe-portal:v1.9.13
+#
+# Host port: http://localhost:8089  (container listens on 6060)
 services:
   web:
-    container_name: icrcs-fe-portal
-    image: 10.248.0.7:30000/icrcs-fe-portal:v1.8.0
+    container_name: icrcs-portal
+    image: 10.248.0.7:30000/icrcs-fe-portal:v1.9.13
     build:
       context: .
       dockerfile: Dockerfile
+      tags:
+        - icrcs-fe-portal:v1.9.13
+        - 10.248.0.7:30000/icrcs-fe-portal:v1.9.13
     ports:
-      - "6060:6060"
+      - "8089:6060"
     env_file:
       - .env
     environment:
-      - PORT=6060
-      - HOSTNAME=0.0.0.0
+      PORT: "6060"
+      HOSTNAME: "0.0.0.0"
+      BACKEND_API_BASE_URL: http://icrcs-portal-api:6063/api
+      AUTH_API_BASE_URL: http://icrcs-portal-api:6063/api
+      USER_MGT_API_BASE_URL: http://icrcs-portal-api:6063/api
+      NEXT_PUBLIC_APP_VERSION: "1.9.13"
+      # Inlined at next build from .env — workstation agent, not a container.
+      NEXT_PUBLIC_DEVICE_SERVICE_URL: http://127.0.0.1:8090
     networks:
       - icrcs-net
     restart: unless-stopped

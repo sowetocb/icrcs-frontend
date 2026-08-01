@@ -14,6 +14,7 @@ import {
   setClientCookieJson,
   subscribeAuthBroadcast,
 } from "./clientCookies";
+import { clearLookupCache } from "@/lib/api/lookup";
 
 export type OfficerUser = {
   userId?: string;
@@ -81,6 +82,7 @@ export function clearOfficer(): void {
     deleteClientCookie(FLAG);
     deleteClientCookie(USER);
     deleteClientCookie("icrcs_user");
+    clearLookupCache();
     purgeSensitiveLocalStorage();
     broadcastAuthChange({ kind: "officer", loggedIn: false });
   } catch {

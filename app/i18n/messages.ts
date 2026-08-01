@@ -868,6 +868,17 @@ const en = {
     cameraError: "Could not access the camera. Check the browser permission and try again.",
     cameraUnavailable:
       "The camera is unavailable. It requires a secure (HTTPS) connection — upload a photo instead.",
+    cameraCanonUnavailable:
+      "Canon camera is not connected via the device service (port 8090).",
+    cameraCanonError:
+      "Could not capture from the Canon camera. Check that icrcs-device-service and the Canon bridge are running.",
+    cameraCanonLiveViewError:
+      "Canon live view failed. Keep using the external camera, or retry.",
+    cameraRetryCanon: "Retry Canon",
+    cameraUseWebcam: "Use computer camera",
+    cameraCapturing: "Capturing…",
+    cameraFinalizing: "Finalizing photo…",
+    cancel: "Cancel",
     uploaded: "Uploaded", // REVIEW
     uploadFailed: "Upload failed", // REVIEW
     uploadsNeedId: "At least one identification document is required.", // REVIEW
@@ -1991,6 +2002,17 @@ const sw: typeof en = {
     cameraError: "Imeshindwa kufikia kamera. Angalia ruhusa ya kivinjari kisha jaribu tena.",
     cameraUnavailable:
       "Kamera haipatikani. Inahitaji muunganisho salama (HTTPS) — pakia picha badala yake.",
+    cameraCanonUnavailable:
+      "Kamera ya Canon haijaunganishwa kupitia huduma ya kifaa (port 8090).",
+    cameraCanonError:
+      "Imeshindwa kupiga picha kutoka Canon. Hakikisha icrcs-device-service na bridge ya Canon zinafanya kazi.",
+    cameraCanonLiveViewError:
+      "Mwonekano wa moja kwa moja wa Canon umeshindikana. Endelea na kamera ya nje, au jaribu tena.",
+    cameraRetryCanon: "Jaribu Canon tena",
+    cameraUseWebcam: "Tumia kamera ya kompyuta",
+    cameraCapturing: "Inapiga…",
+    cameraFinalizing: "Inakamilisha picha…",
+    cancel: "Ghairi",
     uploaded: "Imepakiwa", // REVIEW
     uploadFailed: "Upakiaji umeshindwa", // REVIEW
     uploadsNeedId: "Angalau hati moja ya utambulisho inahitajika.", // REVIEW

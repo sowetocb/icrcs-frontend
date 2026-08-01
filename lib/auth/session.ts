@@ -10,6 +10,7 @@
 // uses BroadcastChannel (see clientCookies).
 
 import type { Tokens } from "@/lib/api/auth";
+import { clearLookupCache } from "@/lib/api/lookup";
 import {
   broadcastAuthChange,
   deleteClientCookie,
@@ -54,6 +55,7 @@ export function clearSession(): void {
   if (typeof window === "undefined") return;
   try {
     deleteClientCookie(FLAG);
+    clearLookupCache();
     purgeSensitiveLocalStorage();
     broadcastAuthChange({ kind: "citizen", loggedIn: false });
   } catch {

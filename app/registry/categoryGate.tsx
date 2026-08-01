@@ -96,7 +96,10 @@ export default function CategoryGate({
   }
 
   function pickCategory(key: RegistrationCategory) {
-    if (isDependent) {
+    // The parent/guardian question only makes sense for a citizen registering
+    // their OWN dependent — an officer is never the minor's parent/guardian,
+    // so skip straight through for officer-driven registrations.
+    if (isDependent && !officerMode) {
       setPendingCategory(key);
       setRelationship("");
       return;

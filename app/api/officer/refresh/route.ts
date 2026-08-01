@@ -1,6 +1,10 @@
-// Officer refresh — reads the officer refresh token from its HttpOnly cookie,
-// rotates it against the SAME auth backend that issued it at login, and writes
-// the new tokens back. The auth API ROTATES the refresh token on every call.
+// Officer refresh — reads the officer refresh token from its HttpOnly cookie
+// and exchanges it via icrcs-api's own /v1/auth/officer-refresh endpoint. This
+// is NOT the same as citizen /v1/auth/refresh or the external User Management
+// API: it verifies icrcs-api's own locally-signed officer JWT and rotates it,
+// entirely independent of the external service's reachability. The endpoint
+// rotates the refresh token on every call, so both cookies are always
+// replaced with the values it returns.
 //
 // CRITICAL: never wipe cookies on a failed refresh. Proactive keep-alive /
 // AuthGuard refreshes run while the user is mid-form; a flaky or raced refresh
@@ -35,7 +39,7 @@ export async function POST(request: Request) {
   let res: Response;
   try {
     // Send both camelCase and snake_case — portal and UM APIs differ on the key.
-    res = await fetch(`${BACKEND}/v1/auth/refresh`, {
+    res = await fetch(`${BACKEND}/v1/auth/officer-refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

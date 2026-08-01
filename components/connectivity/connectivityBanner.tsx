@@ -9,7 +9,7 @@ export default function ConnectivityBanner() {
 
   if (online && !justReconnected) return null;
 
-  const message = online ? t("connectivity.restored") : t("connectivity.offline");
+  const message = justReconnected ? t("connectivity.restored") : t("connectivity.offline");
 
   return (
     <div
